@@ -16,11 +16,13 @@
 
 ## Основные модули
 
-- `run.py` — основной скрипт для запуска batch-обработки и расчетов.
-- `classes/batch.py` — логика batch-режимов и интерактивного расчета DPI.
-- `classes/recorder.py` — модуль логирования.
-- `classes/vuescan/workflow.py` — автоматизация workflow для VueScan.
-- `classes/exifer.py` — извлечение и парсинг EXIF-метаданных.
+- `scan_batcher/cli.py` — основной CLI-модуль (используется для команды `scan-batcher`).
+- `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
+- `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
+- `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
+- `scan_batcher/recorder.py` — модуль логирования.
+- `scan_batcher/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
+- `scan_batcher/exifer.py` — извлечение и обработка EXIF-метаданных.
 
 ## Система шаблонов
 

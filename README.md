@@ -16,11 +16,13 @@ A utility designed to automate and optimize the scanning workflow using [VueScan
 
 ## Main Utilities
 
-- `run.py` — main entry point for launching batch workflows and calculations.
-- `classes/batch.py` — batch and interactive DPI calculation logic.
-- `classes/recorder.py` — logging utility.
-- `classes/vuescan/workflow.py` — workflow automation for VueScan.
-- `classes/exifer.py` — EXIF metadata extraction and parsing.
+- `scan_batcher/cli.py` — main CLI entry point (used for the `scan-batcher` command).
+- `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
+- `scan_batcher/calculator.py` — DPI calculation algorithms.
+- `scan_batcher/parser.py` — command-line argument parsing and validation.
+- `scan_batcher/recorder.py` — logging utility.
+- `scan_batcher/vuescan/workflow.py` — workflow automation for VueScan.
+- `scan_batcher/exifer.py` — EXIF metadata extraction and parsing.
 
 ## Template System
 
