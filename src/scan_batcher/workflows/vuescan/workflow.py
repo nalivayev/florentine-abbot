@@ -138,10 +138,7 @@ class VuescanWorkflow(Workflow):
             if not Path(output_path_name).exists():
                 makedirs(output_path_name, True)
             log(self._recorder, [f"Launching VueScan from '{program_path}'"])
-            run(
-                f'cd /D "{self._get_script_value("main", "program_path")}" & {self._get_script_value("main", "program_name")}',
-                shell=True
-            )
+            run([program_path], cwd=self._get_script_value("main", "program_path"), shell=False)
             log(self._recorder, ["VueScan is closed"])
         else:
             raise VuescanWorkflow.Exception(f"File '{program_path}' not found")
