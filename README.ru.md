@@ -70,9 +70,7 @@
 scan-batcher --workflow <путь_к_ini> --engine vuescan --batch scan --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800
 ```
 
-**Обязательные аргументы:**
-- `--photo-min-side` - Минимальная длина короткой стороны фотографии (в сантиметрах)
-- `--image-min-side` - Минимальная длина короткой стороны изображения (в пикселях)
+Программа **интерактивно запросит** у вас размеры фотографии и изображения во время выполнения.
 
 Для получения полного списка аргументов и опций используйте:
 
@@ -82,11 +80,7 @@ scan-batcher --help
 
 ## Аргументы командной строки
 
-### Обязательные аргументы
-- `-ps, --photo-min-side` - Минимальная длина короткой стороны фотографии (в сантиметрах, должна быть > 0)
-- `-is, --image-min-side` - Минимальная длина короткой стороны изображения (в пикселях, должна быть > 0)
-
-### Дополнительные аргументы
+### Доступные аргументы
 - `-b, --batch` - Режим пакетной обработки: scan (интерактивный), calculate (одиночный расчёт), или process (обработка папки). По умолчанию: scan
 - `-w, --workflow` - Путь к файлу конфигурации рабочего процесса (формат INI) для пакетной обработки
 - `-t, --templates` - Список пар ключ-значение для шаблонов имён файлов или метаданных, например `-t year=2024 author=Smith`
@@ -100,18 +94,21 @@ scan-batcher --help
 
 ### Интерактивный расчёт DPI (режим scan)
 ```sh
-scan-batcher --workflow examples/workflow.ini --photo-min-side 10.0 --image-min-side 2400 --batch scan --dpis 300 600 1200 2400
+scan-batcher --workflow examples/workflow.ini --batch scan --dpis 300 600 1200 2400
 ```
+*Программа запросит у вас размеры фотографии в интерактивном режиме.*
 
 ### Одиночный расчёт DPI (режим calculate)
 ```sh
-scan-batcher --workflow examples/workflow.ini --photo-min-side 15.0 --image-min-side 3000 --batch calculate --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800 --rounding nr
+scan-batcher --workflow examples/workflow.ini --batch calculate --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800 --rounding nr
 ```
+*Программа запросит размеры фотографии и изображения, затем завершится после одного расчёта.*
 
 ### Обработка файлов из папки
 ```sh
-scan-batcher --workflow examples/workflow.ini --photo-min-side 12.0 --image-min-side 2800 --batch process /path/to/scanned/files --templates author="John Doe" project="Family Archive"
+scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/files --templates author="John Doe" project="Family Archive"
 ```
+*Обработка существующих файлов без интерактивного ввода.*
 
 ## Логирование
 

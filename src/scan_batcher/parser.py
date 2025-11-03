@@ -34,51 +34,7 @@ class Arguments:
     including photo dimensions, image dimensions, resolution settings, and file processing options.
     """
 
-    @staticmethod
-    def check_photo_size(value):
-        """
-        Validate and convert photo dimension input.
 
-        Args:
-            value: Input value to validate as a photo dimension.
-
-        Returns:
-            float: Validated photo dimension value.
-
-        Raises:
-            ArgumentTypeError: If value cannot be converted to float.
-            ArgumentError: If value is not positive.
-        """
-        try:
-            value = float(value)
-        except ValueError:
-            raise ArgumentTypeError("Invalid photo side size value")
-        if value <= 0:
-            raise ArgumentError(None, "Invalid photo side size")
-        return value
-
-    @staticmethod
-    def check_image_size(value):
-        """
-        Validate and convert image dimension input.
-
-        Args:
-            value: Input value to validate as an image dimension.
-
-        Returns:
-            int: Validated image dimension value.
-
-        Raises:
-            ArgumentTypeError: If value cannot be converted to integer.
-            ArgumentError: If value is not positive.
-        """
-        try:
-            value = int(value)
-        except ValueError:
-            raise ArgumentTypeError("Invalid digitized image side size value")
-        if value <= 0:
-            raise ArgumentError(None, "Invalid digitized image side size")
-        return value
 
     workflow = {
         "keys": ["-w", "--workflow"],
@@ -113,24 +69,6 @@ class Arguments:
             "default": ["scan"],
             "nargs": '+',
             "help": "Batch mode: scan (interactive), calculate (single calculation), or process (folder processing). Default: scan"
-        }
-    }
-    
-    photo_min_side = {
-        "keys": ["-ps", "--photo-min-side"],
-        "values": {
-            "type": check_photo_size,
-            "required": True,
-            "help": "Minimum length of the photo's shorter side (in centimeters, must be > 0)"
-        }
-    }
-
-    image_min_side = {
-        "keys": ["-is", "--image-min-side"],
-        "values": {
-            "type": int,
-            "required": True,
-            "help": "Minimum length of the image's shorter side (in pixels, must be > 0)"
         }
     }
 
