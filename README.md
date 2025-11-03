@@ -70,9 +70,7 @@ Run the main workflow:
 scan-batcher --workflow <path_to_ini> --engine vuescan --batch scan --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800
 ```
 
-**Required arguments:**
-- `--photo-min-side` - Minimum length of the photo's shorter side (in centimeters)
-- `--image-min-side` - Minimum length of the image's shorter side (in pixels)
+The program will **interactively prompt** you for the photo and image dimensions during execution.
 
 For a full list of arguments and options, use:
 
@@ -82,11 +80,7 @@ scan-batcher --help
 
 ## Command Line Arguments
 
-### Required Arguments
-- `-ps, --photo-min-side` - Minimum length of the photo's shorter side (in centimeters, must be > 0)
-- `-is, --image-min-side` - Minimum length of the image's shorter side (in pixels, must be > 0)
-
-### Optional Arguments
+### Available Arguments
 - `-b, --batch` - Batch mode: scan (interactive), calculate (single calculation), or process (folder processing). Default: scan
 - `-w, --workflow` - Path to the workflow configuration file (INI format) for batch processing
 - `-t, --templates` - List of template key-value pairs for file naming or metadata, e.g. `-t year=2024 author=Smith`
@@ -100,18 +94,21 @@ scan-batcher --help
 
 ### Interactive DPI calculation (scan mode)
 ```sh
-scan-batcher --workflow examples/workflow.ini --photo-min-side 10.0 --image-min-side 2400 --batch scan --dpis 300 600 1200 2400
+scan-batcher --workflow examples/workflow.ini --batch scan --dpis 300 600 1200 2400
 ```
+*The program will prompt you to enter photo dimensions interactively.*
 
 ### Single DPI calculation (calculate mode)
 ```sh
-scan-batcher --workflow examples/workflow.ini --photo-min-side 15.0 --image-min-side 3000 --batch calculate --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800 --rounding nr
+scan-batcher --workflow examples/workflow.ini --batch calculate --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800 --rounding nr
 ```
+*The program will prompt you to enter photo and image dimensions, then exit after one calculation.*
 
 ### Process files from folder
 ```sh
-scan-batcher --workflow examples/workflow.ini --photo-min-side 12.0 --image-min-side 2800 --batch process /path/to/scanned/files --templates author="John Doe" project="Family Archive"
+scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/files --templates author="John Doe" project="Family Archive"
 ```
+*Process existing files without interactive input.*
 
 ## Logging
 
