@@ -1,5 +1,7 @@
 from logging import Logger, getLogger, FileHandler, Formatter, INFO
 
+from scan_batcher.constants import LOG_DATE_FORMAT, LOG_MESSAGE_FORMAT
+
 
 class Recorder:
     """Logger wrapper for convenient logging to a file."""
@@ -16,7 +18,7 @@ class Recorder:
         """
         self._logger = getLogger(category)
         self._logger.setLevel(INFO)
-        formatter = Formatter("%(asctime)s.%(msecs)03d %(message)s", datefmt="%Y.%m.%d %H:%M:%S")
+        formatter = Formatter(LOG_MESSAGE_FORMAT, datefmt=LOG_DATE_FORMAT)
         handler = FileHandler(f"{path}", mode="w")
         handler.setFormatter(formatter)
         if not self._logger.handlers:

@@ -4,6 +4,7 @@ from typing import Tuple
 
 from scan_batcher.recorder import log, Recorder
 from scan_batcher.calculator import Calculator
+from scan_batcher.constants import RoundingStrategy, CM_TO_INCH
 
 
 class Batch(ABC):
@@ -42,7 +43,7 @@ class Calculate(Batch):
         min_dpi: int | None = None,
         max_dpi: int | None = None,
         dpis: list[int] | None = None,
-        rounding: str = "nr"
+        rounding: RoundingStrategy | str = RoundingStrategy.NEAREST
     ):
         """
         Initialize the Calculate batch.
@@ -52,14 +53,15 @@ class Calculate(Batch):
             min_dpi (int, optional): Minimum allowed DPI.
             max_dpi (int, optional): Maximum allowed DPI.
             dpis (List[int], optional): List of available DPI values.
-            rounding (str, optional): Rounding strategy ('nr', 'mx', 'mn').
+            rounding (RoundingStrategy | str, optional): Rounding strategy (default: NEAREST).
         """
         self.recorder = recorder
         self.calculator = Calculator()
         self.min_dpi = min_dpi
         self.max_dpi = max_dpi
         self.dpis = dpis if dpis is not None else []
-        self.rounding = rounding
+        # Convert string to enum if needed
+        self.rounding = RoundingStrategy.from_string(rounding) if isinstance(rounding, str) else rounding
 
     def _get_user_input(self):
         """
@@ -180,9 +182,9 @@ class Calculate(Batch):
 
         # Add calculated values if not present
         if calc_dpi is not None:
-            dpis.add((int(calc_dpi), int(photo_min_side * calc_dpi / 2.54)))
+            dpis.add((int(calc_dpi), int(photo_min_side * calc_dpi / CM_TO_INCH)))
         if rec_dpi is not None:
-            dpis.add((int(rec_dpi), int(photo_min_side * rec_dpi / 2.54)))
+            dpis.add((int(rec_dpi), int(photo_min_side * rec_dpi / CM_TO_INCH)))
 
         # Sort for display, but work with set
         dpis = sorted(dpis, key=lambda x: x[0])

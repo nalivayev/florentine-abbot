@@ -1,5 +1,7 @@
 from argparse import ArgumentParser, ArgumentError, ArgumentTypeError, Action
 
+from scan_batcher.constants import RoundingStrategy, DEFAULT_ENGINE
+
 
 class KeyValueAction(Action):
     """
@@ -34,8 +36,6 @@ class Arguments:
     including photo dimensions, image dimensions, resolution settings, and file processing options.
     """
 
-
-
     workflow = {
         "keys": ["-w", "--workflow"],
         "values": {
@@ -58,8 +58,8 @@ class Arguments:
         "keys": ["-e", "--engine"],
         "values": {
             "type": str, 
-            "default": "vuescan", 
-            "help": "Scan engine to use for processing (default: vuescan)"
+            "default": DEFAULT_ENGINE, 
+            "help": f"Scan engine to use for processing (default: {DEFAULT_ENGINE})"
         }
     }
     
@@ -100,9 +100,15 @@ class Arguments:
     rounding = {
         "keys": ["-r", "--rounding"],
         "values": {
-            "choices": ["mx", "mn", "nr"],
-            "default": "nr",
-            "help": "Rounding strategy for calculated DPI: mx (maximum), mn (minimum), nr (nearest). Default: nr"
+            "choices": [e.value for e in RoundingStrategy],
+            "default": RoundingStrategy.NEAREST.value,
+            "help": (
+                f"Rounding strategy for calculated DPI: "
+                f"{RoundingStrategy.MAXIMUM.value} (maximum), "
+                f"{RoundingStrategy.MINIMUM.value} (minimum), "
+                f"{RoundingStrategy.NEAREST.value} (nearest). "
+                f"Default: {RoundingStrategy.NEAREST.value}"
+            )
         }
     }
 
