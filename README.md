@@ -22,6 +22,7 @@ A utility designed to automate and optimize the scanning workflow using [VueScan
 - `scan_batcher/calculator.py` — DPI calculation algorithms.
 - `scan_batcher/parser.py` — command-line argument parsing and validation.
 - `scan_batcher/recorder.py` — logging utility.
+- `scan_batcher/constants.py` — centralized constants and enumerations (e.g., `RoundingStrategy`).
 - `scan_batcher/workflow.py` — base class for all workflow plugins.
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
 - `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
@@ -88,7 +89,7 @@ scan-batcher --help
 - `-mnd, --min-dpi` - Minimum allowed DPI value for scanning (optional)
 - `-mxd, --max-dpi` - Maximum allowed DPI value for scanning (optional)
 - `-d, --dpis` - List of supported DPI resolutions by the scanner, separated by space, e.g., `100 300 1200`
-- `-r, --rounding` - Rounding strategy: `mx` (maximum), `mn` (minimum), `nr` (nearest). Default: nr
+- `-r, --rounding` - Rounding strategy: `mx` (maximum), `mn` (minimum), `nr` (nearest). Default: nr. Internally uses `RoundingStrategy` enum
 
 ## Examples
 
