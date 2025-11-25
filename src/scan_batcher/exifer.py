@@ -2,6 +2,8 @@ from piexif import load, TAGS, InvalidImageDataError
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from scan_batcher.constants import EXIF_DATE_FORMAT, EXIF_DATETIME_FORMAT
+
 
 class Exifer:
     """
@@ -125,7 +127,7 @@ class Exifer:
             Exifer.Exception: If date or time values are invalid.
         """
         try:
-            date = datetime.strptime(date_value, "%Y:%m:%d")
+            date = datetime.strptime(date_value, EXIF_DATE_FORMAT)
         except ValueError:
             raise Exifer.Exception(f"Invalid date input value: {date_value}")
         try:
@@ -153,7 +155,7 @@ class Exifer:
             Exifer.Exception: If the value cannot be parsed.
         """
         try:
-            return datetime.strptime(value, "%Y:%m:%d %H:%M:%S")
+            return datetime.strptime(value, EXIF_DATETIME_FORMAT)
         except ValueError:
             raise Exifer.Exception(f"Invalid input value: {value}")
 

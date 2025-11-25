@@ -6,6 +6,7 @@ from scan_batcher.recorder import log, Recorder
 from scan_batcher.batch import Batch, Scan
 from scan_batcher.parser import Parser
 from scan_batcher.workflows import get_workflow
+from scan_batcher.constants import DEFAULT_ENGINE
 
 
 def get_subclasses(cls):
@@ -55,7 +56,7 @@ def create_batch(recorder: Recorder, batch: List, min_res: int, max_res: int, re
     
     raise ValueError(f"Unknown batch type: {batch[0]}")
 
-def create_workflow(engine: str = "vuescan"):
+def create_workflow(engine: str = DEFAULT_ENGINE):
     """
     Get a registered workflow class by engine name and return its instance.
 

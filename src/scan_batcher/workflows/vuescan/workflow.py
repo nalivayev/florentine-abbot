@@ -12,6 +12,7 @@ from scan_batcher.recorder import log, Recorder
 from scan_batcher.exifer import Exifer
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import Workflow
+from scan_batcher.constants import EXIF_SUPPORTED_EXTENSIONS
 
 
 @register_workflow("vuescan")
@@ -221,7 +222,7 @@ class VuescanWorkflow(Workflow):
             path (Path): Path to the scanned file.
         """
         moment = None
-        if path.suffix.lower() in [".tiff", ".tif", ".jpeg", ".jpg"]:
+        if path.suffix.lower() in EXIF_SUPPORTED_EXTENSIONS:
             tags: dict = self._extract_exif_tags(path)
             value = tags.get(Exifer.EXIFIFD, {}).get("DateTimeDigitized", "")
             if value:
