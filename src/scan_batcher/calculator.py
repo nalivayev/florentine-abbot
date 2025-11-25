@@ -1,5 +1,7 @@
 from typing import List, Optional, Tuple
 
+from scan_batcher.constants import RoundingStrategy, CM_TO_INCH
+
 
 class Calculator:
     """
@@ -10,12 +12,11 @@ class Calculator:
     and rounding strategies.
 
     Example:
+        >>> from scan_batcher.constants import RoundingStrategy
         >>> calc = Calculator()
-        >>> calc(15.0, 3000, 150, 600, [150, 300, 600], 'nr')
+        >>> calc(15.0, 3000, 150, 600, [150, 300, 600], RoundingStrategy.NEAREST)
         (508.0, 300, [(150, 1772), (300, 3543), (600, 7087)])
     """
-
-    _CM_TO_INCH: float = 2.54  # Conversion factor from centimeters to inches
 
     def __call__(
         self,
@@ -24,7 +25,7 @@ class Calculator:
         min_dpi: Optional[int],
         max_dpi: Optional[int],
         dpi_list: Optional[List[int]],
-        rounding: str
+        rounding: RoundingStrategy | str
     ) -> Tuple[float, int, List[Tuple[int, int]]]:
         """
         Calculate the optimal DPI values for printing an image on a photo with given dimensions.
@@ -35,10 +36,10 @@ class Calculator:
             min_dpi (Optional[int]): Minimum allowed DPI value (None if not specified).
             max_dpi (Optional[int]): Maximum allowed DPI value (None if not specified).
             dpi_list (Optional[List[int]]): List of available DPI values to choose from (None if not specified).
-            rounding (str): Rounding strategy:
-                'nr' - nearest DPI value,
-                'mx' - maximum possible DPI value,
-                'mn' - minimum possible DPI value.
+            rounding (RoundingStrategy | str): Rounding strategy (RoundingStrategy enum or string):
+                RoundingStrategy.NEAREST or 'nr' - nearest DPI value,
+                RoundingStrategy.MAXIMUM or 'mx' - maximum possible DPI value,
+                RoundingStrategy.MINIMUM or 'mn' - minimum possible DPI value.
 
         Returns:
             Tuple[float, int, List[Tuple[int, int]]]: A tuple containing:
@@ -53,8 +54,12 @@ class Calculator:
         if photo_min_side <= 0 or image_min_side <= 0:
             raise ValueError("Photo and image dimensions must be positive")
 
-        if rounding not in ("nr", "mx", "mn"):
-            raise ValueError("Invalid rounding strategy")
+        # Convert string to enum if needed
+        if isinstance(rounding, str):
+            try:
+                rounding = RoundingStrategy.from_string(rounding)
+            except ValueError as e:
+                raise ValueError(str(e))
 
         # Validate min/max constraints
         if min_dpi is not None and max_dpi is not None and min_dpi > max_dpi:
@@ -63,7 +68,7 @@ class Calculator:
         dpi_list = sorted(dpi_list) if dpi_list else []
 
         # Calculate base DPI
-        calculated_dpi = image_min_side / (photo_min_side / self._CM_TO_INCH)
+        calculated_dpi = image_min_side / (photo_min_side / CM_TO_INCH)
         recommended_dpi = calculated_dpi
 
         dpi_options: List[Tuple[int, int]] = []
@@ -79,11 +84,11 @@ class Calculator:
                             recommended_dpi = value
                         else:
                             match rounding:
-                                case "nr":  # nearest
+                                case RoundingStrategy.NEAREST:
                                     recommended_dpi = value if (value - recommended_dpi) <= (recommended_dpi - dpi_list[index-1]) else dpi_list[index-1]
-                                case "mx":  # max
+                                case RoundingStrategy.MAXIMUM:
                                     recommended_dpi = value
-                                case "mn":  # min
+                                case RoundingStrategy.MINIMUM:
                                     recommended_dpi = dpi_list[index-1]
                         break
                 else:
@@ -93,7 +98,7 @@ class Calculator:
 
             # Prepare DPI options
             dpi_options = [
-                (dpi, int(dpi * photo_min_side / self._CM_TO_INCH))
+                (dpi, int(dpi * photo_min_side / CM_TO_INCH))
                 for dpi in dpi_list
             ]
 
