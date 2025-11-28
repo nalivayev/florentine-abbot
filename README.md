@@ -152,7 +152,6 @@ pip install --upgrade .
 
 - Documentation index: [docs/README.md](docs/README.md)
 - File naming guide (EN): [docs/en/naming.md](docs/en/naming.md)
-- Russian documentation index: [docs/README.ru.md](docs/README.ru.md)
 
 ---
 
