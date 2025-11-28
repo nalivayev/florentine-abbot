@@ -148,6 +148,12 @@ pip install -e .
 pip install --upgrade .
 ```
 
+## Документация
+
+- Индекс документации: [docs/README.ru.md](docs/README.ru.md)
+- Руководство по именованию (RU): [docs/ru/naming.md](docs/ru/naming.md)
+- Documentation index (EN): [docs/README.md](docs/README.md)
+
 ---
 
 Для подробностей см. [README.md](README.md) (на английском).
