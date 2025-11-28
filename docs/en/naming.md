@@ -472,7 +472,7 @@ Key points:
 - Use the shooting date from EXIF with the `E` (Exact) modifier
 - Group (`GGG`) and subgroup (`SSS`) values are set manually for each photo series
 - The sequential number starts at `0001` for each new subgroup
-- For digital photos, the `.A` suffix is usually not specified (assumed by default)
+- For digital photos, ALWAYS include the `.A` suffix explicitly for consistency; omitting it is treated as a format error.
 
 Example result:
 `IMG_1234.JPG` → `2024.12.25.15.05.10.E.VAC.ALP.0001.A.jpg`
