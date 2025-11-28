@@ -77,10 +77,10 @@ YYYY.MM.DD.X.GGG.NNN.extension
 
 ### Examples
 ```
-1950.06.15.12.00.00.E.FAM.POR.000001.tiff    # Exact date, family portrait
-1950.00.00.00.00.00.C.FAM.POR.000002.tiff    # Circa 1950
-0000.00.00.00.00.00.A.FAM.POR.000003.tiff    # Date unknown
-1950.06.15.E.FAM.001.tiff                    # Simplified format (no time)
+1950.06.15.12.00.00.E.FAM.POR.000001.A.tiff    # Exact date, family portrait, obverse
+1950.00.00.00.00.00.C.FAM.POR.000002.A.tiff    # Circa 1950, obverse
+0000.00.00.00.00.00.A.FAM.POR.000003.A.tiff    # Date unknown, obverse
+1950.06.15.E.FAM.001.A.tiff                    # Simplified format (no time), obverse
 ```
 
 ---
@@ -108,12 +108,12 @@ Forget the complex format. Your goal is to learn to use 4 key components:
 
 #### Examples to start immediately
 
-- Family portrait, exactly June 15, 1960 → `1960.06.15.E.FAM.001.tiff`
-- Landscape from a trip, circa 1985 → `1985.00.00.C.TRV.001.jpg`
-- A friend's photo, circa August 1975 → `1975.08.00.C.FRD.001.tiff`
-- Wedding, date unknown → `0000.00.00.C.WED.001.tiff`
+- Family portrait, exactly June 15, 1960 → `1960.06.15.E.FAM.001.A.tiff`
+- Landscape from a trip, circa 1985 → `1985.00.00.C.TRV.001.A.jpg`
+- A friend's photo, circa August 1975 → `1975.08.00.C.FRD.001.A.tiff`
+- Wedding, date unknown → `0000.00.00.A.WED.001.A.tiff`
 
-Main rule: START. It's better to name a file `1990.00.00.C.XXX.001.tiff` than to leave `IMG_8547.JPG`.
+Main rule: START. It's better to name a file `1990.00.00.C.XXX.001.A.tiff` than to leave `IMG_8547.JPG`.
 
 ### Category code cheat sheet
 
@@ -145,11 +145,11 @@ For each file determine:
 4. **Number:** Start at `001` for each new category
 
 #### Step 3: Renaming
-Manually rename files using the template `YYYY.MM.DD.X.GGG.001.tiff`
+Manually rename files using the template `YYYY.MM.DD.X.GGG.001.A.tiff`
 
 Example process:
 - Was: `DSC_1234.JPG`
-- Became: `1987.05.00.C.FAM.001.jpg`
+- Became: `1987.05.00.C.FAM.001.A.jpg`
 
 #### Step 4: Fill in metadata (REQUIRED STEP!)
 
@@ -174,10 +174,10 @@ This simplified system is not a dead end. It’s a full-fledged core that you wi
 
 | When you need... | What to add | Example |
 |------------------|------------|---------|
-| More detail | Subgroup (`SSS`) | `1960.06.15.E.FAM.**POR**.001.tiff` |
-| File count exceeded 999 | 6-digit number | `1960.06.15.E.FAM.001.**000001**.tiff` |
-| Photos with exact time appear | Time (`HH.NN.SS`) | `1960.06.15.**14.30.00**.E.FAM.001.tiff` |
-| Complex dating | Other modifiers | `1940.00.00.**B**.FAM.001.tiff` |
+| More detail | Subgroup (`SSS`) | `1960.06.15.E.FAM.**POR**.001.A.tiff` |
+| File count exceeded 999 | 6-digit number | `1960.06.15.E.FAM.001.**000001**.A.tiff` |
+| Photos with exact time appear | Time (`HH.NN.SS`) | `1960.06.15.**14.30.00**.E.FAM.001.A.tiff` |
+| Complex dating | Other modifiers | `1940.00.00.**B**.FAM.001.A.tiff` |
 
 Key advantage: You won’t have to change the names of already created files! You’ll simply start using a longer and more precise format for new photos. All your old files will sort perfectly together with the new ones.
 
@@ -230,19 +230,19 @@ The file name consists of the following components:
 | .tiff | File extension (for archival copies — TIFF without compression). | .tiff or .tif | .tiff |
 
 Full example file name:
-- `1950.06.15.12.00.00.E.FAM.POR.000001.tiff` — exact date (June 15, 1950, 12:00), family portrait, number 000001.
-- `1950.00.00.00.00.00.C.001.101.000002.tiff` — circa 1950, group 001, subgroup 101, number 000002.
+- `1950.06.15.12.00.00.E.FAM.POR.000001.A.tiff` — exact date (June 15, 1950, 12:00), family portrait, number 000001, obverse.
+- `1950.00.00.00.00.00.C.001.101.000002.A.tiff` — circa 1950, group 001, subgroup 101, number 000002, obverse.
 
 ### 2. Date modifier (X)
 The modifier is an uppercase Latin letter indicating the type of date. It provides logical sorting (alphabetical order: A, B, C, E, F), corresponding to the sequence: "unknown" → "before" → "circa" → "exact" → "after".
 
 | Letter | Meaning | Description | Usage example |
 |:-|:-|:-|:-|
-| A | Absent (unknown) | Date completely unknown. Used with a zero date (`0000.00.00.00.00.00`). | `0000.00.00.00.00.00.A.FAM.POR.000001.tiff` — date unknown. |
-| B | Before | Photo was taken before the specified date (e.g., before 1950). Use if the upper bound is known. | `1950.00.00.00.00.00.B.FAM.POR.000002.tiff` — before 1950. |
-| C | Circa | Approximate date (year, month, or day is known with uncertainty, but not exact). Use if the date is not exact and not "before" or "after". | `1950.00.00.00.00.00.C.FAM.POR.000003.tiff` — circa 1950. <br> `1950.06.00.00.00.00.C.001.101.000004.tiff` — circa June 1950. |
-| E | Exact | Exact date (year, month, day, and possibly time are known). Use if the date is confirmed (e.g., written on the photo). | `1950.06.15.12.00.00.E.FAM.POR.000005.tiff` — June 15, 1950, 12:00. |
-| F | aFter | Photo was taken after the specified date (e.g., after 1950). Use if the lower bound is known. | `1950.00.00.00.00.00.F.FAM.POR.000006.tiff` — after 1950. |
+| A | Absent (unknown) | Date completely unknown. Used with a zero date (`0000.00.00.00.00.00`). | `0000.00.00.00.00.00.A.FAM.POR.000001.A.tiff` — date unknown. |
+| B | Before | Photo was taken before the specified date (e.g., before 1950). Use if the upper bound is known. | `1950.00.00.00.00.00.B.FAM.POR.000002.A.tiff` — before 1950. |
+| C | Circa | Approximate date (year, month, or day is known with uncertainty, but not exact). Use if the date is not exact and not "before" or "after". | `1950.00.00.00.00.00.C.FAM.POR.000003.A.tiff` — circa 1950. <br> `1950.06.00.00.00.00.C.001.101.000004.A.tiff` — circa June 1950. |
+| E | Exact | Exact date (year, month, day, and possibly time are known). Use if the date is confirmed (e.g., written on the photo). | `1950.06.15.12.00.00.E.FAM.POR.000005.A.tiff` — June 15, 1950, 12:00. |
+| F | aFter | Photo was taken after the specified date (e.g., after 1950). Use if the lower bound is known. | `1950.00.00.00.00.00.F.FAM.POR.000006.A.tiff` — after 1950. |
 
 Sorting: Files are sorted first by date (`YYYY.MM.DD.HH.NN.SS`), then by letter (`A`, `B`, `C`, `E`, `F`), then by group, and so on, which produces:
 - `0000.00.00.00.00.00.A...` (unknown, at the beginning).
@@ -447,7 +447,7 @@ The main principle: the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and in
 The most common case — absence of time:
 
 - If the shooting time is unknown for ALL photos in the archive, you can agree to omit the `HH.NN.SS` components.
-- Simplified format: `YYYY.MM.DD.X.GGG.SSS.NNNNNN.tiff`
+- Simplified format: `YYYY.MM.DD.X.GGG.SSS.NNNNNN.A.tiff`
 - Example:
   - Full format: `1950.06.15.12.00.00.E.FAM.POR.000001.A.tiff`
   - Simplified format: `1950.06.15.E.FAM.POR.000001.A.tiff`
@@ -555,33 +555,33 @@ Important rule: Folders are created reactively, only when at least one file appe
 ### 3. Practical organization examples
 
 Example 1: Photo with an exact date
-- File: `1945.06.15.12.00.00.E.FAM.POR.000001.MSR.tiff`
-- Path: `.../1945.E/1945.06.15.E/MSR/1945.06.15.12.00.00.E.FAM.POR.000001.MSR.tiff`
+- File: `1945.06.15.12.00.00.E.FAM.POR.000001.A.MSR.tiff`
+- Path: `.../1945.E/1945.06.15.E/MSR/1945.06.15.12.00.00.E.FAM.POR.000001.A.MSR.tiff`
 
 Example 2: Photo with an approximate date (only year known)
-- File: `1930.00.00.00.00.00.C.HIS.000.000005.RAW.tiff`
-- Path: `.../1930.C/1930.00.00.C/RAW/1930.00.00.00.00.00.C.HIS.000.000005.RAW.tiff`
+- File: `1930.00.00.00.00.00.C.HIS.000.000005.A.RAW.tiff`
+- Path: `.../1930.C/1930.00.00.C/RAW/1930.00.00.00.00.00.C.HIS.000.000005.A.RAW.tiff`
 
 Example 3: Photo with an approximate date (year and month known)
-- File: `1955.08.00.00.00.00.C.TRV.LND.000003.WEB.jpg`
-- Path: `.../1955.C/1955.08.00.C/WEB/1955.08.00.00.00.00.C.TRV.LND.000003.WEB.jpg`
+- File: `1955.08.00.00.00.00.C.TRV.LND.000003.A.WEB.jpg`
+- Path: `.../1955.C/1955.08.00.C/WEB/1955.08.00.00.00.00.C.TRV.LND.000003.A.WEB.jpg`
 
 ### 4. Special cases (B, F, unknown dates)
 
 For files with modifiers `B` (Before) and `F` (After), a special folder `0000` is used, because there is no exact year to bind them to.
 
 Example 4: Photo "before 1950"
-- File: `1950.00.00.00.00.00.B.FAM.000.000002.tiff`
-- Path: `.../0000.B/1950.00.00.B/MSR/1950.00.00.00.00.00.B.FAM.000.000002.MSR.tiff`
+- File: `1950.00.00.00.00.00.B.FAM.000.000002.A.tiff`
+- Path: `.../0000.B/1950.00.00.B/MSR/1950.00.00.00.00.00.B.FAM.000.000002.A.MSR.tiff`
 - Logic: All files "before a certain date" are grouped in the `0000.B` folder, inside — by the approximate year.
 
 Example 5: Photo "after 1960"
-- File: `1960.00.00.00.00.00.F.TRV.000.000001.tiff`
-- Path: `.../0000.F/1960.00.00.F/RAW/1960.00.00.00.00.00.F.TRV.000.000001.RAW.tiff`
+- File: `1960.00.00.00.00.00.F.TRV.000.000001.A.tiff`
+- Path: `.../0000.F/1960.00.00.F/RAW/1960.00.00.00.00.00.F.TRV.000.000001.A.RAW.tiff`
 
 Example 6: Photo with completely unknown date
-- File: `0000.00.00.00.00.00.A.UNK.000.000001.tiff`
-- Path: `.../0000.A/0000.00.00.A/MSR/0000.00.00.00.00.00.A.UNK.000.000001.MSR.tiff`
+- File: `0000.00.00.00.00.00.A.UNK.000.000001.A.tiff`
+- Path: `.../0000.A/0000.00.00.A/MSR/0000.00.00.00.00.00.A.UNK.000.000001.A.MSR.tiff`
 
 ### 5. Quick viewing and derivative files
 
@@ -593,7 +593,7 @@ Recommendations for the `VIEW` folder:
 - Long side size — 1600–2400 pixels.
 - The file name should retain the full naming structure but with the `.VIEW.jpg` suffix.
 
-Example: `1945.06.15.12.00.00.E.FAM.POR.000001.VIEW.jpg`
+Example: `1945.06.15.12.00.00.E.FAM.POR.000001.A.VIEW.jpg`
 
 This folder allows opening any day of the archive and quickly viewing all its photos without the need to load heavy Master or RAW files.
 
@@ -643,7 +643,7 @@ Scenario 1: Digitizing a new album
 2. Research and assigning names:
     * Study each photo: determine the date (exact or approximate), choose the group (`GGG`) and subgroup (`SSS`).
     * Assign names to files according to the system from Part 1 using batch renaming.
-    * Example: Source `Album5_001.tiff` → `1968.07.00.00.00.00.C.FAM.VAC.000001.RAW.tiff`
+    * Example: Source `Album5_001.tiff` → `1968.07.00.00.00.00.C.FAM.VAC.000001.A.RAW.tiff`
 
 3. Filling metadata:
     * Open each file in a metadata editor (e.g., Adobe Bridge).
@@ -652,7 +652,7 @@ Scenario 1: Digitizing a new album
 
 4. Organizing into the structure:
     * Using batch tools or a file manager, move files from `INCOMING/` to corresponding folders according to the architecture from Part 2.
-    * Example: `1968.07.00.00.00.00.C.FAM.VAC.000001.RAW.tiff` → `/1968.C/1968.07.00.C/RAW/`
+    * Example: `1968.07.00.00.00.00.C.FAM.VAC.000001.A.RAW.tiff` → `/1968.C/1968.07.00.C/RAW/`
 
 5. Creating derivative copies:
     * From Master copies, create files for WEB, PRT, and VIEW.
@@ -672,7 +672,7 @@ Scenario 2: Batch renaming digital photos
         * Text: `.E.` (modifier for exact date)
         * Text: `[GGG].[SSS].` (set manually for the entire series)
         * Sequential number: Start from `000001`
-    * Result: `IMG_1234.JPG` → `2024.12.25.15.05.10.E.VAC.ALP.000001.jpg`
+    * Result: `IMG_1234.JPG` → `2024.12.25.15.05.10.E.VAC.ALP.000001.A.jpg`
 
 3. Post-processing:
     * Manually verify and adjust names if necessary.
@@ -682,14 +682,14 @@ Scenario 2: Batch renaming digital photos
 Scenario 3: Clarifying a date and batch renaming
 
 1. Discovering new information:
-    * An exact date was found for the photo `1950.00.00.00.00.00.C.FAM.000.000045.tiff` — June 15, 1950.
+    * An exact date was found for the photo `1950.00.00.00.00.00.C.FAM.000.000045.A.tiff` — June 15, 1950.
 
 2. Renaming:
     * Use software that supports batch template-based renaming (e.g., Advanced Renamer, Total Commander).
     * Set a replacement rule:
         * Find: `1950.00.00.00.00.00.C`
         * Replace: `1950.06.15.12.00.00.E` (set time to 12:00:00 if unknown)
-    * Result: `1950.00.00.00.00.00.C.FAM.000.000045.tiff` → `1950.06.15.12.00.00.E.FAM.000.000045.tiff`
+    * Result: `1950.00.00.00.00.00.C.FAM.000.000045.A.tiff` → `1950.06.15.12.00.00.E.FAM.000.000045.A.tiff`
 
 3. Updating metadata and structure:
     * Update the `DateTimeOriginal` field in the file.
