@@ -35,7 +35,7 @@ YYYY.MM.DD.HH.NN.SS.X.GGG.SSS.NNNN.extension
 
 ### Simplified format (without time)
 ```
-YYYY.MM.DD.X.GGG.NNN.extension
+YYYY.MM.DD.X.GGG.NNN.[A|R].extension
 ```
 
 ### Component definitions
@@ -51,6 +51,7 @@ YYYY.MM.DD.X.GGG.NNN.extension
 | GGG | Group | 3 characters (A-Z or 0-9) |
 | SSS | Subgroup | 3 characters (A-Z or 0-9) |
 | NNNN | Sequential number | 4 digits (0001–9999) |
+| A/R | Scan side | 1 letter: A — obverse (front), R — reverse (back) |
 
 ### Date modifiers (X)
 | Letter | Meaning | When to use |
