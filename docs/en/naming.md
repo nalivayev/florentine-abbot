@@ -97,14 +97,17 @@ Without reading the entire guide, learn the basics in 15 minutes and get to work
 
 Forget the complex format. Your goal is to learn to use 4 key components:
 
-#### Basic format: `YYYY.MM.DD.X.GGG.NNN.extension`
+#### Basic format: `YYYY.MM.DD.X.GGG.NNN.A.extension`
 
 | Component | Meaning | Examples |
-|-----------|---------|----------|
+|:-|:-|:-|
 | **YYYY.MM.DD** | Shooting date | `1960.06.15` (exact) <br> `1975.08.00` (year and month known) <br> `1985.00.00` (year only known) |
 | **X** | Date modifier | `E` - exact date <br> `C` - approximate date |
 | **GGG** | Photo category | `FAM` - family <br> `TRV` - travel |
 | **NNN** | Sequential number | `001`, `002`, `003`... |
+| **A** | Scan side | `A` - obverse (front), always `A` for digital photos |
+
+> **Important about obverse and reverse:** For scanned analog photos, use `A` for the front side and `R` for the back (if there are inscriptions, stamps). For digital photos, always use `A`.
 
 #### Examples to start immediately
 
@@ -112,6 +115,7 @@ Forget the complex format. Your goal is to learn to use 4 key components:
 - Landscape from a trip, circa 1985 → `1985.00.00.C.TRV.001.A.jpg`
 - A friend's photo, circa August 1975 → `1975.08.00.C.FRD.001.A.tiff`
 - Wedding, date unknown → `0000.00.00.A.WED.001.A.tiff`
+- Back of an old photo with inscriptions → `1960.06.15.E.FAM.001.R.tiff`
 
 Main rule: START. It's better to name a file `1990.00.00.C.XXX.001.A.tiff` than to leave `IMG_8547.JPG`.
 
@@ -120,7 +124,7 @@ Main rule: START. It's better to name a file `1990.00.00.C.XXX.001.A.tiff` than 
 Create your own codes or use these ready-made ones:
 
 | Code | Meaning | Usage examples |
-|-----|---------|----------------|
+|:-|:-|:-|
 | **FAM** | Family | Family portraits, home events |
 | **TRV** | Travel | Vacation, trips, excursions |
 | **WED** | Wedding | Ceremonies, banquets |
@@ -173,7 +177,7 @@ Congratulations! You’ve just laid the foundation of your future professional a
 This simplified system is not a dead end. It’s a full-fledged core that you will gradually extend as your archive and needs grow.
 
 | When you need... | What to add | Example |
-|------------------|------------|---------|
+|:-|:-|:-|
 | More detail | Subgroup (`SSS`) | `1960.06.15.E.FAM.**POR**.001.A.tiff` |
 | File count exceeded 999 | 4-digit number | `1960.06.15.E.FAM.001.**0001**.A.tiff` |
 | Photos with exact time appear | Time (`HH.NN.SS`) | `1960.06.15.**14.30.00**.E.FAM.001.A.tiff` |
@@ -379,7 +383,7 @@ A file name ensures uniqueness and sorting, but it’s the metadata that carries
 #### Mapping the date modifier to metadata fields
 
 | Modifier | DateTimeOriginal (Example) | Description (Example) |
-| :- | :- | :- |
+|:-|:-|:-|
 | `A` (Absent) | (empty) | `Unknown date. In the photo: graduation party. On the back of the original, the inscription: "In memory of school".` |
 | `B` (Before) | (empty) | `Approximate date: before 1940. Determined by clothing style. In the photo: parents’ wedding.` |
 | `C` (Circa) | (empty) | `Approximate date: circa 1950. Determined by the date on the cinema poster in the background.` |
@@ -394,15 +398,9 @@ A file name ensures uniqueness and sorting, but it’s the metadata that carries
 - Exact date: `1950.06.15.12.00.00.E.FAM.POR.0004.A.tiff` — family portrait, exactly June 15, 1950, 12:00, obverse.
 - After a date: `1960.00.00.00.00.00.F.TRV.LND.0005.A.tiff` — landscape from a trip, after 1960, obverse.
 
-## 10. FADGI Compliance
+### 11. FADGI Compliance
 
 The naming system is designed in accordance with the recommendations of FADGI (Federal Agencies Digital Guidelines Initiative) to ensure the long-term preservation of digital materials.
-
-References to standards and guidelines:
-- FADGI Still Image Working Group: https://www.digitizationguidelines.gov/guidelines/FADGI_Still_Image-Tech_Guidelines_2016.pdf
-- Dublin Core Metadata Initiative: https://www.dublincore.org/specifications/dublin-core/
-- TIFF 6.0 Specification: https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf
-- ExifTool Documentation: https://exiftool.org/
 
 Main principles of compliance:
 
@@ -412,6 +410,8 @@ Main principles of compliance:
 - Logical sorting: The sequence of components ensures correct chronological organization in line with archival principles.
 - Semantic integrity: The file name contains key metadata (event date), which aligns with the principle of content priority over technical attributes.
 - Independence from software: The naming system is not tied to any specific software or operating system.
+
+> **References to standards and guidelines** see **Appendix A**.
 
 ### 12. Recommendations
 
