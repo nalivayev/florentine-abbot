@@ -35,7 +35,7 @@ YYYY.MM.DD.HH.NN.SS.X.GGG.SSS.NNNN.extension
 
 ### Simplified format (without time)
 ```
-YYYY.MM.DD.X.GGG.NNN.[A|R].extension
+YYYY.MM.DD.X.GGG.NNNN.[A|R].extension
 ```
 
 ### Component definitions
@@ -81,7 +81,7 @@ YYYY.MM.DD.X.GGG.NNN.[A|R].extension
 1950.06.15.12.00.00.E.FAM.POR.0001.A.tiff    # Exact date, family portrait, obverse
 1950.00.00.00.00.00.C.FAM.POR.0002.A.tiff    # Circa 1950, obverse
 0000.00.00.00.00.00.A.FAM.POR.0003.A.tiff    # Date unknown, obverse
-1950.06.15.E.FAM.001.A.tiff                    # Simplified format (no time), obverse
+1950.06.15.E.FAM.0001.A.tiff                 # Simplified format (no time), obverse
 ```
 
 ---
@@ -98,25 +98,25 @@ Without reading the entire guide, learn the basics in 15 minutes and get to work
 
 Forget the complex format. Your goal is to learn to use 4 key components:
 
-#### Basic format: `YYYY.MM.DD.X.GGG.NNN.A.extension`
+#### Basic format: `YYYY.MM.DD.X.GGG.NNNN.A.extension`
 
 | Component | Meaning | Examples |
 |:-|:-|:-|
 | **YYYY.MM.DD** | Shooting date | `1960.06.15` (exact) <br> `1975.08.00` (year and month known) <br> `1985.00.00` (year only known) |
 | **X** | Date modifier | `E` - exact date <br> `C` - approximate date |
 | **GGG** | Photo category | `FAM` - family <br> `TRV` - travel |
-| **NNN** | Sequential number | `001`, `002`, `003`... |
+| **NNNN** | Sequential number | `0001`, `0002`, `0003`... |
 | **A** | Scan side | `A` - obverse (front), always `A` for digital photos |
 
 > **Important about obverse and reverse:** For scanned analog photos, use `A` for the front side and `R` for the back (if there are inscriptions, stamps). For digital photos, always use `A`.
 
 #### Examples to start immediately
 
-- Family portrait, exactly June 15, 1960 → `1960.06.15.E.FAM.001.A.tiff`
-- Landscape from a trip, circa 1985 → `1985.00.00.C.TRV.001.A.jpg`
-- A friend's photo, circa August 1975 → `1975.08.00.C.FRD.001.A.tiff`
-- Wedding, date unknown → `0000.00.00.A.WED.001.A.tiff`
-- Back of an old photo with inscriptions → `1960.06.15.E.FAM.001.R.tiff`
+- Family portrait, exactly June 15, 1960 → `1960.06.15.E.FAM.0001.A.tiff`
+- Landscape from a trip, circa 1985 → `1985.00.00.C.TRV.0001.A.jpg`
+- A friend's photo, circa August 1975 → `1975.08.00.C.FRD.0001.A.tiff`
+- Wedding, date unknown → `0000.00.00.A.WED.0001.A.tiff`
+- Back of an old photo with inscriptions → `1960.06.15.E.FAM.0001.R.tiff`
 
 Main rule: START. It's better to name a file `1990.00.00.C.XXX.001.A.tiff` than to leave `IMG_8547.JPG`.
 
