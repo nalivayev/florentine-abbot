@@ -148,6 +148,12 @@ To upgrade an existing installation, use:
 pip install --upgrade .
 ```
 
+## Documentation
+
+- Documentation index: [docs/README.md](docs/README.md)
+- File naming guide (EN): [docs/en/naming.md](docs/en/naming.md)
+- Russian documentation index: [docs/README.ru.md](docs/README.ru.md)
+
 ---
 
 For more details, see the [README.ru.md](README.ru.md) (in Russian).
