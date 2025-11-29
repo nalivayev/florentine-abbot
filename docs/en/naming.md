@@ -24,68 +24,6 @@ What you get by adopting this system:
 
 You can start simple using the rules from the Quick Start in the first part and gradually move to the full format. Going through all three parts of the guide will give you complete control over the archive.
 
----
-
-## Cheat Sheet
-
-### Full filename format
-```
-YYYY.MM.DD.HH.NN.SS.X.GGG.SSS.NNNN.extension
-```
-
-### Simplified format (without time)
-```
-YYYY.MM.DD.X.GGG.NNNN.[A|R].extension
-```
-
-### Component definitions
-| Component | Description | Format |
-|:-|:-|:-|
-| YYYY | Year | 4 digits (or 0000 if unknown) |
-| MM | Month | 2 digits (01–12, or 00) |
-| DD | Day | 2 digits (01–31, or 00) |
-| HH | Hour | 2 digits (00–23) |
-| NN | Minutes | 2 digits (00–59) |
-| SS | Seconds | 2 digits (00–59) |
-| X | Date modifier | 1 letter: Absent, Before, Circa, Exact, aFter |
-| GGG | Group | 3 characters (A-Z or 0-9) |
-| SSS | Subgroup | 3 characters (A-Z or 0-9) |
-| NNNN | Sequential number | 4 digits (0001–9999) |
-| A/R | Scan side | 1 letter: A — obverse (front), R — reverse (back) |
-
-### Date modifiers (X)
-| Letter | Meaning | When to use |
-|:-|:-|:-|
-| **A** | Absent | Date completely unknown (`0000.00.00.00.00.00.A`) |
-| **B** | Before | Before the specified date (e.g., before 1950) |
-| **C** | Circa | Approximate date (around the specified year/month) |
-| **E** | Exact | Exact date (all components known) |
-| **F** | aFter | After the specified date |
-
-### Version suffixes
-- `.RAW.tiff` — raw scan
-- `.MSR.tiff` — Master copy (minimally processed)
-- `.WEB.jpg` — for the web (72 dpi, 80% compression)
-- `.PRT.jpg` — for print (300 dpi, no compression)
-- `.VIEW.jpg` — for quick viewing
-
-### Required metadata fields
-1. **Description** — everything known about the photo (who, what, where, when, source)
-2. **DateTimeOriginal** — filled only for modifier **E** (format: `YYYY:MM:DD HH:NN:SS`)
-3. **Copyright** — archive rights holder
-4. **Creator** — who created the digital copy
-5. **Artist** — author of the original (if known)
-
-### Examples
-```
-1950.06.15.12.00.00.E.FAM.POR.0001.A.tiff    # Exact date, family portrait, obverse
-1950.00.00.00.00.00.C.FAM.POR.0002.A.tiff    # Circa 1950, obverse
-0000.00.00.00.00.00.A.FAM.POR.0003.A.tiff    # Date unknown, obverse
-1950.06.15.E.FAM.0001.A.tiff                 # Simplified format (no time), obverse
-```
-
----
-
 ## Part 0. Quick Start
 
 ### Purpose of this chapter
