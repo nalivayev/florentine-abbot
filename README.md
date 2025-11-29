@@ -5,6 +5,16 @@
 
 A utility designed to automate and optimize the scanning workflow using [VueScan](https://www.hamrick.com) by Ed Hamrick.
 
+## Why this matters
+
+VueScan is powerful, but its flexibility becomes a liability at scale. Hundreds of settings scattered across different tabs are easy to change by accident or forget to set correctly.
+
+I addressed this by using canonical INI profiles, which provide:
+- **Predictability** — the same settings for every scan
+- **Reproducibility** — the ability to repeat the process exactly, even much later
+- **Standardization** — a single workflow for everyone on the project
+- **Automation** — fewer manual steps and less risk of human error
+
 ## Features
 
 - **Automatic calculation of optimal scanning DPI** based on photo and output requirements.
