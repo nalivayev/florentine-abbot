@@ -524,6 +524,46 @@ Answer: Yes, this decision has deep practical justifications that go far beyond 
 
 Conclusion: The choice between uppercase and lowercase Latin letters is not just an aesthetic preference. Using UPPERCASE Latin letters is a conservative, time-tested, and safest choice for archival storage. It ensures continuity with existing professional practices, maximum human readability, unprecedented technical reliability, and global compatibility. While using lowercase letters is technically possible for consistency, it offers no substantial benefits but deprives the archive of the above critically important advantages for its longevity. It’s an investment in the future clarity and preservation of digital heritage.
 
+Question 6: How should I choose Group (`GGG`) and Subgroup (`SSS`) codes so they remain robust and useful?
+
+Answer: Use simple, stable, and scalable rules so codes don’t require revision as the archive grows and remain understandable years later.
+
+Practical recommendations:
+
+1. Family → Type
+    - `GGG` reflects a broad theme or collection ("where to file").
+    - `SSS` refines the type within the theme ("what exactly").
+    - Examples: `FAM.POR` (family → portrait), `TRV.LND` (travel → landscape), `EVT.GRP` (event → group photo).
+
+2. Uppercase Latin letters or digits
+    - Only `A-Z` and `0-9`, fixed length of 3 characters.
+    - For numeric series use leading zeros: `001`, `002`, … `101`, `102`.
+
+3. Stable code dictionaries
+    - Compile a short list of allowed codes and keep it at the archive root (see section 7.4 “Document group codes”).
+    - Example dictionary: `FAM, TRV, WED, HIS, DOC` for `GGG`; `POR, LND, GRP, EVT, TXT` for `SSS`.
+
+4. Context matters
+    - If the archive grows around albums/boxes — numeric `GGG.SSS` is convenient: `001.101` (album 1, series 101).
+    - If the archive is thematic — letter codes are convenient: `FAM.POR`, `TRV.LND`.
+
+5. Independence from folder names
+    - Codes in the file name must remain correct even when moved to another folder. Don’t tie `GGG.SSS` to the current physical structure.
+
+6. Avoid frequent renames
+    - Don’t use overly specific codes that will need to change when the archive is rethought.
+    - Prefer broader `GGG` with more detailed `SSS` rather than making both overly narrow.
+
+Mini‑cheatsheet:
+
+- Family album: `FAM.POR`, `FAM.GRP`, `FAM.EVT`
+- Travel: `TRV.LND`, `TRV.GRP`, `TRV.CIT`
+- Documents: `DOC.TXT`, `DOC.CRD` (cards), `DOC.LET` (letters)
+- Album/series: `001.101`, `001.102`, `002.001`
+- Event/photographer: `023.007` — where `023` is the event/occasion number (e.g., family gathering #23), and `007` is the photographer identifier within the archive.
+
+This approach is compatible with the sorting and clarity requirements described in Part 1 (sections 4 and 5) and scales without breaking the logic.
+
 ### 14. Summary
 
 This naming system (`YYYY.MM.DD.HH.NN.SS.[A|B|C|E|F].GGG.SSS.NNNN.[A|R].SUF.EXT`) provides logical sorting (`A`, `B`, `C`, `E`, `F`) corresponding to the sequence: unknown → before → circa → exact → after. Groups and subgroups, highlighted in separate sections, can be letter-based (e.g., `FAM.POR`) or numeric (e.g., `001.101`), adding flexibility for large archives or automation.
