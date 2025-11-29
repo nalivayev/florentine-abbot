@@ -7,13 +7,14 @@ A utility designed to automate and optimize the scanning workflow using [VueScan
 
 ## Why this matters
 
-VueScan is powerful, but its flexibility becomes a liability at scale. Hundreds of settings scattered across different tabs are easy to change by accident or forget to set correctly.
+VueScan is powerful, but its flexibility becomes a liability at scale: hundreds of settings across different tabs are easy to change by accident or miss.
 
-I addressed this by using canonical INI profiles, which provide:
+Florentine Abbot addresses this with canonical INI profiles and a scripted workflow that deliver:
 - **Predictability** — the same settings for every scan
-- **Reproducibility** — the ability to repeat the process exactly, even much later
-- **Standardization** — a single workflow for everyone on the project
-- **Automation** — fewer manual steps and less risk of human error
+- **Reproducibility** — the ability to repeat the process exactly, even months later
+- **Standardization** — a single workflow shared by the team
+- **Automation** — fewer manual steps and less chance of human error
+
 
 ## Features
 
