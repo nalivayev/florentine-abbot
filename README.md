@@ -5,7 +5,7 @@
 
 A utility designed to automate and optimize the scanning workflow using [VueScan](https://www.hamrick.com) by Ed Hamrick.
 
-## Why this matters
+## Why this matters 
 
 VueScan is powerful, but its flexibility becomes a liability at scale: hundreds of settings across different tabs are easy to change by accident or miss.
 
