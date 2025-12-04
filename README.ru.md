@@ -84,6 +84,12 @@ scan-batcher --workflow <путь_к_ini> --engine vuescan --batch scan --min-dp
 
 Программа **интерактивно запросит** у вас размеры фотографии и изображения во время выполнения.
 
+В Windows PowerShell синтаксис тот же. Если значения содержат пробелы — используйте кавычки:
+
+```powershell
+scan-batcher --workflow .\examples\workflow.ini --batch scan --dpis 300 600 1200 2400 --templates author="John Doe" project="Family Archive"
+```
+
 Для получения полного списка аргументов и опций используйте:
 
 ```sh
@@ -110,17 +116,35 @@ scan-batcher --workflow examples/workflow.ini --batch scan --dpis 300 600 1200 2
 ```
 *Программа запросит у вас размеры фотографии в интерактивном режиме.*
 
+PowerShell:
+
+```powershell
+scan-batcher --workflow .\examples\workflow.ini --batch scan --dpis 300 600 1200 2400
+```
+
 ### Одиночный расчёт DPI (режим calculate)
 ```sh
 scan-batcher --workflow examples/workflow.ini --batch calculate --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800 --rounding nr
 ```
 *Программа запросит размеры фотографии и изображения, затем завершится после одного расчёта.*
 
+PowerShell:
+
+```powershell
+scan-batcher --workflow .\examples\workflow.ini --batch calculate --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800 --rounding nr
+```
+
 ### Обработка файлов из папки
 ```sh
 scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/files --templates author="John Doe" project="Family Archive"
 ```
 *Обработка существующих файлов без интерактивного ввода.*
+
+PowerShell:
+
+```powershell
+scan-batcher --workflow .\examples\workflow.ini --batch process C:\path\to\scanned\files --templates author="John Doe" project="Family Archive"
+```
 
 ## Логирование
 
@@ -129,7 +153,7 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 ## Установка
 
 ### Требования
-- Python 3.8 или выше
+- Python 3.10 или выше
 - Программа VueScan (для операций сканирования)
 
 ### Установка из исходного кода
