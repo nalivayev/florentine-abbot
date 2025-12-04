@@ -82,13 +82,13 @@ Run the main workflow:
 scan-batcher --workflow <path_to_ini> --engine vuescan --batch scan --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800
 ```
 
+The program will **interactively prompt** you for the photo and image dimensions during execution.
+
 On Windows PowerShell, the syntax is the same. For values with spaces, use quotes:
 
 ```powershell
 scan-batcher --workflow .\examples\workflow.ini --batch scan --dpis 300 600 1200 2400 --templates author="John Doe" project="Family Archive"
 ```
-
-The program will **interactively prompt** you for the photo and image dimensions during execution.
 
 For a full list of arguments and options, use:
 
@@ -114,6 +114,7 @@ scan-batcher --help
 ```sh
 scan-batcher --workflow examples/workflow.ini --batch scan --dpis 300 600 1200 2400
 ```
+*The program will prompt you for photo dimensions interactively.*
 
 PowerShell:
 
@@ -125,6 +126,7 @@ scan-batcher --workflow .\examples\workflow.ini --batch scan --dpis 300 600 1200
 ```sh
 scan-batcher --workflow examples/workflow.ini --batch calculate --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800 --rounding nr
 ```
+*The program will prompt for photo and image dimensions, then exit after one calculation.*
 
 PowerShell:
 
@@ -136,6 +138,7 @@ scan-batcher --workflow .\examples\workflow.ini --batch calculate --min-dpi 300 
 ```sh
 scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/files --templates author="John Doe" project="Family Archive"
 ```
+*Process existing files without interactive input.*
 
 PowerShell:
 
