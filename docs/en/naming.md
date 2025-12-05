@@ -54,7 +54,7 @@ Without reading the entire guide, quickly learn the basic principles and get sta
 - Wedding, date unknown → `0000.00.00.A.WED.0001.A.tiff`
 - Back of an old photo with inscriptions → `1960.06.15.E.FAM.0001.R.tiff`
 
-**Main rule: START.** It's better to name a file `1990.00.00.C.XXX.001.A.tiff` than to leave `IMG_8547.JPG`.
+**Main rule: START.** It's better to name a file `1990.00.00.C.XXX.0001.A.tiff` than to leave `IMG_8547.JPG`.
 
 ### Category code cheat sheet
 
@@ -83,14 +83,14 @@ For each file determine:
 1. **Date:** What is known? Year? Month? Day?
 2. **Modifier:** Is it exact (`E`) or approximate (`C`)?
 3. **Category:** Which theme does it belong to?
-4. **Number:** Start at `001` for each new category
+4. **Number:** Start at `0001` for each new category
 
 #### Step 3: Renaming
-Manually rename files using the template `YYYY.MM.DD.X.GGG.001.A.tiff`
+Manually rename files using the template `YYYY.MM.DD.X.GGG.0001.A.tiff`
 
 **Example process:**
 - Was: `DSC_1234.JPG`
-- Became: `1987.05.00.C.FAM.001.A.jpg`
+- Became: `1987.05.00.C.FAM.0001.A.jpg`
 
 #### Step 4: Fill in metadata (REQUIRED STEP!)
 
@@ -115,10 +115,9 @@ This simplified system is not a dead end. It’s a full-fledged core that you wi
 
 | When you need... | What to add | Example |
 |:-|:-|:-|
-| More detail | Subgroup (`SSS`) | `1960.06.15.E.FAM.**POR**.001.A.tiff` |
-| File count exceeded 999 | 4-digit number | `1960.06.15.E.FAM.001.**0001**.A.tiff` |
-| Photos with exact time appear | Time (`HH.NN.SS`) | `1960.06.15.**14.30.00**.E.FAM.001.A.tiff` |
-| Complex dating | Other modifiers | `1940.00.00.**B**.FAM.001.A.tiff` |
+| More detail | Subgroup (`SSS`) | `1960.06.15.E.FAM.**POR**.0001.A.tiff` |
+| Photos with exact time appear | Time (`HH.NN.SS`) | `1960.06.15.**14.30.00**.E.FAM.0001.A.tiff` |
+| Complex dating | Other modifiers | `1940.00.00.**B**.FAM.0001.A.tiff` |
 
 **Key advantage:** You won't have to change the names of already created files! You'll simply start using a longer and more precise format for *new* photos. All your old files will sort perfectly together with the new ones.
 
@@ -202,7 +201,7 @@ The modifier is an uppercase Latin letter indicating the type of date. It provid
 - Updating the date: If the date is specified more precisely (e.g., from `1950.00.00.00.00.00.C` to `1950.06.15.12.00.00.E`), rename the file and update the metadata.
 
 #### Rules for time (HH.NN.SS)
-- **Known time:** Use real values (e.g., `12.30.15`).
+- **Known time:** Use real values (e.g., `12.30.15`) if known (e.g., imprinted on the photo by the camera or recorded in diaries).
 - **Unknown time in the file name:** **Always use `00.00.00`.** This ensures uniformity and indicates that the exact time is unknown.
 - **Conditional time in metadata:** In the `DateTimeOriginal` field for exact dates (`E`) with unknown time, set `12:00:00`. For non-exact dates (`A`, `B`, `C`, `F`), leave the field empty.
 
@@ -294,7 +293,7 @@ A file name ensures uniqueness and sorting, but it’s the metadata that carries
     * This is the most important field. Enter all known information here:
         * **Who is depicted:** Names of people, their family relationships (e.g., "Ivan Petrov (grandfather), Maria Petrova (grandmother). Sitting on a bench in the garden at 10 Lenin St.").
         * **What is happening:** Event, holiday (e.g., "Celebrating a silver wedding").
-        * **Origin of the photo:** Information source (e.g., "Inscription on the back of the original", "From Aunt Anna's words", "Determined by the model of the car in the background").
+        * **Origin of the photo:** Information source (e.g., "Inscription on the back of the original", "Date imprinted on photo (Quartz Date)", "From Aunt Anna's words", "Determined by the model of the car in the background").
         * **History of changes:** (e.g., "Date clarified on 2024-01-12 from circa 1950 to exact 1950-06-15 based on an album found with dates").
         * **Link to other files:** For the obverse, indicate the existence of a reverse (e.g., "Inscriptions on the back: see file 1950.06.15.E.FAM.POR.0001.R.MSR.tiff").
 
@@ -400,7 +399,14 @@ The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and 
 
 **Conclusion:** Simplifying the format is possible, but should be approached **very** carefully. The full format is the most reliable and consistent with FADGI best practices, as it is sufficiently universal.
 
-**Question 3:** How to batch-rename modern digital photos using the date from EXIF?  
+**Question 3:** Why not remove the time from the file name by default? After all, for old photos it is almost always `00.00.00`, and this would shorten the name.
+
+**Answer:** This seems logical for archives from the 19th or early 20th century, but for later periods it creates problems.
+1. **Cameras with date imprinting (Quartz Date):** In the 1980s-2000s, cameras that imprinted the exact shooting time directly into the frame were very popular. For such shots, time is part of the exact date (`E`), and preserving it is critical for chronology.
+2. **Digital photos:** Modern archives are mixed. A folder might contain a film scan from 1995 and a digital photo from 2005. Digital photos always have time. A unified `HH.NN.SS` standard allows storing them together without discrepancies in file names.
+3. **Event chronology:** Even if the time is not imprinted, the order of events within a single day is often known (wedding: ransom, registry office, walk, banquet). Using conditional time (10.00.00, 11.00.00) allows arranging files in the correct order when sorting by name.
+
+**Question 4:** How to batch-rename modern digital photos using the date from EXIF?  
 
 **Answer:** The batch renaming process is easily automated with batch renaming software.
 
@@ -415,7 +421,7 @@ The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and 
 
 **Detailed instructions for software and step-by-step scenarios** are in **Part 3. Archive Operation in Practice**.
 
-**Question 4:** Why not use the standard ISO 8601 date/time format (e.g., `2025-01-15T12:00:00`) instead of components separated by dots (`2025.01.15.12.00.00`)?
+**Question 5:** Why not use the standard ISO 8601 date/time format (e.g., `2025-01-15T12:00:00`) instead of components separated by dots (`2025.01.15.12.00.00`)?
 
 **Answer:** This is a very logical question, but replacing it with ISO 8601 within this naming system is undesirable for several fundamental reasons related to archival integrity, ease of processing, and the system's philosophy.
 
@@ -438,7 +444,7 @@ The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and 
 
 Conclusion: Using dot-separated components is not a drawback but a deliberate architectural feature. It provides straightforward sorting, seamless handling of incomplete dates, and maximum compatibility, doing its narrow job better than ISO 8601 would as a file name.
 
-**Question 5:** Why must codes use UPPERCASE Latin letters rather than lowercase or Cyrillic? Are there practical reasons beyond consistency?
+**Question 6:** Why must codes use UPPERCASE Latin letters rather than lowercase or Cyrillic? Are there practical reasons beyond consistency?
 
 **Answer:** Yes, this decision has deep practical justifications that go far beyond mere uniformity. Choosing UPPERCASE Latin letters is strategic for long-term archival preservation and is based on several key principles.
 
@@ -460,7 +466,7 @@ Conclusion: Using dot-separated components is not a drawback but a deliberate ar
 
 Conclusion: The choice between uppercase and lowercase Latin letters is not just an aesthetic preference. Using UPPERCASE Latin letters is a conservative, time-tested, and safest choice for archival storage. It ensures continuity with existing professional practices, maximum human readability, unprecedented technical reliability, and global compatibility. While using lowercase letters is technically possible for consistency, it offers no substantial benefits but deprives the archive of the above critically important advantages for its longevity. It’s an investment in the future clarity and preservation of digital heritage.
 
-**Question 6:** How should I choose Group (`GGG`) and Subgroup (`SSS`) codes so they remain robust and useful?
+**Question 7:** How should I choose Group (`GGG`) and Subgroup (`SSS`) codes so they remain robust and useful?
 
 **Answer:** Use simple, stable, and scalable rules so codes don't require revision as the archive grows and remain understandable years later.
 
