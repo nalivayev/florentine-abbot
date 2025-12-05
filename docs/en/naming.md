@@ -1,9 +1,9 @@
-# Systematizing the Storage of Digital Photographs in a Personal Archive
+# Rules for the Storage of Digital Photographs in a Personal Archive
 
 ## Contents
 - **Introduction**
 - **Part 0: Quick Start**
-- **Part 1: File Naming System**
+- **Part 1: File Naming Rules**
 - **Part 2: Storage Architecture**
 - **Part 3: Archive Operation in Practice**
 
@@ -11,11 +11,11 @@
 
 ## Introduction
 
-Imagine you're looking for a particular family photograph taken sometime in the 1980s. Instead of scrolling through thousands of files with meaningless names like `IMG_1234.JPG` or `Scan001.tiff`, you simply open the folder "1980.C" and find the needed photo within minutes.
+Storing photos haphazardly with names like `IMG_1234.JPG` or `Scan001.tiff` makes an archive practically useless. Finding a specific shot is difficult, and the context of the photo — the date and event — is forgotten over time.
 
-The goal of this guide is to achieve exactly that result and turn your collection of digital photographs into a thoughtful, convenient, and long-lasting archive.
+This guide describes naming and organization rules that turn chaos into an ordered structure. The goal of these rules is to make the archive understandable, easy to search, and durable, so that it remains accessible even decades from now.
 
-**What you get by adopting this system:**
+**What you get by following these rules:**
 
 *   **Order:** You'll never lose a photo in a pile of files again.
 *   **Accessibility:** Fast and logical search by dates and categories.
@@ -30,7 +30,7 @@ You can start simple using the rules from the **"Quick Start"**, and gradually m
 
 ### Purpose of this chapter
 
-Without reading the entire guide, quickly learn the basic principles and get started. You'll get a working system that you can later refine.
+Without reading the entire guide, quickly learn the basic principles and get started. You'll get a working approach that you can later refine.
 
 ### Getting started
 
@@ -109,9 +109,9 @@ This is even more important than the perfect name! Right-click the file → Prop
 
 **Congratulations! You've just laid the foundation of your future professional archive.**
 
-### What’s next? How the system will grow with you
+### What’s next? How the archive structure will grow with you
 
-This simplified system is not a dead end. It’s a full-fledged core that you will gradually extend as your archive and needs grow.
+This simplified approach is not a dead end. It’s a full-fledged core that you will gradually extend as your archive and needs grow.
 
 | When you need... | What to add | Example |
 |:-|:-|:-|
@@ -138,14 +138,14 @@ This simplified system is not a dead end. It’s a full-fledged core that you wi
 ---
 
 > **Tips:** 
-- Try applying the instructions to a few files; this will give you more understanding than just reading the recommendations.
-- If you're ready, study the full naming system in Part 1: working with file versions, automation, and professional storage structure.
+- try applying the instructions to a few files; this will give you more understanding than just reading the recommendations.
+- if you're ready, study the full naming rules in Part 1: working with file versions, automation, and professional storage structure.
 
 ---
 
-## Part 1. File Naming System
+## Part 1. File Naming Rules
 
-This guide describes a file naming system for photographs in a digital archive. The system is designed to ensure uniqueness, readability, logical sorting, and long-term preservation in accordance with FADGI (Federal Agencies Digital Guidelines Initiative) recommendations. It is suitable for images of any origin: digitized paper photographs (both black-and-white and color), as well as digital photographs.
+This guide describes file naming rules for photographs in a digital archive. The rules are designed to ensure uniqueness, readability, logical sorting, and long-term preservation in accordance with FADGI (Federal Agencies Digital Guidelines Initiative) recommendations. It is suitable for images of any origin: digitized paper photographs (both black-and-white and color), as well as digital photographs.
 
 File name format: `YYYY.MM.DD.HH.NN.SS.X.GGG.SSS.NNNN.tiff`, where:
 - Used for all file versions (RAW, master copy, derivatives) with suffixes (e.g., `.RAW.tiff`, `.MSR.tiff`).
@@ -336,7 +336,7 @@ A file name ensures uniqueness and sorting, but it’s the metadata that carries
 
 ### 11. FADGI Compliance
 
-The naming system is designed in accordance with the recommendations of FADGI (Federal Agencies Digital Guidelines Initiative) to ensure the long-term preservation of digital materials.
+The naming rules are designed in accordance with the recommendations of FADGI (Federal Agencies Digital Guidelines Initiative) to ensure the long-term preservation of digital materials.
 
 **Main principles of compliance:**
 
@@ -345,7 +345,7 @@ The naming system is designed in accordance with the recommendations of FADGI (F
 - **Readability:** The structured format is intuitive for both humans and automated systems.
 - **Logical sorting:** The sequence of components ensures correct chronological organization in line with archival principles.
 - **Semantic integrity:** The file name contains key metadata (event date), which aligns with the principle of content priority over technical attributes.
-- **Independence from software:** The naming system is not tied to any specific software or operating system.
+- **Independence from software:** The naming rules are not tied to any specific software or operating system.
 
 > **References to standards and guidelines** see **Appendix A**.
 
@@ -378,9 +378,9 @@ The naming system is designed in accordance with the recommendations of FADGI (F
 
 **Question 2:** The file name becomes very long. Can it be shortened? 
 
-**Answer:** Yes, the system allows reasonable simplification to improve usability, **if it does not violate uniqueness and sorting logic**.
+**Answer:** Yes, the rules allow reasonable simplification to improve usability, **if it does not violate uniqueness and sorting logic**.
 
-The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and in some cases four (`YYYY.MM.DD.X`), are the foundation for sorting and must retain their structure.** If a date part is **totally absent** throughout the entire archive, you can omit it at the level of the **entire** system.
+The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and in some cases four (`YYYY.MM.DD.X`), are the foundation for sorting and must retain their structure.** If a date part is **totally absent** throughout the entire archive, you can omit it at the level of the **entire archive**.
 
 **The most common case — absence of time:**
 
@@ -423,13 +423,13 @@ The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and 
 
 **Question 5:** Why not use the standard ISO 8601 date/time format (e.g., `2025-01-15T12:00:00`) instead of components separated by dots (`2025.01.15.12.00.00`)?
 
-**Answer:** This is a very logical question, but replacing it with ISO 8601 within this naming system is undesirable for several fundamental reasons related to archival integrity, ease of processing, and the system's philosophy.
+**Answer:** This is a very logical question, but replacing it with ISO 8601 within these naming rules is undesirable for several fundamental reasons related to archival integrity, ease of processing, and the approach's philosophy.
 
 1. Philosophy of “components,” not a “single date”.
-   The key idea of the system is not recording a single date-time value, but creating a set of separate, lexicographically sortable components. The dot (`.`) is an ideal separator for file systems, providing clear visual and machine separation of fields. This allows working independently with year, month, day, etc., as separate entities, which is critical for partially specified dates.
+   The key idea of the approach is not recording a single date-time value, but creating a set of separate, lexicographically sortable components. The dot (`.`) is an ideal separator for file systems, providing clear visual and machine separation of fields. This allows working independently with year, month, day, etc., as separate entities, which is critical for partially specified dates.
 
 2. Elegant handling of unknown values.
-   The system allows indicating unknown parts of the date with sequences of zeros (`00`). The format `1950.00.00.00.00.00.C` is intuitive and easily sorted: all photos “circa 1950” will be grouped together. ISO 8601 has no standard way to denote “unknown month” or “unknown day.” Attempts to do so (e.g., `1950-00-00T00:00:00`) often lead to errors in date parsers and violate the standard, since `00` for month and day is not valid.
+   The approach allows indicating unknown parts of the date with sequences of zeros (`00`). The format `1950.00.00.00.00.00.C` is intuitive and easily sorted: all photos “circa 1950” will be grouped together. ISO 8601 has no standard way to denote “unknown month” or “unknown day.” Attempts to do so (e.g., `1950-00-00T00:00:00`) often lead to errors in date parsers and violate the standard, since `00` for month and day is not valid.
 
 3. Trouble-free sorting in any environment.
    File names formed as `YYYY.MM.DD.HH.NN.SS` are guaranteed to be sorted in correct chronological order in any file manager (Windows Explorer, macOS Finder, ls in Linux) without any special software. ISO 8601 also sorts well, but using it in a file name, especially with the `T` character (e.g., `2025-01-15T12:00:00`), can cause inconveniences:
@@ -440,7 +440,7 @@ The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and 
    The dot-separated format is more “flat” and universal. It doesn’t overload the file name with technical characters like `T` and `:`, which serve a service function in ISO but are redundant in a file name where structure is already set by the component’s position. This makes the file name slightly more compact and easier for a human to skim in a list.
 
 5. Separation of responsibilities: file name vs. metadata.
-   It’s important to remember that the main task of the file name in this system is to ensure uniqueness and logical sorting. The full, standardized representation of date and time should be stored in the appropriate metadata fields (e.g., `DateTimeOriginal`), where ISO 8601 is ideal and widely supported. Thus, the system gets the best of both worlds: a simple and reliable name for sorting and a strict standard in metadata.
+   It’s important to remember that the main task of the file name in these rules is to ensure uniqueness and logical sorting. The full, standardized representation of date and time should be stored in the appropriate metadata fields (e.g., `DateTimeOriginal`), where ISO 8601 is ideal and widely supported. Thus, the approach gets the best of both worlds: a simple and reliable name for sorting and a strict standard in metadata.
 
 Conclusion: Using dot-separated components is not a drawback but a deliberate architectural feature. It provides straightforward sorting, seamless handling of incomplete dates, and maximum compatibility, doing its narrow job better than ISO 8601 would as a file name.
 
@@ -508,7 +508,7 @@ This approach is compatible with the sorting and clarity requirements described 
 
 ### 14. Summary
 
-This naming system (`YYYY.MM.DD.HH.NN.SS.[A|B|C|E|F].GGG.SSS.NNNN.[A|R].SUF.EXT`) provides logical sorting (`A`, `B`, `C`, `E`, `F`) corresponding to the sequence: unknown → before → circa → exact → after. Groups and subgroups, highlighted in separate sections, can be letter-based (e.g., `FAM.POR`) or numeric (e.g., `001.101`), adding flexibility for large archives or automation.
+These naming rules (`YYYY.MM.DD.HH.NN.SS.[A|B|C|E|F].GGG.SSS.NNNN.[A|R].SUF.EXT`) provide logical sorting (`A`, `B`, `C`, `E`, `F`) corresponding to the sequence: unknown → before → circa → exact → after. Groups and subgroups, highlighted in separate sections, can be letter-based (e.g., `FAM.POR`) or numeric (e.g., `001.101`), adding flexibility for large archives or automation.
 
 ---
 
@@ -516,9 +516,9 @@ This naming system (`YYYY.MM.DD.HH.NN.SS.[A|B|C|E|F].GGG.SSS.NNNN.[A|R].SUF.EXT`
 
 ### 1. Philosophy: from file to structure
 
-The naming system described in Part 1 is the core of the archive. It ensures uniqueness and logical order at the level of individual files. The storage architecture is the overlay that organizes these files into an intuitive directory hierarchy for easy navigation, management, and manual browsing.
+The naming rules described in Part 1 are the core of the archive. It ensures uniqueness and logical order at the level of individual files. The storage architecture is the overlay that organizes these files into an intuitive directory hierarchy for easy navigation, management, and manual browsing.
 
-**Key principle:** The directory structure **mirrors the file naming system**, creating a direct and predictable link between the file name and its place in the archive. This allows working with the archive without specialized software, using only a file manager.
+**Key principle:** The directory structure **mirrors the file naming rules**, creating a direct and predictable link between the file name and its place in the archive. This allows working with the archive without specialized software, using only a file manager.
 
 ### 2. Recommended directory hierarchy
 
@@ -610,7 +610,7 @@ Answer: This structure is optimized for chronological navigation. For thematic s
 
 Question 3: Can this structure be used for other types of media, such as scanned documents?
 
-Answer: Yes, the system is universal. For documents, define appropriate groups (`DOC` — documents, `LET` — letters, `NEW` — newspapers) and apply the same naming and organization principles based on the document’s creation date.
+Answer: Yes, the approach is universal. For documents, define appropriate groups (`DOC` — documents, `LET` — letters, `NEW` — newspapers) and apply the same naming and organization principles based on the document’s creation date.
 
 ---
 
@@ -627,7 +627,7 @@ Answer: Yes, the system is universal. For documents, define appropriate groups (
 
 2.  **Research and assigning names:**
     *   Study each photo: determine the date (exact or approximate), choose the group (`GGG`) and subgroup (`SSS`).
-    *   Assign names to files according to the system from Part 1 using batch renaming.
+    *   Assign names to files according to the rules from Part 1 using batch renaming.
     *   **Example:** Source `Album5_001.tiff` → `1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff`
 
 3. Filling metadata:
@@ -740,12 +740,12 @@ exiftool -d "%Y.%m.%d.%H.%M.%S" '-filename<${DateTimeOriginal}.E.${Model;tr/ /_/
 
 ### 4. Conclusion. Your archive as historical heritage
 
-An archive created according to this system is not just a collection of files. It is a **structured digital heritage** with several key properties:
+An archive created according to these rules is not just a collection of files. It is a **structured digital heritage** with several key properties:
 
 *   **Durability:** Standardized names and structure will be clear even 50 years from now.
 *   **Independence:** The archive is not tied to specific software and can be read on any operating system.
 *   **Context:** Rich metadata preserves the history of each photo for future generations.
-*   **Scalability:** The system will work for 100 photos and for 100,000 photos.
+*   **Scalability:** The rules will work for 100 photos and for 100,000 photos.
 
 Starting small — with the proper naming of a few files — you lay the foundation for a professional archival fund whose value will only increase over time.
 
