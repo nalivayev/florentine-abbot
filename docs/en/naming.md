@@ -13,16 +13,16 @@
 
 Imagine you're looking for a particular family photograph taken sometime in the 1980s. Instead of scrolling through thousands of files with meaningless names like `IMG_1234.JPG` or `Scan001.tiff`, you simply open the folder "1980.C" and find the needed photo within minutes.
 
-This guide helps you achieve exactly that result. We're not just suggesting you "rename files." We offer a **philosophy and a ready-made system** to turn your collection of digital photographs into a thoughtful, convenient, and long-lasting archive.
+The goal of this guide is to achieve exactly that result and turn your collection of digital photographs into a thoughtful, convenient, and long-lasting archive.
 
 **What you get by adopting this system:**
 
 *   **Order:** You'll never lose a photo in a pile of files again.
 *   **Accessibility:** Fast and logical search by dates and categories.
-*   **Preservation:** The context of each photo (who, what, where, when) is safely preserved not only in your memory but also in the file's metadata.
-*   **Continuity:** The archive will likely remain understandable—to you and to software—in 20, 30, or even 50 years.
+*   **Preservation:** The context of each photo (who, what, where, when) will be known not only to you, but also preserved in the file's metadata.
+*   **Continuity:** The archive will likely remain understandable even in 20, 30, or 50 years.
 
-You can start simple using the rules from the **"Quick Start"** in the first part and gradually move to the full format. Going through all three parts of the guide will give you complete control over the archive.
+You can start simple using the rules from the **"Quick Start"**, and gradually move to the full format. After reading all three parts of the guide, you will have a complete understanding.
 
 ---
 
