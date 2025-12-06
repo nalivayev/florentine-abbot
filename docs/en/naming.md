@@ -6,6 +6,7 @@
 - **Part 1: File Naming Rules**
 - **Part 2: Storage Architecture**
 - **Part 3: Archive Operation in Practice**
+- **Part 4: Frequently Asked Questions (FAQ)**
 
 ---
 
@@ -364,7 +365,242 @@ The naming rules are designed in accordance with the recommendations of FADGI (F
   - Predictable sorting
   - No conflicts due to different case
 
-### 13. Frequently asked questions about file naming
+
+
+### 13. Summary
+
+These naming rules (`YYYY.MM.DD.HH.NN.SS.[A|B|C|E|F].GGG.SSS.NNNN.[A|R].SUF.EXT`) provide logical sorting (`A`, `B`, `C`, `E`, `F`) corresponding to the sequence: unknown → before → circa → exact → after. Groups and subgroups, highlighted in separate sections, can be letter-based (e.g., `FAM.POR`) or numeric (e.g., `001.101`), adding flexibility for large archives or automation.
+
+---
+
+## Part 2. Storage Architecture
+
+### 1. Philosophy: from file to structure
+
+The naming rules described in Part 1 are the core of the archive. It ensures uniqueness and logical order at the level of individual files. The storage architecture is the overlay that organizes these files into an intuitive directory hierarchy for easy navigation, management, and manual browsing.
+
+**Key principle:** The directory structure **mirrors the file naming rules**, creating a direct and predictable link between the file name and its place in the archive. This allows working with the archive without specialized software, using only a file manager.
+
+### 2. Recommended directory hierarchy
+
+The structure is built according to the principle `Archive/YYYY.X/YYYY.MM.DD.X/<suffix>/`.
+
+```
+├─── ARCHIVE/                 // For example, "0001.Ivanov Family Archive"
+│  ├─── YYYY.X/               // Year folder with modifier
+│  │  ├─── YYYY.MM.DD.X/      // Day folder with modifier
+│  │  │  ├── RAW/             // Raw scans
+│  │  │  ├── MSR/             // Master copies
+│  │  │  ├── WEB/             // Web versions
+│  │  │  ├── PRT/             // Print versions
+│  │  │  ├── VIEW/            // Quick viewing files (often copies from WEB or PRT)
+```
+
+**Important rule:** Folders are created **reactively**, only when at least one file appears for them. This eliminates empty directories.
+
+### 3. Practical organization examples
+
+**Example 1: Photo with exact date**
+- File: `1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff`
+- Path: `.../1945.E/1945.06.15.E/MSR/1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff`
+
+**Example 2: Photo with approximate date (only year known)**
+- File: `1930.00.00.00.00.00.C.HIS.000.0005.A.RAW.tiff`
+- Path: `.../1930.C/1930.00.00.C/RAW/1930.00.00.00.00.00.C.HIS.000.0005.A.RAW.tiff`
+
+**Example 3: Photo with approximate date (year and month known)**
+- File: `1955.08.00.00.00.00.C.TRV.LND.0003.A.WEB.jpg`
+- Path: `.../1955.C/1955.08.00.C/WEB/1955.08.00.00.00.00.C.TRV.LND.0003.A.WEB.jpg`
+
+### 4. Special cases (B, F, unknown dates)
+
+For files with modifiers `B` (Before) and `F` (After), a special folder `0000` is used, because there is no exact year to bind them to.
+
+**Example 4: Photo "before 1950"**
+- File: `1950.00.00.00.00.00.B.FAM.000.0002.A.tiff`
+- Path: `.../0000.B/1950.00.00.B/MSR/1950.00.00.00.00.00.B.FAM.000.0002.A.MSR.tiff`
+- Logic: All files "before some date" are grouped in the `0000.B` folder, inside — by approximate year.
+
+**Example 5: Photo "after 1960"**
+- File: `1960.00.00.00.00.00.F.TRV.000.0001.A.tiff`
+- Path: `.../0000.F/1960.00.00.F/RAW/1960.00.00.00.00.00.F.TRV.000.0001.A.RAW.tiff`
+
+**Example 6: Photo with completely unknown date**
+- File: `0000.00.00.00.00.00.A.UNK.000.0001.A.tiff`
+- Path: `.../0000.A/0000.00.00.A/MSR/0000.00.00.00.00.00.A.UNK.000.0001.A.MSR.tiff`
+
+### 5. Quick viewing and derivative files
+
+The `VIEW/` folder in the day structure is intended for files optimized for quick viewing on any device.
+
+Recommendations for the `VIEW` folder:
+- Use JPEG for broad compatibility.
+- Resolution can be set within 150–300 DPI.
+- Long side size — 1600–2400 pixels.
+- The file name should retain the full naming structure but with the `.VIEW.jpg` suffix.
+
+Example: `1945.06.15.12.00.00.E.FAM.POR.0001.A.VIEW.jpg`
+
+This folder allows opening any day of the archive and quickly viewing all its photos without the need to load heavy Master or RAW files.
+
+### 6. FADGI compatibility (for folder structure)
+
+The proposed architecture matches the spirit of FADGI recommendations:
+- Separation by versions: Clear separation into RAW, Master, and Derivatives (WEB, PRT, VIEW) corresponds to the principle of separating originals and derivative copies.
+- Logical organization: Grouping by event date, not processing date, ensures historical and archival integrity.
+- Predictability: A standardized structure facilitates data migration and process automation.
+
+### 7. Recommendations for managing the structure
+
+1. Use batch renaming and organization. Tools like Adobe Bridge, Total Commander, or specialized scripts will help automatically distribute files into folders according to their names.
+2. Control path length. Ensure the full file path does not exceed file system limits (e.g., 260 characters in Windows). Use short names for the archive root folder.
+3. Be consistent. Having adopted this structure, use it for the entire archive. This will ensure uniformity and predictability over many years.
+4. Document group codes. Keep a simple text file or spreadsheet with decoding of the `GGG` and `SSS` codes at the root of the archive.
+
+
+
+---
+
+## Part 3. Archive Operation in Practice
+
+### 1. Typical workflows
+
+#### Scenario 1: Digitizing a new album
+
+1. Preparation:
+    * Create a temporary `INCOMING/` folder at the archive root.
+    * Scan all photos from the album to uncompressed TIFF, saving them to `INCOMING/`.
+    * Pre-name files for convenience (e.g., `Album5_001.tiff`).
+
+2.  **Research and assigning names:**
+    *   Study each photo: determine the date (exact or approximate), choose the group (`GGG`) and subgroup (`SSS`).
+    *   Assign names to files according to the rules from Part 1 using batch renaming.
+    *   **Example:** Source `Album5_001.tiff` → `1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff`
+
+3. Filling metadata:
+    * Open each file in a metadata editor (e.g., Adobe Bridge).
+    * Fill the `Description` field with all known information.
+    * For exact dates (`E`), fill in `DateTimeOriginal`.
+
+4. Organizing into the structure:
+    * Using batch tools or a file manager, move files from `INCOMING/` to corresponding folders according to the architecture from Part 2.
+    * Example: `1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff` → `/1968.C/1968.07.00.C/RAW/`
+
+5. Creating derivative copies:
+    * From Master copies, create files for WEB, PRT, and VIEW.
+    * Distribute them into corresponding folders within the day.
+
+#### Scenario 2: Batch renaming digital photos
+
+1. Preparation:
+    * Copy photos from the camera to the `INCOMING/` folder.
+    * Make sure the camera date and time are set correctly.
+
+2. Automatic renaming:
+    * Use Adobe Bridge ("Tools" → "Batch Rename").
+    * In the settings, specify:
+        * Text: `.#!`
+        * Creation date (EXIF): `YYYY.MM.DD.HH.NN.SS`
+        * Text: `.E.` (modifier for exact date)
+        * Text: `[GGG].[SSS].` (set manually for the entire series)
+        * Sequential number: Start from `0001`
+    * Result: `IMG_1234.JPG` → `2024.12.25.15.05.10.E.VAC.ALP.0001.A.jpg`
+
+3. Post-processing:
+    * Manually verify and adjust names if necessary.
+    * Fill in metadata, especially the `Description` field.
+    * Place files within the archive structure.
+
+#### Scenario 3: Clarifying a date and batch renaming
+
+1. Discovering new information:
+    * An exact date was found for the photo `1950.00.00.00.00.00.C.FAM.000.0045.A.tiff` — June 15, 1950.
+
+2. Renaming:
+    * Use software that supports batch template-based renaming (e.g., Advanced Renamer, Total Commander).
+    * Set a replacement rule:
+        * Find: `1950.00.00.00.00.00.C`
+        * Replace: `1950.06.15.12.00.00.E` (set time to 12:00:00 if unknown)
+    * Result: `1950.00.00.00.00.00.C.FAM.000.0045.A.tiff` → `1950.06.15.12.00.00.E.FAM.000.0045.A.tiff`
+
+3. Updating metadata and structure:
+    * Update the `DateTimeOriginal` field in the file.
+    * In the `Description` field add: "Date clarified on 2025-01-10 from circa 1950 to exact 1950-06-15 based on the inscription on the back of the original."
+    * Move the file to the new folder: from `/1950.C/1950.00.00.C/` to `/1950.E/1950.06.15.E/`.
+
+#### Scenario 4: Searching photos in the archive
+
+1. Chronological search:
+    * Use the folder structure. To find photos for July 1968, go to `/1968.C/1968.07.00.C/VIEW/`.
+
+2. Thematic search:
+    * Use the operating system’s search.
+    * Example search in Windows: In the Explorer search field enter: `*.VIEW.jpg description:="Ivan Petrov"`
+
+3. Search by technical parameters:
+    * Use cataloging programs (Adobe Bridge, Lightroom).
+    * Create collections by keywords, ratings, or other metadata.
+
+### 2. Software and tools
+
+#### For batch renaming:
+*   **Adobe Bridge** (cross-platform, powerful tool with metadata support)
+*   **Advanced Renamer** (Windows, free, powerful and flexible)
+*   **NameChanger** (macOS, simple and effective)
+*   **Renamer** (Windows, Russian interface)
+
+#### For metadata management (EXIF, IPTC, XMP):
+*   **Adobe Bridge** (integrated metadata work)
+*   **ExifTool** (command line, maximum power and automation)
+*   **Exif Pilot** (Windows, GUI for ExifTool)
+*   **Metadata++** (Windows, free viewer and editor)
+
+#### For viewing and cataloging:
+*   **Adobe Bridge/Lightroom** (professional suite)
+*   **XnView MP** (cross-platform, free for non-commercial use, supports many formats)
+*   **FastStone Image Viewer** (Windows, fast and convenient)
+
+#### Example script for ExifTool (advanced level):
+
+```bash
+# Example: Rename all JPG files in the current folder using the date from EXIF
+exiftool -d "%Y.%m.%d.%H.%M.%S" '-filename<${DateTimeOriginal}.E.${Model;tr/ /_/}.${SubSecTimeOriginal}.%e' -ext jpg .
+
+**Note:** ExifTool scripts require precise understanding of the syntax and testing on file copies. For most batch renaming tasks, graphical tools are sufficient.
+```
+### 3. Rules for maintaining order
+
+1. Regular procedures:
+    * Quarterly: Check archive integrity (absence of corrupted files).
+    * When adding new materials: Immediately apply the full processing cycle — naming, metadata, placement in the structure.
+    * Once a year: Make a full backup and check the relevance of the tools.
+
+2.  **Backup (3-2-1 rule):**
+    *   **3** copies of data
+    *   **2** different media types (e.g., HDD + cloud)
+    *   **1** copy in a remote location
+
+    **Example strategy:**
+    *   **Working copy:** On the main computer.
+    *   **Local backup:** On an external hard drive, updated weekly.
+    *   **Remote copy:** In cloud storage (Backblaze, Yandex Disk, Google Drive) or on a drive in another building.
+
+### 4. Conclusion. Your archive as historical heritage
+
+An archive created according to these rules is not just a collection of files. It is a **structured digital heritage** with several key properties:
+
+*   **Durability:** Standardized names and structure will be clear even 50 years from now.
+*   **Independence:** The archive is not tied to specific software and can be read on any operating system.
+*   **Context:** Rich metadata preserves the history of each photo for future generations.
+*   **Scalability:** The rules will work for 100 photos and for 100,000 photos.
+
+Starting small — with the proper naming of a few files — you lay the foundation for a professional archival fund whose value will only increase over time.
+
+---
+
+## Part 4. Frequently Asked Questions (FAQ)
+
+### About file naming
 
 **Question 1:** Why use the date the photograph (event) was taken in the file name rather than the scanning date?
 
@@ -506,269 +742,42 @@ Conclusion: The choice between uppercase and lowercase Latin letters is not just
 
 This approach is compatible with the sorting and clarity requirements described in Part 1 (sections 4 and 5) and scales without breaking the logic.
 
-### 14. Summary
+### About architecture and navigation
 
-These naming rules (`YYYY.MM.DD.HH.NN.SS.[A|B|C|E|F].GGG.SSS.NNNN.[A|R].SUF.EXT`) provide logical sorting (`A`, `B`, `C`, `E`, `F`) corresponding to the sequence: unknown → before → circa → exact → after. Groups and subgroups, highlighted in separate sections, can be letter-based (e.g., `FAM.POR`) or numeric (e.g., `001.101`), adding flexibility for large archives or automation.
+**Question 1:** Won’t this structure create too many small folders?
 
----
+**Answer:** Yes, this is inevitable for a large archive. However, that’s the goal — breaking a large archive into small, logically organized, and easily viewable parts. It’s much more convenient to view 20 day folders in a year folder than 10,000 files in a single folder.
 
-## Part 2. Storage Architecture
+**Question 2:** What if I want to find all photos of a particular person that are scattered across different years?
 
-### 1. Philosophy: from file to structure
-
-The naming rules described in Part 1 are the core of the archive. It ensures uniqueness and logical order at the level of individual files. The storage architecture is the overlay that organizes these files into an intuitive directory hierarchy for easy navigation, management, and manual browsing.
-
-**Key principle:** The directory structure **mirrors the file naming rules**, creating a direct and predictable link between the file name and its place in the archive. This allows working with the archive without specialized software, using only a file manager.
-
-### 2. Recommended directory hierarchy
-
-The structure is built according to the principle `Archive/YYYY.X/YYYY.MM.DD.X/<suffix>/`.
-
-```
-├─── ARCHIVE/                 // For example, "0001.Ivanov Family Archive"
-│  ├─── YYYY.X/               // Year folder with modifier
-│  │  ├─── YYYY.MM.DD.X/      // Day folder with modifier
-│  │  │  ├── RAW/             // Raw scans
-│  │  │  ├── MSR/             // Master copies
-│  │  │  ├── WEB/             // Web versions
-│  │  │  ├── PRT/             // Print versions
-│  │  │  ├── VIEW/            // Quick viewing files (often copies from WEB or PRT)
-```
-
-**Important rule:** Folders are created **reactively**, only when at least one file appears for them. This eliminates empty directories.
-
-### 3. Practical organization examples
-
-**Example 1: Photo with exact date**
-- File: `1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff`
-- Path: `.../1945.E/1945.06.15.E/MSR/1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff`
-
-**Example 2: Photo with approximate date (only year known)**
-- File: `1930.00.00.00.00.00.C.HIS.000.0005.A.RAW.tiff`
-- Path: `.../1930.C/1930.00.00.C/RAW/1930.00.00.00.00.00.C.HIS.000.0005.A.RAW.tiff`
-
-**Example 3: Photo with approximate date (year and month known)**
-- File: `1955.08.00.00.00.00.C.TRV.LND.0003.A.WEB.jpg`
-- Path: `.../1955.C/1955.08.00.C/WEB/1955.08.00.00.00.00.C.TRV.LND.0003.A.WEB.jpg`
-
-### 4. Special cases (B, F, unknown dates)
-
-For files with modifiers `B` (Before) and `F` (After), a special folder `0000` is used, because there is no exact year to bind them to.
-
-**Example 4: Photo "before 1950"**
-- File: `1950.00.00.00.00.00.B.FAM.000.0002.A.tiff`
-- Path: `.../0000.B/1950.00.00.B/MSR/1950.00.00.00.00.00.B.FAM.000.0002.A.MSR.tiff`
-- Logic: All files "before some date" are grouped in the `0000.B` folder, inside — by approximate year.
-
-**Example 5: Photo "after 1960"**
-- File: `1960.00.00.00.00.00.F.TRV.000.0001.A.tiff`
-- Path: `.../0000.F/1960.00.00.F/RAW/1960.00.00.00.00.00.F.TRV.000.0001.A.RAW.tiff`
-
-**Example 6: Photo with completely unknown date**
-- File: `0000.00.00.00.00.00.A.UNK.000.0001.A.tiff`
-- Path: `.../0000.A/0000.00.00.A/MSR/0000.00.00.00.00.00.A.UNK.000.0001.A.MSR.tiff`
-
-### 5. Quick viewing and derivative files
-
-The `VIEW/` folder in the day structure is intended for files optimized for quick viewing on any device.
-
-Recommendations for the `VIEW` folder:
-- Use JPEG for broad compatibility.
-- Resolution can be set within 150–300 DPI.
-- Long side size — 1600–2400 pixels.
-- The file name should retain the full naming structure but with the `.VIEW.jpg` suffix.
-
-Example: `1945.06.15.12.00.00.E.FAM.POR.0001.A.VIEW.jpg`
-
-This folder allows opening any day of the archive and quickly viewing all its photos without the need to load heavy Master or RAW files.
-
-### 6. FADGI compatibility (for folder structure)
-
-The proposed architecture matches the spirit of FADGI recommendations:
-- Separation by versions: Clear separation into RAW, Master, and Derivatives (WEB, PRT, VIEW) corresponds to the principle of separating originals and derivative copies.
-- Logical organization: Grouping by event date, not processing date, ensures historical and archival integrity.
-- Predictability: A standardized structure facilitates data migration and process automation.
-
-### 7. Recommendations for managing the structure
-
-1. Use batch renaming and organization. Tools like Adobe Bridge, Total Commander, or specialized scripts will help automatically distribute files into folders according to their names.
-2. Control path length. Ensure the full file path does not exceed file system limits (e.g., 260 characters in Windows). Use short names for the archive root folder.
-3. Be consistent. Having adopted this structure, use it for the entire archive. This will ensure uniformity and predictability over many years.
-4. Document group codes. Keep a simple text file or spreadsheet with decoding of the `GGG` and `SSS` codes at the root of the archive.
-
-### 8. Frequently asked questions about architecture and navigation
-
-Question 1: Won’t this structure create too many small folders?
-
-Answer: Yes, this is inevitable for a large archive. However, that’s the goal — breaking a large archive into small, logically organized, and easily viewable parts. It’s much more convenient to view 20 day folders in a year folder than 10,000 files in a single folder.
-
-Question 2: What if I want to find all photos of a particular person that are scattered across different years?
-
-Answer: This structure is optimized for chronological navigation. For thematic search (by people, events, places) you should use:
+**Answer:** This structure is optimized for chronological navigation. For thematic search (by people, events, places) you should use:
 1. Metadata: Entering names in the `Description` or `Keywords` fields allows searching via the operating system or photo viewers.
 2. External tools: Cataloging programs (e.g., Adobe Lightroom) allow creating virtual collections independent of the physical file location.
 
-Question 3: Can this structure be used for other types of media, such as scanned documents?
+**Question 3:** Can this structure be used for other types of media, such as scanned documents?
 
-Answer: Yes, the approach is universal. For documents, define appropriate groups (`DOC` — documents, `LET` — letters, `NEW` — newspapers) and apply the same naming and organization principles based on the document’s creation date.
-
----
-
-## Part 3. Archive Operation in Practice
-
-### 1. Typical workflows
-
-#### Scenario 1: Digitizing a new album
-
-1. Preparation:
-    * Create a temporary `INCOMING/` folder at the archive root.
-    * Scan all photos from the album to uncompressed TIFF, saving them to `INCOMING/`.
-    * Pre-name files for convenience (e.g., `Album5_001.tiff`).
-
-2.  **Research and assigning names:**
-    *   Study each photo: determine the date (exact or approximate), choose the group (`GGG`) and subgroup (`SSS`).
-    *   Assign names to files according to the rules from Part 1 using batch renaming.
-    *   **Example:** Source `Album5_001.tiff` → `1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff`
-
-3. Filling metadata:
-    * Open each file in a metadata editor (e.g., Adobe Bridge).
-    * Fill the `Description` field with all known information.
-    * For exact dates (`E`), fill in `DateTimeOriginal`.
-
-4. Organizing into the structure:
-    * Using batch tools or a file manager, move files from `INCOMING/` to corresponding folders according to the architecture from Part 2.
-    * Example: `1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff` → `/1968.C/1968.07.00.C/RAW/`
-
-5. Creating derivative copies:
-    * From Master copies, create files for WEB, PRT, and VIEW.
-    * Distribute them into corresponding folders within the day.
-
-#### Scenario 2: Batch renaming digital photos
-
-1. Preparation:
-    * Copy photos from the camera to the `INCOMING/` folder.
-    * Make sure the camera date and time are set correctly.
-
-2. Automatic renaming:
-    * Use Adobe Bridge ("Tools" → "Batch Rename").
-    * In the settings, specify:
-        * Text: `.#!`
-        * Creation date (EXIF): `YYYY.MM.DD.HH.NN.SS`
-        * Text: `.E.` (modifier for exact date)
-        * Text: `[GGG].[SSS].` (set manually for the entire series)
-        * Sequential number: Start from `0001`
-    * Result: `IMG_1234.JPG` → `2024.12.25.15.05.10.E.VAC.ALP.0001.A.jpg`
-
-3. Post-processing:
-    * Manually verify and adjust names if necessary.
-    * Fill in metadata, especially the `Description` field.
-    * Place files within the archive structure.
-
-#### Scenario 3: Clarifying a date and batch renaming
-
-1. Discovering new information:
-    * An exact date was found for the photo `1950.00.00.00.00.00.C.FAM.000.0045.A.tiff` — June 15, 1950.
-
-2. Renaming:
-    * Use software that supports batch template-based renaming (e.g., Advanced Renamer, Total Commander).
-    * Set a replacement rule:
-        * Find: `1950.00.00.00.00.00.C`
-        * Replace: `1950.06.15.12.00.00.E` (set time to 12:00:00 if unknown)
-    * Result: `1950.00.00.00.00.00.C.FAM.000.0045.A.tiff` → `1950.06.15.12.00.00.E.FAM.000.0045.A.tiff`
-
-3. Updating metadata and structure:
-    * Update the `DateTimeOriginal` field in the file.
-    * In the `Description` field add: "Date clarified on 2025-01-10 from circa 1950 to exact 1950-06-15 based on the inscription on the back of the original."
-    * Move the file to the new folder: from `/1950.C/1950.00.00.C/` to `/1950.E/1950.06.15.E/`.
-
-#### Scenario 4: Searching photos in the archive
-
-1. Chronological search:
-    * Use the folder structure. To find photos for July 1968, go to `/1968.C/1968.07.00.C/VIEW/`.
-
-2. Thematic search:
-    * Use the operating system’s search.
-    * Example search in Windows: In the Explorer search field enter: `*.VIEW.jpg description:="Ivan Petrov"`
-
-3. Search by technical parameters:
-    * Use cataloging programs (Adobe Bridge, Lightroom).
-    * Create collections by keywords, ratings, or other metadata.
-
-### 2. Software and tools
-
-#### For batch renaming:
-*   **Adobe Bridge** (cross-platform, powerful tool with metadata support)
-*   **Advanced Renamer** (Windows, free, powerful and flexible)
-*   **NameChanger** (macOS, simple and effective)
-*   **Renamer** (Windows, Russian interface)
-
-#### For metadata management (EXIF, IPTC, XMP):
-*   **Adobe Bridge** (integrated metadata work)
-*   **ExifTool** (command line, maximum power and automation)
-*   **Exif Pilot** (Windows, GUI for ExifTool)
-*   **Metadata++** (Windows, free viewer and editor)
-
-#### For viewing and cataloging:
-*   **Adobe Bridge/Lightroom** (professional suite)
-*   **XnView MP** (cross-platform, free for non-commercial use, supports many formats)
-*   **FastStone Image Viewer** (Windows, fast and convenient)
-
-#### Example script for ExifTool (advanced level):
-
-```bash
-# Example: Rename all JPG files in the current folder using the date from EXIF
-exiftool -d "%Y.%m.%d.%H.%M.%S" '-filename<${DateTimeOriginal}.E.${Model;tr/ /_/}.${SubSecTimeOriginal}.%e' -ext jpg .
-
-**Note:** ExifTool scripts require precise understanding of the syntax and testing on file copies. For most batch renaming tasks, graphical tools are sufficient.
-```
-### 3. Rules for maintaining order
-
-1. Regular procedures:
-    * Quarterly: Check archive integrity (absence of corrupted files).
-    * When adding new materials: Immediately apply the full processing cycle — naming, metadata, placement in the structure.
-    * Once a year: Make a full backup and check the relevance of the tools.
-
-2.  **Backup (3-2-1 rule):**
-    *   **3** copies of data
-    *   **2** different media types (e.g., HDD + cloud)
-    *   **1** copy in a remote location
-
-    **Example strategy:**
-    *   **Working copy:** On the main computer.
-    *   **Local backup:** On an external hard drive, updated weekly.
-    *   **Remote copy:** In cloud storage (Backblaze, Yandex Disk, Google Drive) or on a drive in another building.
-
-### 4. Conclusion. Your archive as historical heritage
-
-An archive created according to these rules is not just a collection of files. It is a **structured digital heritage** with several key properties:
-
-*   **Durability:** Standardized names and structure will be clear even 50 years from now.
-*   **Independence:** The archive is not tied to specific software and can be read on any operating system.
-*   **Context:** Rich metadata preserves the history of each photo for future generations.
-*   **Scalability:** The rules will work for 100 photos and for 100,000 photos.
-
-Starting small — with the proper naming of a few files — you lay the foundation for a professional archival fund whose value will only increase over time.
+**Answer:** Yes, the approach is universal. For documents, define appropriate groups (`DOC` — documents, `LET` — letters, `NEW` — newspapers) and apply the same naming and organization principles based on the document’s creation date.
 
 ---
 
-## Appendix A: Links and additional resources
+## Appendix A: References and Additional Resources
 
-This section contains links to official standards, guides, and tools mentioned in the document, as well as additional materials for those who want to dive deeper into digital preservation.
+This section contains links to official standards, guidelines, and tools mentioned in the document, as well as additional materials for those who want to dive deeper into the topic of digital preservation.
 
-### **1. Preservation standards and guidelines**
+### **1. Preservation Standards**
 
 *   **FADGI (Federal Agencies Digital Guidelines Initiative)**
     *   *Official site:* [https://www.digitizationguidelines.gov/](https://www.digitizationguidelines.gov/)
     *   *"Technical Guidelines for Digitizing Cultural Heritage Materials":* [https://www.digitizationguidelines.gov/guidelines/digitize-technical.html](https://www.digitizationguidelines.gov/guidelines/digitize-technical.html)
-    *   *Why it matters:* This is the direct guidance on which the philosophy of long-term preservation, use of formats and metadata in this guide is based.
+    *   *Why it matters:* This is the direct guide upon which the philosophy of long-term preservation, format usage, and metadata in this instruction is based.
 
 *   **ISO 19005 (PDF/A)**
-    *   *Information from the PDF Association:* [https://pdfa.org/resource/iso-19005-pdfa/](https://pdfa.org/resource/iso-19005-pdfa/)
+    *   *Information from PDF Association:* [https://pdfa.org/resource/iso-19005-pdfa/](https://pdfa.org/resource/iso-19005-pdfa/)
     *   *Why it matters:* PDF/A is a standard for long-term preservation of electronic documents. Understanding its principles is useful for archiving documents accompanying scanned photos.
 
 *   **Dublin Core Metadata Initiative (DCMI)**
     *   *Official site:* [https://www.dublincore.org/](https://www.dublincore.org/)
-    *   *Why it matters:* This is one of the most common metadata sets for describing resources. The principles of Dublin Core are directly reflected in the metadata fields recommended for filling out.
+    *   *Why it matters:* This is one of the most common metadata sets for describing resources. Dublin Core principles are directly reflected in the metadata fields recommended for completion.
 
 ### **2. Software & Tools**
 
@@ -776,23 +785,23 @@ This section contains links to official standards, guides, and tools mentioned i
     *   *Official site:* [https://exiftool.org/](https://exiftool.org/)
     *   *Why it matters:* This is the "gold standard" and the most powerful tool for reading, writing, and editing metadata in almost any file format. Recommended for advanced users and automation.
 
-*   **Summary table of batch renaming and metadata tools**
+*   **Summary table of software for batch renaming and metadata management**
     *   **Adobe Bridge:** [https://www.adobe.com/products/bridge.html](https://www.adobe.com/products/bridge.html)
     *   **Advanced Renamer (Windows):** [https://www.advancedrenamer.com/](https://www.advancedrenamer.com/)
     *   **NameChanger (macOS):** [https://mrrsoftware.com/namechanger/](https://mrrsoftware.com/namechanger/)
-    *   **XnView MP (cross-platform viewer and converter):** [https://www.xnview.com/en/xnviewmp/](https://www.xnview.com/en/xnviewmp/)
+    *   **XnView MP (cross-platform viewing and conversion):** [https://www.xnview.com/en/xnviewmp/](https://www.xnview.com/en/xnviewmp/)
     *   **FastStone Image Viewer (Windows):** [https://www.faststone.org/FSViewerDetail.htm](https://www.faststone.org/FSViewerDetail.htm)
 
-### **3. Further reading**
+### **3. Further Reading**
 
 *   **Library of Congress - Sustainability of Digital Formats**
-    *   *Page on the TIFF format:* [https://www.loc.gov/preservation/digital/formats/fdd/fdd000022.shtml](https://www.loc.gov/preservation/digital/formats/fdd/fdd000022.shtml)
-    *   *Why it matters:* The most detailed analysis of the TIFF format in terms of its suitability for long-term preservation.
+    *   *Page about TIFF format:* [https://www.loc.gov/preservation/digital/formats/fdd/fdd000022.shtml](https://www.loc.gov/preservation/digital/formats/fdd/fdd000022.shtml)
+    *   *Why it matters:* A detailed analysis of the TIFF format in terms of its suitability for long-term preservation.
 
 *   **DPBestflow (Project of the Library of Congress)**
     *   *Official site:* [http://www.dpbestflow.org/](http://www.dpbestflow.org/)
-    * Why it matters: An excellent resource on all aspects of digital photography for archives and libraries.
+    *   *Why it matters:* An excellent resource on all aspects of digital photography for archives and libraries.
 
-* Digital Preservation Coalition (DPC)
-    * Official site: https://www.dpconline.org/
-    * Why it matters: An international association engaged in digital preservation issues. The site contains a vast number of guides and news in this area.
+*   **Digital Preservation Coalition (DPC)**
+    *   *Official site:* [https://www.dpconline.org/](https://www.dpconline.org/)
+    *   *Why it matters:* An international association dedicated to digital preservation issues. The site contains a huge amount of guides and news in this area.
