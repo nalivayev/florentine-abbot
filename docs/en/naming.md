@@ -284,72 +284,50 @@ The rules completely match those for the group (GGG):
   - `.PRT.jpg` (high resolution, 300 dpi, 100% quality for print).
 - Example: `1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff`, `1950.00.00.00.00.00.C.001.101.0002.R.RAW.tiff`.
 
-### 9. Metadata: Filling the file with meaning
+### 9. Metadata and Automation
 
-A file name ensures uniqueness and sorting, but it’s the metadata that carries the meaning, history, and context of the photograph. Filling out metadata is a mandatory step in the archiving process. Use tools like Adobe Bridge, ExifTool, etc., to work with metadata.
+A file name ensures uniqueness and sorting, but it’s the metadata that carries the meaning, history, and context of the photograph. Filling out metadata is a mandatory step in the archiving process.
 
-#### Required fields for TIFF files
+Since the filename already contains all necessary chronological information in a structured form, the process of filling technical fields (dates) is recommended to be **automated** using specialized tools. Descriptive fields are filled manually.
 
-1. **`Description` / `Caption` / `XPComment` (Description)**
-    * This is the most important field. Enter all known information here:
-        * **Who is depicted:** Names of people, their family relationships (e.g., "Ivan Petrov (grandfather), Maria Petrova (grandmother). Sitting on a bench in the garden at 10 Lenin St.").
-        * **What is happening:** Event, holiday (e.g., "Celebrating a silver wedding").
-        * **Origin of the photo:** Information source (e.g., "Inscription on the back of the original", "Date imprinted on photo (Quartz Date)", "From Aunt Anna's words", "Determined by the model of the car in the background").
-        * **History of changes:** (e.g., "Date clarified on 2024-01-12 from circa 1950 to exact 1950-06-15 based on an album found with dates").
-        * **Link to other files:** For the obverse, indicate the existence of a reverse (e.g., "Inscriptions on the back: see file 1950.06.15.E.FAM.POR.0001.R.MSR.tiff").
+#### Field Mapping Rules
 
-2. **`DateTimeOriginal` (Date and time of shooting)**
-    * **For modifier `E` (Exact):** Enter the exact date in the format `YYYY:MM:DD HH:NN:SS`. If the time is unknown, set `12:00:00`.
-    * **For modifiers `A` (Absent), `B` (Before), `C` (Circa), `F` (After):** Leave the field empty.
+Below describes how file name components and known information should be reflected in standard metadata fields (EXIF, IPTC, XMP).
 
-3. **`Copyright` (Copyright)**
-    * Specify the archive rights holder. Example: `© Ivanov Family Archive. Scan © 2025, A.A. Ivanov.`
+**1. Dates (Date/Time)**
+The logic for filling date fields depends on the date modifier in the file name:
 
-4. **`Creator` (Creator of the digital copy)**
-    * Your name or the name of the organization that performed the scanning.
+*   **Exact Dates (Modifier `E`):**
+    *   `EXIF:DateTimeOriginal`: The full date and time (`YYYY:MM:DD HH:MM:SS`) is written. If the time is unknown, `12:00:00` is used. This is the primary field for most software.
+    *   `XMP:photoshop:DateCreated`: The full timestamp is written (`YYYY-MM-DDTHH:MM:SS`).
+    *   `XMP:Iptc4xmpCore:DateCreated`: The date is written in ISO format (`YYYY-MM-DD`).
 
-5. **`Artist` (Author of the original)**
-    * If the photographer is known. Example: `Photo studio "Luch"`.
+*   **Non-Exact Dates (Modifiers `A`, `B`, `C`, `F`):**
+    *   `EXIF:DateTimeOriginal`: **Remains empty**. The EXIF standard requires an exact date and does not support partial values. Writing fictitious values (like `01.01`) distorts historical truth.
+    *   `XMP:Iptc4xmpCore:DateCreated`: A partial date is written as far as it is known (`YYYY` or `YYYY-MM`). This allows professional software to correctly display the year or month.
 
-6. **Technical metadata** (often added by the scanner or software automatically, but must be checked)
-    * **`XResolution` / `YResolution`:** Resolution (e.g., `600 dpi`).
-    * **`Software`:** Program used for scanning.
-    * **`Model`:** Scanner model.
-    * **`DateTimeDigitized` (Digitization date):** Date and time the digital copy was created (e.g., `2025:09:18 14:30:00`).
+**2. Description / Caption**
+*   This is the most important field for manual filling.
+*   **Content:** Who is depicted, what is happening, information source (e.g., "inscription on the back").
+*   **For non-exact dates:** A text explanation of the date is mandatory here (e.g., "Circa 1950", "Before 1940").
 
-#### Mapping the date modifier to metadata fields
+**3. Identifiers**
+*   It is recommended to generate and write a unique identifier (UUID) into the `XMP-dc:Identifier` and `XMP-xmp:Identifier` fields. This allows for unambiguous identification of the file even after renaming.
 
-| Modifier | DateTimeOriginal (Example) | Description (Example) |
-|:-|:-|:-|
-| **`A` (Absent)** | (empty) | `Unknown date. In the photo: graduation party. On the back of the original, the inscription: "In memory of school".` |
-| **`B` (Before)** | (empty) | `Approximate date: before 1940. Determined by clothing style. In the photo: parents' wedding.` |
-| **`C` (Circa)** | (empty) | `Approximate date: circa 1950. Determined by the date on the cinema poster in the background.` |
-| **`E` (Exact)** | `1950:06:15 12:00:00` | `Exact date: June 15, 1950. The exact date is written in ink on the back of the original.` |
-| **`F` (aFter)** | (empty) | `Approximate date: after 1960. The photo was taken after moving into the new house, which was purchased in 1960.` |
+**4. Authorship and Origin**
+*   `Copyright`: Archive rights holder (e.g., `© Ivanov Family Archive`).
+*   `Creator`: Who performed the scanning.
+*   `Artist`: Author of the original shot (if known).
 
-### 9.1. Automation and Field Mapping
+#### Summary Table of Examples
 
-Manual filling of technical fields (date, time) is tedious and prone to errors. Since the filename already contains all necessary chronological information in a structured form, it is recommended to automate this process.
-
-There are tools that parse the filename and automatically write the corresponding values into standardized EXIF and XMP fields.
-
-**Automatic Mapping Rules:**
-
-1.  **For Exact Dates (Modifier `E`):**
-    *   **`EXIF:DateTimeOriginal`**: The full date and time (`YYYY:MM:DD HH:MM:SS`) is written. This is the primary field for most software.
-    *   **`XMP:Iptc4xmpCore:DateCreated`**: The date is written in ISO format (`YYYY-MM-DD`).
-    *   **`XMP:photoshop:DateCreated`**: The full timestamp is written (`YYYY-MM-DDTHH:MM:SS`).
-
-2.  **For Non-Exact Dates (Modifiers `A`, `B`, `C`, `F`):**
-    *   **`EXIF:DateTimeOriginal`**: **Not filled**. The EXIF standard requires an exact date and does not support partial values (e.g., year only). Writing fictitious values (like `1950:01:01`) distorts historical truth.
-    *   **`XMP:Iptc4xmpCore:DateCreated`**: A partial date is written as far as it is known (`YYYY` or `YYYY-MM`). This allows professional software to correctly display the year or month without "inventing" non-existent days.
-
-3.  **Unique Identifiers:**
-    *   It is recommended to generate and write a unique identifier (UUID) into the `XMP-dc:Identifier` and `XMP-xmp:Identifier` fields. This allows for unambiguous identification of the file even after it has been renamed or moved.
-
-**Benefits of Automation:**
-*   **Validation:** Automated tools check the correctness of dates (e.g., absence of February 30th or 25th hour).
-*   **Synchronization:** When the filename changes (date refinement), metadata is updated automatically, preserving archive integrity.
+| Modifier | DateTimeOriginal (EXIF) | XMP DateCreated | Description (Example) |
+|:-|:-|:-|:-|
+| **`A` (Absent)** | *(empty)* | *(empty)* | `Unknown date. Graduation party.` |
+| **`B` (Before)** | *(empty)* | `1940` | `Approximate date: before 1940. Parents' wedding.` |
+| **`C` (Circa)** | *(empty)* | `1950` | `Approximate date: circa 1950.` |
+| **`E` (Exact)** | `1950:06:15 12:00:00` | `1950-06-15` | `Exact date: June 15, 1950. Inscription on the back.` |
+| **`F` (aFter)** | *(empty)* | `1960` | `Approximate date: after 1960.` |
 
 ### 10. Examples
 
