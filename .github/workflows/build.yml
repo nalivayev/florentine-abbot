@@ -1,6 +1,14 @@
-name: Build wheel
+name: Build and Release
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ "master" ]
+    tags: [ "v*" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -11,10 +19,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.x"
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libexiv2-dev
 
       - name: Install dependencies
-        run: pip install pyexiv2 build
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyexiv2 build
 
       - name: Build wheel
         run: python -m build --wheel
@@ -29,3 +44,11 @@ jobs:
         with:
           name: scan-batcher
           path: dist/*.whl
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
