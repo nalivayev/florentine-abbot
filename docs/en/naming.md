@@ -327,6 +327,30 @@ A file name ensures uniqueness and sorting, but it’s the metadata that carries
 | **`E` (Exact)** | `1950:06:15 12:00:00` | `Exact date: June 15, 1950. The exact date is written in ink on the back of the original.` |
 | **`F` (aFter)** | (empty) | `Approximate date: after 1960. The photo was taken after moving into the new house, which was purchased in 1960.` |
 
+### 9.1. Automation and Field Mapping
+
+Manual filling of technical fields (date, time) is tedious and prone to errors. Since the filename already contains all necessary chronological information in a structured form, it is recommended to automate this process.
+
+There are tools that parse the filename and automatically write the corresponding values into standardized EXIF and XMP fields.
+
+**Automatic Mapping Rules:**
+
+1.  **For Exact Dates (Modifier `E`):**
+    *   **`EXIF:DateTimeOriginal`**: The full date and time (`YYYY:MM:DD HH:MM:SS`) is written. This is the primary field for most software.
+    *   **`XMP:Iptc4xmpCore:DateCreated`**: The date is written in ISO format (`YYYY-MM-DD`).
+    *   **`XMP:photoshop:DateCreated`**: The full timestamp is written (`YYYY-MM-DDTHH:MM:SS`).
+
+2.  **For Non-Exact Dates (Modifiers `A`, `B`, `C`, `F`):**
+    *   **`EXIF:DateTimeOriginal`**: **Not filled**. The EXIF standard requires an exact date and does not support partial values (e.g., year only). Writing fictitious values (like `1950:01:01`) distorts historical truth.
+    *   **`XMP:Iptc4xmpCore:DateCreated`**: A partial date is written as far as it is known (`YYYY` or `YYYY-MM`). This allows professional software to correctly display the year or month without "inventing" non-existent days.
+
+3.  **Unique Identifiers:**
+    *   It is recommended to generate and write a unique identifier (UUID) into the `XMP-dc:Identifier` and `XMP-xmp:Identifier` fields. This allows for unambiguous identification of the file even after it has been renamed or moved.
+
+**Benefits of Automation:**
+*   **Validation:** Automated tools check the correctness of dates (e.g., absence of February 30th or 25th hour).
+*   **Synchronization:** When the filename changes (date refinement), metadata is updated automatically, preserving archive integrity.
+
 ### 10. Examples
 
 - Unknown date: `0000.00.00.00.00.00.A.FAM.POR.0001.A.tiff` — family portrait, unknown date, obverse.
