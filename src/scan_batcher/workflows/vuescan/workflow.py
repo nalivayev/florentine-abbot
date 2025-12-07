@@ -227,7 +227,7 @@ class VuescanWorkflow(Workflow):
             value = tags.get(Exifer.EXIFIFD, {}).get("DateTimeDigitized", "")
             if value:
                 try:
-                    moment = Exifer.convert_value_to_datetime(value.decode())
+                    moment = Exifer.convert_value_to_datetime(value)
                 except Exifer.Exception:
                     return
         else:
