@@ -14,7 +14,7 @@ jobs:
           python-version: "3.x"
 
       - name: Install dependencies
-        run: pip install piexif build
+        run: pip install pyexiv2 build
 
       - name: Build wheel
         run: python -m build --wheel

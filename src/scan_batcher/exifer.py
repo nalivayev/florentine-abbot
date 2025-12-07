@@ -1,4 +1,4 @@
-from piexif import load, TAGS, InvalidImageDataError
+import pyexiv2
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -173,27 +173,36 @@ class Exifer:
         Raises:
             Exifer.Exception: If the file does not exist or is not a valid image.
         """
-        _ifd_names = {
-            "0th": Exifer.IFD0,
-            "1st": Exifer.IFD1,
-            "Exif": Exifer.EXIFIFD,
-            "GPS": Exifer.GPSIFD
+        if not Path(path).is_file():
+            raise Exifer.Exception(f"File '{Path(path).name}' not found")
+
+        try:
+            with pyexiv2.Image(path) as img:
+                exif_data = img.read_exif()
+        except Exception as e:
+            raise Exifer.Exception(f"Invalid image file format or error reading EXIF: {e}")
+
+        tags = {
+            Exifer.IFD0: {},
+            Exifer.EXIFIFD: {},
+            Exifer.GPSIFD: {},
+            Exifer.IFD1: {}
         }
 
-        if Path(path).is_file():
-            try:
-                dict = load(path)
-            except InvalidImageDataError:
-                raise Exifer.Exception("Invalid image file format")
-            tags = {}
-            for ifd in ("0th", "Exif", "GPS", "1st"):
-                for tag in dict[ifd]:
-                    name = TAGS.get(ifd, {}).get(tag, {}).get("name", None)
-                    value = dict.get(ifd, {}).get(tag, None)
-                    if name and value:
-                        if _ifd_names[ifd] not in tags:
-                            tags[_ifd_names[ifd]] = {}
-                        tags[_ifd_names[ifd]][name] = value
-            return tags
-        else:
-            raise Exifer.Exception(f"File '{Path(path).name}' not found")
+        for key, value in exif_data.items():
+            # key is like "Exif.Image.Make"
+            parts = key.split('.')
+            if len(parts) < 3:
+                continue
+            
+            group = parts[1] # Image, Photo, GPSInfo
+            tag_name = parts[-1]
+
+            if group == "Image":
+                tags[Exifer.IFD0][tag_name] = value
+            elif group == "Photo":
+                tags[Exifer.EXIFIFD][tag_name] = value
+            elif group == "GPSInfo":
+                tags[Exifer.GPSIFD][tag_name] = value
+            
+        return tags
