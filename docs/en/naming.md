@@ -298,12 +298,12 @@ Below describes how file name components and known information should be reflect
 The logic for filling date fields depends on the date modifier in the file name:
 
 *   **Exact Dates (Modifier `E`):**
-    *   `EXIF:DateTimeOriginal`: The full date and time (`YYYY:MM:DD HH:MM:SS`) is written. If the time is unknown, `12:00:00` is used. This is the primary field for most software.
+    *   `Exif.Photo.DateTimeOriginal`: The full date and time (`YYYY:MM:DD HH:MM:SS`) is written. If the time is unknown, `12:00:00` is used. This is the primary field for most software.
     *   `XMP:photoshop:DateCreated`: The full timestamp is written (`YYYY-MM-DDTHH:MM:SS`).
     *   `XMP:Iptc4xmpCore:DateCreated`: The date is written in ISO format (`YYYY-MM-DD`).
 
 *   **Non-Exact Dates (Modifiers `A`, `B`, `C`, `F`):**
-    *   `EXIF:DateTimeOriginal`: **Remains empty**. The EXIF standard requires an exact date and does not support partial values. Writing fictitious values (like `01.01`) distorts historical truth.
+    *   `Exif.Photo.DateTimeOriginal`: **Remains empty**. The EXIF standard requires an exact date and does not support partial values. Writing fictitious values (like `01.01`) distorts historical truth.
     *   `XMP:Iptc4xmpCore:DateCreated`: A partial date is written as far as it is known (`YYYY` or `YYYY-MM`). This allows professional software to correctly display the year or month.
 
 **2. Description / Caption**
@@ -321,7 +321,7 @@ The logic for filling date fields depends on the date modifier in the file name:
 
 #### Summary Table of Examples
 
-| Modifier | DateTimeOriginal (EXIF) | XMP DateCreated | Description (Example) |
+| Modifier | Exif.Photo.DateTimeOriginal | XMP DateCreated | Description (Example) |
 |:-|:-|:-|:-|
 | **`A` (Absent)** | *(empty)* | *(empty)* | `Unknown date. Graduation party.` |
 | **`B` (Before)** | *(empty)* | `1940` | `Approximate date: before 1940. Parents' wedding.` |
@@ -482,7 +482,7 @@ The proposed architecture matches the spirit of FADGI recommendations:
 3. Filling metadata:
     * Open each file in a metadata editor (e.g., Adobe Bridge).
     * Fill the `Description` field with all known information.
-    * For exact dates (`E`), fill in `DateTimeOriginal`.
+    * For exact dates (`E`), fill in `Exif.Photo.DateTimeOriginal`.
 
 4. Organizing into the structure:
     * Using batch tools or a file manager, move files from `INCOMING/` to corresponding folders according to the architecture from Part 2.
@@ -526,7 +526,7 @@ The proposed architecture matches the spirit of FADGI recommendations:
     * Result: `1950.00.00.00.00.00.C.FAM.000.0045.A.tiff` → `1950.06.15.12.00.00.E.FAM.000.0045.A.tiff`
 
 3. Updating metadata and structure:
-    * Update the `DateTimeOriginal` field in the file.
+    * Update the `Exif.Photo.DateTimeOriginal` field in the file.
     * In the `Description` field add: "Date clarified on 2025-01-10 from circa 1950 to exact 1950-06-15 based on the inscription on the back of the original."
     * Move the file to the new folder: from `/1950.C/1950.00.00.C/` to `/1950.E/1950.06.15.E/`.
 
@@ -632,7 +632,7 @@ The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and 
 
 1. **You cannot omit individual components selectively.** The decision to omit the time (or other parts) must be made for the entire archive in order to preserve uniformity.
 2. **All other components are mandatory.** The date modifier (`X`), group (`GGG`), subgroup (`SSS`), sequential number (`NNNN`), and side suffixes (`A/R`) are critical for ensuring uniqueness and organization of files. They cannot be omitted.
-3. **Accounting in metadata.** In the `DateTimeOriginal` field of metadata, if the time is unknown, specify `12:00:00` (for exact dates with modifier `E`) or `00:00:00` (for dates with modifiers `B`, `C`, `F`), as indicated in section 9.
+3. **Accounting in metadata.** In the `Exif.Photo.DateTimeOriginal` field of metadata, if the time is unknown, specify `12:00:00` (for exact dates with modifier `E`) or `00:00:00` (for dates with modifiers `B`, `C`, `F`), as indicated in section 9.
 4. **A decision for the future.** If you decide to omit time, but later a photo with known time appears in the archive, you will have to either abandon the simplification and rename all files by adding `.00.00.00`, or add time only for this file, breaking uniformity. The first option is preferable.
 
 **Conclusion:** Simplifying the format is possible, but should be approached **very** carefully. The full format is the most reliable and consistent with FADGI best practices, as it is sufficiently universal.
@@ -678,7 +678,7 @@ The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and 
    The dot-separated format is more “flat” and universal. It doesn’t overload the file name with technical characters like `T` and `:`, which serve a service function in ISO but are redundant in a file name where structure is already set by the component’s position. This makes the file name slightly more compact and easier for a human to skim in a list.
 
 5. Separation of responsibilities: file name vs. metadata.
-   It’s important to remember that the main task of the file name in these rules is to ensure uniqueness and logical sorting. The full, standardized representation of date and time should be stored in the appropriate metadata fields (e.g., `DateTimeOriginal`), where ISO 8601 is ideal and widely supported. Thus, the approach gets the best of both worlds: a simple and reliable name for sorting and a strict standard in metadata.
+   It’s important to remember that the main task of the file name in these rules is to ensure uniqueness and logical sorting. The full, standardized representation of date and time should be stored in the appropriate metadata fields (e.g., `Exif.Photo.DateTimeOriginal`), where ISO 8601 is ideal and widely supported. Thus, the approach gets the best of both worlds: a simple and reliable name for sorting and a strict standard in metadata.
 
 Conclusion: Using dot-separated components is not a drawback but a deliberate architectural feature. It provides straightforward sorting, seamless handling of incomplete dates, and maximum compatibility, doing its narrow job better than ISO 8601 would as a file name.
 
