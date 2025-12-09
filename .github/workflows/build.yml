@@ -37,7 +37,7 @@ jobs:
       - name: Verify wheel
         run: |
           ls dist/*.whl
-          pip install dist/*.whl --force-reinstall
+          pip install dist/*.whl --force-reinstall --no-deps
 
       - name: Upload wheel as artifact
         uses: actions/upload-artifact@v4
