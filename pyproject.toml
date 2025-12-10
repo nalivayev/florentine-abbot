@@ -10,7 +10,6 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
-    "pyexiv2>=2.0.0",
     "folder-monitor>=0.3.0"
 ]
 
