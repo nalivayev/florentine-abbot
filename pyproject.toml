@@ -30,6 +30,7 @@ packages = [
 
 [tool.setuptools.package-data]
 "scan_batcher.workflows.vuescan" = ["*.ini"]
+"archive_plugin" = ["*.json"]
 
 [build-system]
 requires = ["setuptools>=61.0", "setuptools_scm>=8.0"]

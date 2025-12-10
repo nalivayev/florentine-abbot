@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import uuid
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 from folder_monitor.base_plugin import FileProcessorPlugin
 
