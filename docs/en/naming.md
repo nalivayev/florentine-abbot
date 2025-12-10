@@ -329,8 +329,10 @@ For archive protection and attribution, it is recommended to fill in authorship 
 | Modifier | Exif.Photo.DateTimeOriginal | XMP-photoshop:DateCreated | Description (Example) |
 |:-|:-|:-|:-|
 | **`A` (Absent)** | *(empty)* | *(empty)* | `Unknown date. Graduation party.` |
-| **`B` (Before)** | *(empty)* | `1940` | `Approximate date: before 1940. Parents' wedding.` |
+| **`B` (Before)** | *(empty)* | `1940` | `Approximate date: before 1940.` |
 | **`C` (Circa)** | *(empty)* | `1950` | `Approximate date: circa 1950.` |
+| **`C` (Circa)** | *(empty)* | `1950-06` | `Approximate date: circa June 1950.` |
+| **`C` (Circa)** | *(empty)* | `1950-06-15` | `Approximate date: circa June 15, 1950.` |
 | **`E` (Exact)** | `1950:06:15 12:30:45` | `1950-06-15T12:30:45` | `Exact date and time: June 15, 1950, 12:30:45. Date imprinted on the photo.` |
 | **`F` (aFter)** | *(empty)* | `1960` | `Approximate date: after 1960.` |
 
