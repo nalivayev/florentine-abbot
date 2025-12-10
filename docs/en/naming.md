@@ -204,7 +204,7 @@ The modifier is an uppercase Latin letter indicating the type of date. It provid
 #### Rules for time (HH.NN.SS)
 - **Known time:** Use real values (e.g., `12.30.15`) if known (e.g., imprinted on the photo by the camera or recorded in diaries).
 - **Unknown time in the file name:** **Always use `00.00.00`.** This ensures uniformity and indicates that the exact time is unknown.
-- **Conditional time in metadata:** In the `DateTimeOriginal` field for exact dates (`E`) with unknown time, set `12:00:00`. For non-exact dates (`A`, `B`, `C`, `F`), leave the field empty.
+- **Conditional time in metadata:** In the `DateTimeOriginal` field for exact dates (`E`) with unknown time, set `12:00:00`. For non-exact dates (`A`, `B`, `C`, `F`), leave the field empty. If the time is known, specify it up to seconds.
 
 ### 4. Group (GGG)
 - Description: 3-character code denoting the main category of the photo. Used for broad grouping, e.g., by theme, collection, or album.
@@ -331,7 +331,7 @@ For archive protection and attribution, it is recommended to fill in authorship 
 | **`A` (Absent)** | *(empty)* | *(empty)* | `Unknown date. Graduation party.` |
 | **`B` (Before)** | *(empty)* | `1940` | `Approximate date: before 1940. Parents' wedding.` |
 | **`C` (Circa)** | *(empty)* | `1950` | `Approximate date: circa 1950.` |
-| **`E` (Exact)** | `1950:06:15 12:30:00` | `1950-06-15T12:30:00` | `Exact date and time: June 15, 1950, 12:30. Inscription on the back.` |
+| **`E` (Exact)** | `1950:06:15 12:30:45` | `1950-06-15T12:30:45` | `Exact date and time: June 15, 1950, 12:30:45. Date imprinted on the photo.` |
 | **`F` (aFter)** | *(empty)* | `1960` | `Approximate date: after 1960.` |
 
 ### 10. Examples
