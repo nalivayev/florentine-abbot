@@ -300,7 +300,7 @@ Below describes how file name components and known information should be reflect
 The logic for filling date fields depends on the date modifier in the file name:
 
 *   **Exact Dates (Modifier `E`):**
-    *   `Exif.Photo.DateTimeOriginal`: The full date and time (`YYYY:MM:DD HH:MM:SS`) is written. If the time is unknown, `12:00:00` is used. This is the primary field for most software.
+    *   `Exif.Photo.DateTimeOriginal`: The full date and time (`YYYY:MM:DD HH:MM:SS`) from the filename is written. This is the primary field for most software.
     *   `XMP-photoshop:DateCreated`: The full timestamp is written (`YYYY-MM-DDTHH:MM:SS`).
 
 *   **Non-Exact Dates (Modifiers `A`, `B`, `C`, `F`):**
@@ -637,7 +637,7 @@ The main principle: **the first seven components (`YYYY.MM.DD.HH.NN.SS.X`), and 
 
 1. **You cannot omit individual components selectively.** The decision to omit the time (or other parts) must be made for the entire archive in order to preserve uniformity.
 2. **All other components are mandatory.** The date modifier (`X`), group (`GGG`), subgroup (`SSS`), sequential number (`NNNN`), and side suffixes (`A/R`) are critical for ensuring uniqueness and organization of files. They cannot be omitted.
-3. **Accounting in metadata.** In the `Exif.Photo.DateTimeOriginal` field of metadata, if the time is unknown, specify `12:00:00` (for exact dates with modifier `E`) or `00:00:00` (for dates with modifiers `B`, `C`, `F`), as indicated in section 9.
+3. **Accounting in metadata.** In the `Exif.Photo.DateTimeOriginal` field of metadata, for exact dates with modifier `E`, the time from the filename is recorded. For dates with modifiers `B`, `C`, `F`, the field remains empty, as indicated in section 9.
 4. **A decision for the future.** If you decide to omit time, but later a photo with known time appears in the archive, you will have to either abandon the simplification and rename all files by adding `.00.00.00`, or add time only for this file, breaking uniformity. The first option is preferable.
 
 **Conclusion:** Simplifying the format is possible, but should be approached **very** carefully. The full format is the most reliable and consistent with FADGI best practices, as it is sufficiently universal.
