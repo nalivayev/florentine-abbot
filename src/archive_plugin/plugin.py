@@ -93,8 +93,13 @@ class PhotoNamingExifPlugin(FileProcessorPlugin):
         if not self._write_metadata(path, parsed, config):
             return False
 
+        # Check for associated log file
+        log_file_path = path.with_suffix('.log')
+        if not log_file_path.exists():
+            log_file_path = None
+
         # Move to processed folder
-        if not self._move_to_processed(path, parsed):
+        if not self._move_to_processed(path, parsed, log_file_path):
             return False
 
         self.logger.info(f"Successfully processed: {path.name}")
@@ -234,14 +239,16 @@ class PhotoNamingExifPlugin(FileProcessorPlugin):
             self.logger.error(f"Failed to write metadata to {file_path}: {e}")
             return False
 
-    def _move_to_processed(self, file_path: Path, parsed: Optional[ParsedFilename] = None) -> bool:
+    def _move_to_processed(self, file_path: Path, parsed: Optional[ParsedFilename] = None, log_file_path: Optional[Path] = None) -> bool:
         """Move file to processed subfolder, preserving directory structure.
         
         If parsed data is provided, the filename will be normalized (e.g. adding leading zeros).
+        If a log file is provided, it will be moved and renamed to match the image file.
 
         Args:
             file_path: Path to the file.
             parsed: Parsed filename data (optional).
+            log_file_path: Path to the associated log file (optional).
 
         Returns:
             True if move successful, False otherwise.
@@ -258,15 +265,24 @@ class PhotoNamingExifPlugin(FileProcessorPlugin):
 
             # Determine destination filename
             dest_filename = file_path.name
+            dest_log_filename = None
+
             if parsed:
                 # Reconstruct filename with normalized components (leading zeros)
                 # Ensure sequence is normalized to 4 digits
-                dest_filename = (
+                base_name = (
                     f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}."
                     f"{parsed.hour:02d}.{parsed.minute:02d}.{parsed.second:02d}."
                     f"{parsed.modifier}.{parsed.group}.{parsed.subgroup}.{int(parsed.sequence):04d}."
-                    f"{parsed.side}.{parsed.suffix}.{parsed.extension}"
+                    f"{parsed.side}.{parsed.suffix}"
                 )
+                dest_filename = f"{base_name}.{parsed.extension}"
+                
+                if log_file_path:
+                    dest_log_filename = f"{base_name}.log"
+            
+            elif log_file_path:
+                dest_log_filename = log_file_path.name
 
             # Destination path
             dest_path = processed_dir / dest_filename
@@ -278,10 +294,26 @@ class PhotoNamingExifPlugin(FileProcessorPlugin):
                     f"Leaving source file in place."
                 )
                 return False
+            
+            # Check if log destination exists
+            dest_log_path = None
+            if log_file_path and dest_log_filename:
+                dest_log_path = processed_dir / dest_log_filename
+                if dest_log_path.exists():
+                    self.logger.error(
+                        f"Destination log file already exists: {dest_log_path}. "
+                        f"Leaving source files in place."
+                    )
+                    return False
 
             # Move file
             shutil.move(str(file_path), str(dest_path))
             self.logger.info(f"  Moved to: {dest_path}")
+            
+            # Move log file
+            if log_file_path and dest_log_path:
+                shutil.move(str(log_file_path), str(dest_log_path))
+                self.logger.info(f"  Moved log to: {dest_log_path}")
 
             return True
 
