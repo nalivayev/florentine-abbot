@@ -331,7 +331,7 @@ For archive protection and attribution, it is recommended to fill in authorship 
 | **`A` (Absent)** | *(empty)* | *(empty)* | `Unknown date. Graduation party.` |
 | **`B` (Before)** | *(empty)* | `1940` | `Approximate date: before 1940. Parents' wedding.` |
 | **`C` (Circa)** | *(empty)* | `1950` | `Approximate date: circa 1950.` |
-| **`E` (Exact)** | `1950:06:15 12:00:00` | `1950-06-15` | `Exact date: June 15, 1950. Inscription on the back.` |
+| **`E` (Exact)** | `1950:06:15 12:00:00` (or time from filename) | `1950-06-15` | `Exact date: June 15, 1950. Inscription on the back.` |
 | **`F` (aFter)** | *(empty)* | `1960` | `Approximate date: after 1960.` |
 
 ### 10. Examples
