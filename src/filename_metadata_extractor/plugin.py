@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import uuid
 from pathlib import Path
-from typing import Any, Optional, Dict
+from typing import Any, Optional
 
 from folder_monitor.base_plugin import FileProcessorPlugin
 
@@ -222,8 +222,12 @@ class FilenameMetadataExtractor(FileProcessorPlugin):
                     capture_output=True, 
                     text=True, 
                     encoding='utf-8',
-                    check=False
+                    check=False,
+                    timeout=30
                 )
+            except subprocess.TimeoutExpired:
+                self.logger.error(f"Exiftool timed out after 30 seconds processing {file_path}")
+                return False
             except FileNotFoundError:
                 self.logger.error("Exiftool not found. Please install exiftool and add it to PATH.")
                 return False

@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 import pytest
 from PIL import Image
-from archive_plugin.plugin import PhotoNamingExifPlugin
+from filename_metadata_extractor.plugin import FilenameMetadataExtractor
 
 class TestExiftoolCompliance:
     @pytest.fixture
@@ -30,7 +30,7 @@ class TestExiftoolCompliance:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        plugin = PhotoNamingExifPlugin()
+        plugin = FilenameMetadataExtractor()
         config = {
             "creator": "John Doe",
             "credit": "The Archive",
@@ -84,7 +84,7 @@ class TestExiftoolCompliance:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        plugin = PhotoNamingExifPlugin()
+        plugin = FilenameMetadataExtractor()
         plugin.process(str(file_path), {})
         
         processed_path = temp_dir / "processed" / filename

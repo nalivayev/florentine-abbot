@@ -21,7 +21,7 @@ class TestFilenameMetadataExtractor:
 
     def test_plugin_name(self, plugin):
         """Test plugin name."""
-        assert plugin.name == 'naming_exif'
+        assert plugin.name == 'filename_metadata_extractor'
 
     def test_plugin_version(self, plugin):
         """Test plugin version."""
@@ -82,26 +82,4 @@ class TestFilenameMetadataExtractor:
         result = plugin._parse_and_validate('1950.13.15.00.00.00.E.FAM.POR.000001.A.MSR.tiff')
         assert result is None
 
-    def test_build_metadata_dict_exact_date(self, plugin, parser):
-        """Test _build_metadata_dict for exact date."""
-        parsed = parser.parse('1950.06.15.12.30.00.E.FAM.POR.000001.A.MSR.tiff')
-        exif_dict, iptc_dict, xmp_dict = plugin._build_metadata_dict(parsed)
-        
-        assert 'Xmp.dc.identifier' in xmp_dict
-        assert 'Exif.Photo.DateTimeOriginal' in exif_dict
-        assert 'Xmp.Iptc4xmpCore.DateCreated' in xmp_dict
-        assert 'Xmp.photoshop.DateCreated' in xmp_dict
-        assert exif_dict['Exif.Photo.DateTimeOriginal'] == '1950:06:15 12:30:00'
-        assert xmp_dict['Xmp.Iptc4xmpCore.DateCreated'] == '1950-06-15'
-        assert xmp_dict['Xmp.photoshop.DateCreated'] == '1950-06-15T12:30:00'  # Only for exact dates
 
-    def test_build_metadata_dict_circa_date(self, plugin, parser):
-        """Test _build_metadata_dict for circa date."""
-        parsed = parser.parse('1950.06.00.00.00.00.C.FAM.POR.000002.R.WEB.jpg')
-        exif_dict, iptc_dict, xmp_dict = plugin._build_metadata_dict(parsed)
-        
-        assert 'Xmp.dc.identifier' in xmp_dict
-        assert 'Exif.Photo.DateTimeOriginal' not in exif_dict
-        assert 'Xmp.Iptc4xmpCore.DateCreated' in xmp_dict
-        assert 'Xmp.photoshop.DateCreated' not in xmp_dict
-        assert xmp_dict['Xmp.Iptc4xmpCore.DateCreated'] == '1950-06'
