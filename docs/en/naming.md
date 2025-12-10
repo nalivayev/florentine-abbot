@@ -288,6 +288,8 @@ The rules completely match those for the group (GGG):
 
 A file name ensures uniqueness and sorting, but it’s the metadata that carries the meaning, history, and context of the photograph. Filling out metadata is a mandatory step in the archiving process.
 
+Tag filling can be automated. Data for field values can be extracted from filename components, set in general archive settings, or passed via processing script parameters.
+
 Since the filename already contains all necessary chronological information in a structured form, the process of filling technical fields (dates) is recommended to be **automated** using specialized tools. Descriptive fields are filled manually.
 
 #### Field Mapping Rules
@@ -299,12 +301,11 @@ The logic for filling date fields depends on the date modifier in the file name:
 
 *   **Exact Dates (Modifier `E`):**
     *   `Exif.Photo.DateTimeOriginal`: The full date and time (`YYYY:MM:DD HH:MM:SS`) is written. If the time is unknown, `12:00:00` is used. This is the primary field for most software.
-    *   `XMP:photoshop:DateCreated`: The full timestamp is written (`YYYY-MM-DDTHH:MM:SS`).
-    *   `XMP:Iptc4xmpCore:DateCreated`: The date is written in ISO format (`YYYY-MM-DD`).
+    *   `XMP-photoshop:DateCreated`: The full timestamp is written (`YYYY-MM-DDTHH:MM:SS`).
 
 *   **Non-Exact Dates (Modifiers `A`, `B`, `C`, `F`):**
     *   `Exif.Photo.DateTimeOriginal`: **Remains empty**. The EXIF standard requires an exact date and does not support partial values. Writing fictitious values (like `01.01`) distorts historical truth.
-    *   `XMP:Iptc4xmpCore:DateCreated`: A partial date is written as far as it is known (`YYYY` or `YYYY-MM`). This allows professional software to correctly display the year or month.
+    *   `XMP-photoshop:DateCreated`: A partial date is written as far as it is known (`YYYY` or `YYYY-MM`). This allows professional software to correctly display the year or month.
 
 **2. Description / Caption**
 *   This is the most important field for manual filling.
@@ -314,14 +315,18 @@ The logic for filling date fields depends on the date modifier in the file name:
 **3. Identifiers**
 *   It is recommended to generate and write a unique identifier (UUID) into the `XMP-dc:Identifier` and `XMP-xmp:Identifier` fields. This allows for unambiguous identification of the file even after renaming.
 
-**4. Authorship and Origin**
-*   `Copyright`: Archive rights holder (e.g., `© Ivanov Family Archive`).
-*   `Creator`: Who performed the scanning.
-*   `Artist`: Author of the original shot (if known).
+**4. Authorship and Rights**
+For archive protection and attribution, it is recommended to fill in authorship and rights fields:
+
+*   `XMP-dc:Creator`: Creator of the digital copy or archive author (e.g., `John Doe`).
+*   `XMP-photoshop:Credit`: Who holds the credit for the image (e.g., `Doe Family Archive`).
+*   `XMP-dc:Rights`: Rights information (e.g., `Public Domain` or `All Rights Reserved`).
+*   `XMP-xmpRights:UsageTerms`: Usage terms (e.g., `Free to use with attribution`).
+*   `XMP-dc:Source`: Original source (e.g., `Box 42`, `Grandma's Album`).
 
 #### Summary Table of Examples
 
-| Modifier | Exif.Photo.DateTimeOriginal | XMP DateCreated | Description (Example) |
+| Modifier | Exif.Photo.DateTimeOriginal | XMP-photoshop:DateCreated | Description (Example) |
 |:-|:-|:-|:-|
 | **`A` (Absent)** | *(empty)* | *(empty)* | `Unknown date. Graduation party.` |
 | **`B` (Before)** | *(empty)* | `1940` | `Approximate date: before 1940. Parents' wedding.` |

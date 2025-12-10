@@ -26,6 +26,19 @@ Florentine Abbot addresses this with canonical INI profiles and a scripted workf
 - **Command-line interface** with argument validation and help.
 - **Plugin system**: easily extend workflows by adding new plugins (see below).
 
+## Archive Plugin
+
+The `archive_plugin` is a plugin for [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor) that automates metadata tagging for archival photos.
+
+### Requirements
+- **ExifTool**: This plugin requires [ExifTool](https://exiftool.org/) to be installed and available in the system PATH.
+
+### Features
+- Parses structured filenames (e.g., `1950.06.15.E.FAM.0001.A.tiff`).
+- Writes metadata to standard EXIF/XMP fields.
+- Supports partial dates (e.g., `1950.00.00`) by using `XMP-photoshop:DateCreated`.
+- Configurable fields for Creator, Credit, Rights, etc.
+
 ## Main Utilities
 
 - `scan_batcher/cli.py` — main CLI entry point (used for the `scan-batcher` command).
