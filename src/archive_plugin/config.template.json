@@ -1,0 +1,14 @@
+{
+  "_comment": "Configuration for Photo Naming EXIF Plugin",
+  "folders": [
+    {
+      "path": "C:/Scans/Input",
+      "recursive": false,
+      "creator": ["Your Name"],
+      "credit": "Your Family Archive",
+      "rights": "Scan (c) 2025 Your Name",
+      "usage_terms": "Personal use only",
+      "source": "Original physical item location"
+    }
+  ]
+}
