@@ -1,18 +1,18 @@
-"""Unit tests for PhotoNamingExifPlugin."""
+"""Unit tests for FilenameMetadataExtractor."""
 
 import pytest
 from pathlib import Path
-from archive_plugin.plugin import PhotoNamingExifPlugin
-from archive_plugin.parser import FilenameParser
+from filename_metadata_extractor.plugin import FilenameMetadataExtractor
+from filename_metadata_extractor.parser import FilenameParser
 
 
-class TestPhotoNamingExifPlugin:
-    """Test cases for PhotoNamingExifPlugin."""
+class TestFilenameMetadataExtractor:
+    """Test cases for FilenameMetadataExtractor."""
 
     @pytest.fixture
     def plugin(self):
         """Create plugin instance."""
-        return PhotoNamingExifPlugin()
+        return FilenameMetadataExtractor()
 
     @pytest.fixture
     def parser(self):

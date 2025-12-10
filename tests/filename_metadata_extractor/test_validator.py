@@ -1,8 +1,8 @@
 """Unit tests for filename validator."""
 
 import pytest
-from archive_plugin.parser import FilenameParser, ParsedFilename
-from archive_plugin.validator import FilenameValidator
+from filename_metadata_extractor.parser import FilenameParser, ParsedFilename
+from filename_metadata_extractor.validator import FilenameValidator
 
 
 class TestFilenameValidator:

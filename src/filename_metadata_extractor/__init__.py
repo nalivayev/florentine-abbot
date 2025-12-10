@@ -2,6 +2,6 @@
 
 __version__ = "0.1.0"
 
-from .plugin import PhotoNamingExifPlugin
+from .plugin import FilenameMetadataExtractor
 
-__all__ = ["PhotoNamingExifPlugin"]
+__all__ = ["FilenameMetadataExtractor"]

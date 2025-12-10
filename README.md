@@ -28,7 +28,7 @@ Florentine Abbot addresses this with canonical INI profiles and a scripted workf
 
 ## Archive Plugin
 
-The `archive_plugin` is a plugin for [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor) that automates metadata tagging for archival photos.
+The `filename_metadata_extractor` is a plugin for [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor) that automates metadata tagging for archival photos.
 
 ### Requirements
 - **ExifTool**: This plugin requires [ExifTool](https://exiftool.org/) to be installed and available in the system PATH.

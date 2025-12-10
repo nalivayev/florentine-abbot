@@ -28,7 +28,7 @@ Florentine Abbot решает это за счёт эталонных INI‑пр
 
 ## Плагин архивации (Archive Plugin)
 
-`archive_plugin` — это плагин для [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor), который автоматизирует тегирование метаданных для архивных фотографий.
+`filename_metadata_extractor` — это плагин для [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor), который автоматизирует тегирование метаданных для архивных фотографий.
 
 ### Требования
 - **ExifTool**: Для работы плагина необходимо установить [ExifTool](https://exiftool.org/) и добавить его в системный PATH.
