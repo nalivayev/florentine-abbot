@@ -5,7 +5,7 @@ import pytest
 from pathlib import Path
 from PIL import Image
 import pyexiv2
-from archive_plugin.plugin import PhotoNamingExifPlugin
+from filename_metadata_extractor.plugin import FilenameMetadataExtractor
 
 class TestIntegration:
     @pytest.fixture
@@ -27,7 +27,7 @@ class TestIntegration:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        plugin = PhotoNamingExifPlugin()
+        plugin = FilenameMetadataExtractor()
         
         # 2. Execute
         # config is not used by this plugin currently, passing empty dict
@@ -74,7 +74,7 @@ class TestIntegration:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        plugin = PhotoNamingExifPlugin()
+        plugin = FilenameMetadataExtractor()
         
         # Execute
         result = plugin.process(str(file_path), {})
@@ -91,7 +91,7 @@ class TestIntegration:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        plugin = PhotoNamingExifPlugin()
+        plugin = FilenameMetadataExtractor()
         
         result = plugin.process(str(file_path), {})
         assert result is True

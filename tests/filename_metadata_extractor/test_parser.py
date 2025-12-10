@@ -1,7 +1,7 @@
 """Unit tests for filename parser."""
 
 import pytest
-from archive_plugin.parser import FilenameParser, ParsedFilename
+from filename_metadata_extractor.parser import FilenameParser, ParsedFilename
 
 
 class TestFilenameParser:

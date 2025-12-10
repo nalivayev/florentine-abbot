@@ -13,7 +13,7 @@ from .parser import FilenameParser, ParsedFilename
 from .validator import FilenameValidator
 
 
-class PhotoNamingExifPlugin(FileProcessorPlugin):
+class FilenameMetadataExtractor(FileProcessorPlugin):
     """Plugin that extracts metadata from structured photo filenames and writes to EXIF/XMP."""
 
     SUPPORTED_EXTENSIONS = {".tiff", ".tif", ".jpg", ".jpeg"}
@@ -32,7 +32,7 @@ class PhotoNamingExifPlugin(FileProcessorPlugin):
         Returns:
             The plugin name.
         """
-        return "naming_exif"
+        return "filename_metadata_extractor"
 
     @property
     def version(self) -> str:
