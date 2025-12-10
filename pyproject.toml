@@ -1,6 +1,6 @@
 [project]
 name = "florentine-abbot"
-version = "1.1.0"
+dynamic = ["version"]
 description = "A suite of tools for archival scanning and digital workflow automation."
 authors = [
     { name="Andrey Nalivayev", email="nalivayev@gmail.com" }
@@ -32,5 +32,9 @@ packages = [
 "scan_batcher.workflows.vuescan" = ["*.ini"]
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "setuptools_scm>=8.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "node-and-date"
