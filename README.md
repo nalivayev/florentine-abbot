@@ -3,9 +3,13 @@
 
 # Florentine Abbot
 
+Florentine Abbot is a project dedicated to the scanning and digital organization of home photo archives. It consists of tools to automate the scanning process and to organize the resulting files with proper metadata.
+
+## Scanning (Scan Batcher)
+
 A utility designed to automate and optimize the scanning workflow using [VueScan](https://www.hamrick.com) by Ed Hamrick.
 
-## Why this matters 
+### Why this matters 
 
 VueScan is powerful, but its flexibility becomes a liability at scale: hundreds of settings across different tabs are easy to change by accident or miss.
 
@@ -15,8 +19,7 @@ Florentine Abbot addresses this with canonical INI profiles and a scripted workf
 - **Standardization** — a single workflow shared by the team
 - **Automation** — fewer manual steps and less chance of human error
 
-
-## Features
+### Features
 
 - **Automatic calculation of optimal scanning DPI** based on photo and output requirements.
 - **Batch processing**: interactive, single calculation, or folder-based workflows.
@@ -24,70 +27,9 @@ Florentine Abbot addresses this with canonical INI profiles and a scripted workf
 - **Workflow automation**: run VueScan with generated settings, move and rename output files, extract EXIF metadata.
 - **Comprehensive logging** for all workflow steps.
 - **Command-line interface** with argument validation and help.
-- **Plugin system**: easily extend workflows by adding new plugins (see below).
+- **Plugin system**: easily extend workflows by adding new plugins.
 
-## Archive Plugin
-
-The `filename_metadata_extractor` is a plugin for [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor) that automates metadata tagging for archival photos.
-
-### Requirements
-- **ExifTool**: This plugin requires [ExifTool](https://exiftool.org/) to be installed and available in the system PATH.
-
-### Features
-- Parses structured filenames (e.g., `1950.06.15.E.FAM.0001.A.tiff`).
-- Writes metadata to standard EXIF/XMP fields.
-- Supports partial dates (e.g., `1950.00.00`) by using `XMP-photoshop:DateCreated`.
-- Configurable fields for Creator, Credit, Rights, etc.
-
-## Main Utilities
-
-- `scan_batcher/cli.py` — main CLI entry point (used for the `scan-batcher` command).
-- `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
-- `scan_batcher/calculator.py` — DPI calculation algorithms.
-- `scan_batcher/parser.py` — command-line argument parsing and validation.
-- `scan_batcher/recorder.py` — logging utility.
-- `scan_batcher/constants.py` — centralized constants and enumerations (e.g., `RoundingStrategy`).
-- `scan_batcher/workflow.py` — base class for all workflow plugins.
-- `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
-- `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
-- `scan_batcher/exifer.py` — EXIF metadata extraction and parsing.
-
-## Template System
-
-Templates are used in settings and file names to inject dynamic values.
-
-**Template format:**
-
-```
-{<name>[:length[:align[:pad]]]}
-```
-
-- `name` — template variable name  
-- `length` — total length (optional)  
-- `align` — alignment (`<`, `>`, `^`; optional)  
-- `pad` — padding character (optional)  
-
-## Supported Template Variables
-
-- `user_name` — operating system user name  
-- `digitization_year` — year of digitization (from EXIF or file modification time)  
-- `digitization_month` — month of digitization  
-- `digitization_day` — day of digitization  
-- `digitization_hour` — hour of digitization  
-- `digitization_minute` — minute of digitization  
-- `digitization_second` — second of digitization  
-- `scan_dpi` — DPI value selected or calculated during the batch or interactive workflow  
-- ...plus any additional variables provided via command-line (`--templates key=value`) or batch templates
-
-**Note:**  
-If EXIF metadata is missing, date/time variables are filled with the file's modification time.
-
-**Example:**
-```
-{digitization_year:8:>:0}
-```
-
-## Usage
+### Usage
 
 Run the main workflow:
 
@@ -109,9 +51,8 @@ For a full list of arguments and options, use:
 scan-batcher --help
 ```
 
-## Command Line Arguments
+#### Command Line Arguments
 
-### Available Arguments
 - `-b, --batch` - Batch mode: scan (interactive), calculate (single calculation), or process (folder processing). Default: scan
 - `-w, --workflow` - Path to the workflow configuration file (INI format) for batch processing
 - `-t, --templates` - List of template key-value pairs for file naming or metadata, e.g. `-t year=2024 author=Smith`
@@ -121,55 +62,96 @@ scan-batcher --help
 - `-d, --dpis` - List of supported DPI resolutions by the scanner, separated by space, e.g., `100 300 1200`
 - `-r, --rounding` - Rounding strategy: `mx` (maximum), `mn` (minimum), `nr` (nearest). Default: nr. Internally uses `RoundingStrategy` enum
 
-## Examples
+#### Examples
 
-### Interactive DPI calculation (scan mode)
+**Interactive DPI calculation (scan mode)**
 ```sh
 scan-batcher --workflow examples/workflow.ini --batch scan --dpis 300 600 1200 2400
 ```
 *The program will prompt you for photo dimensions interactively.*
 
-PowerShell:
-
-```powershell
-scan-batcher --workflow .\examples\workflow.ini --batch scan --dpis 300 600 1200 2400
-```
-
-### Single DPI calculation (calculate mode)
+**Single DPI calculation (calculate mode)**
 ```sh
 scan-batcher --workflow examples/workflow.ini --batch calculate --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800 --rounding nr
 ```
 *The program will prompt for photo and image dimensions, then exit after one calculation.*
 
-PowerShell:
-
-```powershell
-scan-batcher --workflow .\examples\workflow.ini --batch calculate --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800 --rounding nr
-```
-
-### Process files from folder
+**Process files from folder**
 ```sh
 scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/files --templates author="John Doe" project="Family Archive"
 ```
 *Process existing files without interactive input.*
 
-PowerShell:
+### Template System
 
-```powershell
-scan-batcher --workflow .\examples\workflow.ini --batch process C:\path\to\scanned\files --templates author="John Doe" project="Family Archive"
+Templates are used in settings and file names to inject dynamic values.
+
+**Template format:**
+
+```
+{<name>[:length[:align[:pad]]]}
 ```
 
-## Logging
+- `name` — template variable name  
+- `length` — total length (optional)  
+- `align` — alignment (`<`, `>`, `^`; optional)  
+- `pad` — padding character (optional)  
 
-All workflow steps and errors are logged to a file with the same name as the script and `.log` extension.
+#### Supported Template Variables
 
-## Installation
+- `user_name` — operating system user name  
+- `digitization_year` — year of digitization (from EXIF or file modification time)  
+- `digitization_month` — month of digitization  
+- `digitization_day` — day of digitization  
+- `digitization_hour` — hour of digitization  
+- `digitization_minute` — minute of digitization  
+- `digitization_second` — second of digitization  
+- `scan_dpi` — DPI value selected or calculated during the batch or interactive workflow  
+- ...plus any additional variables provided via command-line (`--templates key=value`) or batch templates
 
-### Prerequisites
+**Note:**  
+If EXIF metadata is missing, date/time variables are filled with the file's modification time.
+
+**Example:**
+```
+{digitization_year:8:>:0}
+```
+
+## Organization & Archiving (Archive Plugin)
+
+The `filename_metadata_extractor` is a plugin for [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor) that automates metadata tagging for archival photos.
+
+### Features
+- Parses structured filenames (e.g., `1950.06.15.E.FAM.0001.A.tiff`).
+- Writes metadata to standard EXIF/XMP fields.
+- Supports partial dates (e.g., `1950.00.00`) by using `XMP-photoshop:DateCreated`.
+- Configurable fields for Creator, Credit, Rights, etc.
+
+### Requirements
+- **ExifTool**: This plugin requires [ExifTool](https://exiftool.org/) to be installed and available in the system PATH.
+
+## Technical Details
+
+### Main Utilities
+
+- `scan_batcher/cli.py` — main CLI entry point (used for the `scan-batcher` command).
+- `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
+- `scan_batcher/calculator.py` — DPI calculation algorithms.
+- `scan_batcher/parser.py` — command-line argument parsing and validation.
+- `scan_batcher/recorder.py` — logging utility.
+- `scan_batcher/constants.py` — centralized constants and enumerations (e.g., `RoundingStrategy`).
+- `scan_batcher/workflow.py` — base class for all workflow plugins.
+- `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
+- `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
+- `scan_batcher/exifer.py` — EXIF metadata extraction and parsing.
+
+### Installation
+
+#### Prerequisites
 - Python 3.10 or higher
 - VueScan software (for scanning operations)
 
-### Install from source
+#### Install from source
 
 To install the package locally from the source directory, use:
 
@@ -182,7 +164,7 @@ This will install all required dependencies and make the `scan-batcher` CLI comm
 > **Note:**  
 > It is recommended to use a [virtual environment](https://docs.python.org/3/library/venv.html) for installation and development.
 
-### Development installation
+#### Development installation
 
 For development with editable installation:
 
@@ -195,6 +177,10 @@ To upgrade an existing installation, use:
 ```sh
 pip install --upgrade .
 ```
+
+### Logging
+
+All workflow steps and errors are logged to a file with the same name as the script and `.log` extension.
 
 ## Documentation
 
