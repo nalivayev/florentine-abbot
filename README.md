@@ -119,12 +119,13 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 
 ## Organization & Archiving (Archive Plugin)
 
-The `filename_metadata_extractor` is a plugin for [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor) that automates metadata tagging for archival photos.
+The `filename_metadata_extractor` is a plugin for [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor) that automates metadata tagging and organization for archival photos.
 
 ### Features
 - Parses structured filenames (e.g., `1950.06.15.E.FAM.0001.A.tiff`).
 - Writes metadata to standard EXIF/XMP fields.
 - Supports partial dates (e.g., `1950.00.00`) by using `XMP-photoshop:DateCreated`.
+- **Automatic Organization**: Moves processed files into a structured folder hierarchy (e.g., `processed/1950.E/1950.06.15.E/MSR/`).
 - Configurable fields for Creator, Credit, Rights, etc.
 
 ### Requirements

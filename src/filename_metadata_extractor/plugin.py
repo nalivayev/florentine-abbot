@@ -262,10 +262,7 @@ class FilenameMetadataExtractor(FileProcessorPlugin):
             # We need to find the base watched folder to create processed/ structure
             # For now, create processed/ in the same directory as the file
             file_dir = file_path.parent
-            processed_dir = file_dir / "processed"
-
-            # Create processed directory if it doesn't exist
-            processed_dir.mkdir(parents=True, exist_ok=True)
+            processed_root = file_dir / "processed"
 
             # Determine destination filename
             dest_filename = file_path.name
@@ -284,9 +281,27 @@ class FilenameMetadataExtractor(FileProcessorPlugin):
                 
                 if log_file_path:
                     dest_log_filename = f"{base_name}.log"
-            
-            elif log_file_path:
-                dest_log_filename = log_file_path.name
+
+                # Build folder structure:
+                # Level 1: YYYY.M (e.g. 1945.E, 1950.B)
+                level1 = f"{parsed.year:04d}.{parsed.modifier}"
+
+                # Level 2: YYYY.MM.DD.M (e.g. 1945.06.15.E)
+                level2 = f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}.{parsed.modifier}"
+
+                # Level 3: SUFFIX (e.g. RAW, MSR)
+                level3 = parsed.suffix
+
+                processed_dir = processed_root / level1 / level2 / level3
+
+            else:
+                # Fallback for unparsed files
+                processed_dir = processed_root / "unparsed"
+                if log_file_path:
+                    dest_log_filename = log_file_path.name
+
+            # Create processed directory if it doesn't exist
+            processed_dir.mkdir(parents=True, exist_ok=True)
 
             # Destination path
             dest_path = processed_dir / dest_filename
