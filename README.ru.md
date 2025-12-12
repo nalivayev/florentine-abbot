@@ -119,12 +119,13 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 
 ## Организация и архивация (Archive Plugin)
 
-`filename_metadata_extractor` — это плагин для [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor), который автоматизирует тегирование метаданных для архивных фотографий.
+`filename_metadata_extractor` — это плагин для [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor), который автоматизирует тегирование метаданных и организацию архивных фотографий.
 
 ### Возможности
 - Парсинг структурированных имен файлов (например, `1950.06.15.E.FAM.0001.A.tiff`).
 - Запись метаданных в стандартные поля EXIF/XMP.
 - Поддержка неполных дат (например, `1950.00.00`) через поле `XMP-photoshop:DateCreated`.
+- **Автоматическая организация**: Перемещает обработанные файлы в структурированную иерархию папок (например, `processed/1950.E/1950.06.15.E/MSR/`).
 - Настраиваемые поля для автора, прав, источника и т.д.
 
 ### Требования
