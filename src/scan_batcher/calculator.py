@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import Sequence
 
 from scan_batcher.constants import RoundingStrategy, CM_TO_INCH
 
@@ -18,34 +18,38 @@ class Calculator:
         (508.0, 300, [(150, 1772), (300, 3543), (600, 7087)])
     """
 
+    def __init__(self) -> None:
+        """Initialize the calculator."""
+        pass
+
     def __call__(
         self,
         photo_min_side: float,
         image_min_side: int,
-        min_dpi: Optional[int],
-        max_dpi: Optional[int],
-        dpi_list: Optional[List[int]],
+        min_dpi: int | None,
+        max_dpi: int | None,
+        dpi_list: Sequence[int] | None,
         rounding: RoundingStrategy | str
-    ) -> Tuple[float, int, List[Tuple[int, int]]]:
+    ) -> tuple[float, int, list[tuple[int, int]]]:
         """
         Calculate the optimal DPI values for printing an image on a photo with given dimensions.
 
         Args:
             photo_min_side (float): Minimum length of the photo's shorter side (in centimeters).
             image_min_side (int): Minimum length of the image's shorter side (in pixels).
-            min_dpi (Optional[int]): Minimum allowed DPI value (None if not specified).
-            max_dpi (Optional[int]): Maximum allowed DPI value (None if not specified).
-            dpi_list (Optional[List[int]]): List of available DPI values to choose from (None if not specified).
+            min_dpi (int | None): Minimum allowed DPI value (None if not specified).
+            max_dpi (int | None): Maximum allowed DPI value (None if not specified).
+            dpi_list (Sequence[int] | None): List of available DPI values to choose from (None if not specified).
             rounding (RoundingStrategy | str): Rounding strategy (RoundingStrategy enum or string):
                 RoundingStrategy.NEAREST or 'nr' - nearest DPI value,
                 RoundingStrategy.MAXIMUM or 'mx' - maximum possible DPI value,
                 RoundingStrategy.MINIMUM or 'mn' - minimum possible DPI value.
 
         Returns:
-            Tuple[float, int, List[Tuple[int, int]]]: A tuple containing:
+            tuple[float, int, list[tuple[int, int]]]: A tuple containing:
                 - calculated_dpi (float): The raw calculated DPI value.
                 - recommended_dpi (int): The recommended DPI after applying constraints and rounding.
-                - dpi_options (List[Tuple[int, int]]): List of tuples with available DPI options and corresponding pixel dimensions.
+                - dpi_options (list[tuple[int, int]]): List of tuples with available DPI options and corresponding pixel dimensions.
 
         Raises:
             ValueError: If parameters are invalid or constraints conflict.
@@ -71,7 +75,7 @@ class Calculator:
         calculated_dpi = image_min_side / (photo_min_side / CM_TO_INCH)
         recommended_dpi = calculated_dpi
 
-        dpi_options: List[Tuple[int, int]] = []
+        dpi_options: list[tuple[int, int]] = []
 
         # Handle empty dpi_list case
         if dpi_list:

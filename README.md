@@ -29,6 +29,11 @@ Scan Batcher addresses this with canonical INI profiles and a scripted workflow 
 - **Command-line interface** with argument validation and help.
 - **Plugin system**: easily extend workflows by adding new plugins.
 
+### Requirements
+
+- Python 3.10+
+- [ExifTool](https://exiftool.org/) must be installed and available in PATH.
+
 ### Usage
 
 Run the main workflow:

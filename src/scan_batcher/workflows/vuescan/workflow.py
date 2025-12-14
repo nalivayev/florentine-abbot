@@ -6,10 +6,11 @@ from subprocess import run
 from pathlib import Path
 from re import finditer
 from os import makedirs
+from typing import Any
 import datetime
 
 from scan_batcher.recorder import log, Recorder
-from scan_batcher.exifer import Exifer
+from common.exifer import Exifer
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import Workflow
 from scan_batcher.constants import EXIF_SUPPORTED_EXTENSIONS
@@ -35,6 +36,10 @@ class VuescanWorkflow(Workflow):
         "digitization_second"
     ]
 
+    def __init__(self) -> None:
+        """Initialize the VueScan workflow."""
+        super().__init__()
+
     def _read_settings_file(self, path: Path) -> ConfigParser:
         """
         Read and parse a configuration file.
@@ -48,7 +53,7 @@ class VuescanWorkflow(Workflow):
         Raises:
             Workflow.Exception: If the file cannot be read or doesn't exist.
         """
-        if Path(path).exists():
+        if path.exists():
             log(self._recorder, [f"Loading settings from '{str(path)}'"])
             parser = ConfigParser(interpolation=ExtendedInterpolation())
             parser.read(path)
@@ -57,13 +62,13 @@ class VuescanWorkflow(Workflow):
         else:
             raise VuescanWorkflow.Exception(f"Error loading settings from file '{path}'")
 
-    def _add_system_templates(self):
+    def _add_system_templates(self) -> None:
         """
         Add system-provided templates (like current username) to the templates dictionary.
         """
         self._templates["user_name"] = getuser()
 
-    def _read_settings(self):
+    def _read_settings(self) -> None:
         """
         Read both script and workflow configuration files and initialize parsers.
         """
@@ -71,7 +76,7 @@ class VuescanWorkflow(Workflow):
         self._workflow_parser = self._read_settings_file(Path(self._workflow_path, self._WORKFLOW_SETTINGS_NAME))
         log(self._recorder, [f"Workflow description: {self._get_workflow_value('main', 'description')}"])
 
-    def _get_workflow_value(self, section, key):
+    def _get_workflow_value(self, section: str, key: str) -> str:
         """
         Get a value from workflow configuration with template substitution.
 
@@ -85,7 +90,7 @@ class VuescanWorkflow(Workflow):
         value = self._workflow_parser[section][key]
         return self._replace_templates_to_value(value)
 
-    def _get_script_value(self, section, key):
+    def _get_script_value(self, section: str, key: str) -> str:
         """
         Get a value from script configuration with template substitution.
 
@@ -99,7 +104,7 @@ class VuescanWorkflow(Workflow):
         value = self._script_parser[section][key]
         return self._replace_templates_to_value(value)
 
-    def _overwrite_vuescan_settings_file(self):
+    def _overwrite_vuescan_settings_file(self) -> None:
         """
         Generate and overwrite VueScan settings file based on workflow configuration.
 
@@ -124,7 +129,7 @@ class VuescanWorkflow(Workflow):
             raise VuescanWorkflow.Exception("Error overwriting the VueScan settings file")
         log(self._recorder, [f"VueScan settings file '{path}' overwritten"])
 
-    def _run_vuescan(self):
+    def _run_vuescan(self) -> None:
         """
         Execute the VueScan program with configured settings.
 
@@ -197,7 +202,7 @@ class VuescanWorkflow(Workflow):
             result = result.replace(template, value)
         return result
 
-    def _extract_exif_tags(self, path: Path) -> dict[str, str]:
+    def _extract_exif_tags(self, path: Path) -> dict[str, Any]:
         """
         Extract EXIF metadata from an image file.
 
@@ -205,10 +210,10 @@ class VuescanWorkflow(Workflow):
             path (Path): Path to the image file.
 
         Returns:
-            dict: Dictionary of EXIF tags or empty dict if extraction fails.
+            dict[str, Any]: Dictionary of EXIF tags or empty dict if extraction fails.
         """
         try:
-            return Exifer.extract(str(path))
+            return Exifer.extract(path)
         except Exifer.Exception as e:
             log(self._recorder, [str(e)])
             log(self._recorder, [f"Unable to extract EXIF from file '{path.name}'"])
@@ -224,19 +229,36 @@ class VuescanWorkflow(Workflow):
         moment = None
         if path.suffix.lower() in EXIF_SUPPORTED_EXTENSIONS:
             tags: dict = self._extract_exif_tags(path)
-            value = tags.get(Exifer.EXIFIFD, {}).get("DateTimeDigitized", "")
+            
+            # Priority list of tags to check for date information
+            date_tags = ["DateTimeDigitized", "DateTimeOriginal", "CreateDate", "DateTime"]
+            # Priority list of EXIF groups to check
+            groups = [Exifer.EXIFIFD, Exifer.IFD0, "System", "File"]
+            
+            value = ""
+            for group in groups:
+                group_data = tags.get(group, {})
+                for tag in date_tags:
+                    value = group_data.get(tag, "")
+                    if value:
+                        break
+                if value:
+                    break
+            
             if value:
                 try:
                     moment = Exifer.convert_value_to_datetime(value)
                 except Exifer.Exception:
-                    return
-        else:
+                    pass
+
+        if moment is None:
             moment = datetime.datetime.fromtimestamp(getmtime(path))
+
         if moment:
             for key in self._EXIF_TEMPLATE_NAMES:
                 self._templates[key] = getattr(moment, key.replace("digitization_", ""), "")
 
-    def _move_output_file(self):
+    def _move_output_file(self) -> None:
         """
         Move the scanned file from VueScan output to final destination.
 
@@ -269,7 +291,7 @@ class VuescanWorkflow(Workflow):
         else:
             raise VuescanWorkflow.Exception(f"Output file '{input_path}' not found")
 
-    def _move_logging_file(self):
+    def _move_logging_file(self) -> None:
         """
         Move VueScan log file to the output directory.
         """
@@ -294,7 +316,7 @@ class VuescanWorkflow(Workflow):
         else:
             log(self._recorder, ["VueScan logging file not found"])
 
-    def __call__(self, recorder: Recorder, workflow_path: str, templates: dict[str, str]):
+    def __call__(self, recorder: Recorder, workflow_path: str, templates: dict[str, str]) -> None:
         """
         Execute the complete VueScan workflow.
 

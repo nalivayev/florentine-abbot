@@ -1,15 +1,16 @@
 from sys import stderr, exit
-from typing import List
+from typing import Sequence
 from pathlib import Path
 
 from scan_batcher.recorder import log, Recorder
 from scan_batcher.batch import Batch, Scan
 from scan_batcher.parser import Parser
 from scan_batcher.workflows import get_workflow
-from scan_batcher.constants import DEFAULT_ENGINE
+from scan_batcher.workflow import Workflow
+from scan_batcher.constants import DEFAULT_ENGINE, RoundingStrategy
 
 
-def get_subclasses(cls):
+def get_subclasses(cls: type) -> list[type]:
     """
     Recursively find all subclasses of a given class, including subclasses of subclasses.
 
@@ -17,7 +18,7 @@ def get_subclasses(cls):
         cls (type): The base class to search subclasses for.
 
     Returns:
-        list: List of all subclasses (including nested).
+        list[type]: List of all subclasses (including nested).
     """
     subclasses = []
     for subclass in cls.__subclasses__():
@@ -25,18 +26,25 @@ def get_subclasses(cls):
         subclasses.extend(get_subclasses(subclass))
     return subclasses
 
-def create_batch(recorder: Recorder, batch: List, min_res: int, max_res: int, res_list, rounding) -> Batch:
+def create_batch(
+    recorder: Recorder, 
+    batch: Sequence[str] | None, 
+    min_res: int | None, 
+    max_res: int | None, 
+    res_list: Sequence[int] | None, 
+    rounding: RoundingStrategy | str
+) -> Batch:
     """
     Create a Batch subclass instance based on the input batch type (case-insensitive).
     Supports all direct and indirect subclasses of Batch.
 
     Args:
         recorder (Recorder): Recorder instance for logging.
-        batch (List): List where the first element specifies the batch type (e.g., "Scan", "CALCULATE").
-        min_res (int): Minimum resolution parameter for the batch.
-        max_res (int): Maximum resolution parameter for the batch.
-        res_list: List of resolutions for processing.
-        rounding: Rounding method to apply.
+        batch (Sequence[str] | None): List where the first element specifies the batch type (e.g., "Scan", "CALCULATE").
+        min_res (int | None): Minimum resolution parameter for the batch.
+        max_res (int | None): Maximum resolution parameter for the batch.
+        res_list (Sequence[int] | None): List of resolutions for processing.
+        rounding (RoundingStrategy | str): Rounding method to apply.
 
     Returns:
         Batch: An instance of the matching Batch subclass (e.g., Scan, Calculate, Process).
@@ -45,7 +53,7 @@ def create_batch(recorder: Recorder, batch: List, min_res: int, max_res: int, re
         ValueError: If the batch type is unknown or empty (defaults to Scan if batch is empty/None).
     """
     if not batch or batch[0] == "":
-        return Scan(recorder, min_res, max_res, res_list, rounding, *batch[1:])
+        return Scan(recorder, min_res, max_res, res_list, rounding)
     
     kind = batch[0].lower()  # Case-insensitive comparison
     
@@ -56,7 +64,7 @@ def create_batch(recorder: Recorder, batch: List, min_res: int, max_res: int, re
     
     raise ValueError(f"Unknown batch type: {batch[0]}")
 
-def create_workflow(engine: str = DEFAULT_ENGINE):
+def create_workflow(engine: str = DEFAULT_ENGINE) -> Workflow:
     """
     Get a registered workflow class by engine name and return its instance.
 
@@ -72,14 +80,14 @@ def create_workflow(engine: str = DEFAULT_ENGINE):
     workflow_class = get_workflow(engine)
     return workflow_class()
 
-def main():
+def main() -> None:
     """
     Main entry point for the CLI utility.
 
     Initializes logging, parses arguments, creates batch and workflow objects,
     and executes the workflow for each batch item.
     """
-    recorder = Recorder(str(Path(__file__).with_suffix(".log")), "workflow")
+    recorder = Recorder(Path(__file__).with_suffix(".log"), "workflow")
     log(recorder, ["Script has been started"])
     parser = Parser()
     args = parser.parse_args()
@@ -98,10 +106,11 @@ def main():
             workflow(recorder, args.workflow, merged_templates)
 
         except KeyboardInterrupt:
-            log(recorder, ["\nExiting..."])
+            log(recorder, ["Script interrupted by user"])
             exit(0)
         except Exception as e:
-            print(f"\nError: {e}", file=stderr)
+            log(recorder, [f"Error: {e}"])
+            stderr.write(f"Error: {e}\n")
             continue
 
     log(recorder, ["Script has been completed"])

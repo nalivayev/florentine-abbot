@@ -13,8 +13,12 @@ class Workflow(ABC):
         """Custom exception for workflow errors."""
         pass
 
+    def __init__(self) -> None:
+        """Initialize the workflow."""
+        pass
+
     @abstractmethod
-    def __call__(self, recorder: Recorder, workflow_path: str, templates: dict[str, str]):
+    def __call__(self, recorder: Recorder, workflow_path: str, templates: dict[str, str]) -> None:
         """
         Execute the workflow.
 
