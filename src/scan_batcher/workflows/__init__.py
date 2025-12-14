@@ -1,14 +1,15 @@
 import importlib
 import pkgutil
+import sys
 from pathlib import Path
-from typing import Dict, Type
+from typing import Callable
 
 from scan_batcher.workflow import Workflow  # base class
 
-_workflows: Dict[str, Type[Workflow]] = {}
+_workflows: dict[str, type[Workflow]] = {}
 
 
-def register_workflow(name: str):
+def register_workflow(name: str) -> Callable[[type[Workflow]], type[Workflow]]:
     """
     Decorator for registering workflow classes.
 
@@ -18,13 +19,13 @@ def register_workflow(name: str):
     Returns:
         Callable: Class decorator.
     """
-    def decorator(cls: Type[Workflow]):
+    def decorator(cls: type[Workflow]) -> type[Workflow]:
         _workflows[name] = cls
         return cls
     return decorator
 
 
-def get_workflow(name: str) -> Type[Workflow]:
+def get_workflow(name: str) -> type[Workflow]:
     """
     Get a registered workflow class by engine name.
 
@@ -32,7 +33,7 @@ def get_workflow(name: str) -> Type[Workflow]:
         name (str): Engine name.
 
     Returns:
-        Type[Workflow]: Workflow class.
+        type[Workflow]: Workflow class.
 
     Raises:
         ValueError: If the workflow is not registered.
@@ -42,7 +43,7 @@ def get_workflow(name: str) -> Type[Workflow]:
     return _workflows[name]
 
 
-def load_workflows():
+def load_workflows() -> None:
     """
     Loads all built-in and external workflow plugins.
 
@@ -60,11 +61,13 @@ def load_workflows():
     try:
         from importlib.metadata import entry_points
         plugin_group = "scan_batcher.workflows"
-        eps = entry_points()
-        if hasattr(eps, 'select'):  # Python 3.10+
-            plugins = eps.select(group=plugin_group)
+        
+        if sys.version_info >= (3, 10):
+            plugins = entry_points(group=plugin_group)
         else:
-            plugins = eps.get(plugin_group, [])
+            eps = entry_points()
+            plugins = eps.get(plugin_group, [])  # type: ignore
+
         for ep in plugins:
             workflow_class = ep.load()
             _workflows[ep.name] = workflow_class

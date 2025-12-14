@@ -1,4 +1,5 @@
-from argparse import ArgumentParser, ArgumentError, ArgumentTypeError, Action
+from argparse import ArgumentParser, Action
+from typing import Any, Sequence
 
 from scan_batcher.constants import RoundingStrategy, DEFAULT_ENGINE
 
@@ -10,21 +11,27 @@ class KeyValueAction(Action):
     Converts input strings in the format 'key=value' into dictionary entries
     and stores them in the namespace.
     """
-    def __call__(self, parser, namespace, value, option_string=None):
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the KeyValueAction."""
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, parser: ArgumentParser, namespace: Any, values: str | Sequence[Any] | None, option_string: str | None = None) -> None:
         """
         Parse key-value pairs and store as a dictionary in the namespace.
 
         Args:
             parser (ArgumentParser): The parser instance.
-            namespace (Namespace): The namespace to update.
-            value (list): List of key=value strings.
-            option_string (str, optional): The option string seen on the command line.
+            namespace (Any): The namespace to update.
+            values (str | Sequence[Any] | None): List of key=value strings.
+            option_string (str | None): The option string seen on the command line.
         """
         dictionary = {}
-        if value:
-            for pair in value:
-                key, value = pair.split("=")
-                dictionary[key] = value
+        if values and isinstance(values, list):
+            for pair in values:
+                if isinstance(pair, str) and "=" in pair:
+                    key, val = pair.split("=", 1)
+                    dictionary[key] = val
         setattr(namespace, self.dest, dictionary)
 
 
@@ -35,6 +42,10 @@ class Arguments:
     Contains argument definitions and validation methods for parameters
     including photo dimensions, image dimensions, resolution settings, and file processing options.
     """
+
+    def __init__(self) -> None:
+        """Initialize the Arguments class."""
+        pass
 
     workflow = {
         "keys": ["-w", "--workflow"],
@@ -122,7 +133,7 @@ class Parser(ArgumentParser):
     user interface.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the Parser with all image calculation arguments.
         """
