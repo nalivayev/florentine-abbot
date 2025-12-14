@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
-from typing import Tuple
+from pathlib import Path
+from typing import Any, Sequence
 
 from scan_batcher.recorder import log, Recorder
 from scan_batcher.calculator import Calculator
@@ -22,7 +23,7 @@ class Batch(ABC):
         return None
 
     @abstractmethod
-    def __iter__(self):
+    def __iter__(self) -> "Batch":
         """
         Return self as the iterator object.
 
@@ -42,33 +43,33 @@ class Calculate(Batch):
         recorder: Recorder | None = None,
         min_dpi: int | None = None,
         max_dpi: int | None = None,
-        dpis: list[int] | None = None,
+        dpis: Sequence[int] | None = None,
         rounding: RoundingStrategy | str = RoundingStrategy.NEAREST
-    ):
+    ) -> None:
         """
         Initialize the Calculate batch.
 
         Args:
-            recorder (Recorder, optional): Recorder instance for logging.
-            min_dpi (int, optional): Minimum allowed DPI.
-            max_dpi (int, optional): Maximum allowed DPI.
-            dpis (List[int], optional): List of available DPI values.
+            recorder (Recorder | None, optional): Recorder instance for logging.
+            min_dpi (int | None, optional): Minimum allowed DPI.
+            max_dpi (int | None, optional): Maximum allowed DPI.
+            dpis (Sequence[int] | None, optional): List of available DPI values.
             rounding (RoundingStrategy | str, optional): Rounding strategy (default: NEAREST).
         """
         self.recorder = recorder
         self.calculator = Calculator()
         self.min_dpi = min_dpi
         self.max_dpi = max_dpi
-        self.dpis = dpis if dpis is not None else []
+        self.dpis = list(dpis) if dpis is not None else []
         # Convert string to enum if needed
         self.rounding = RoundingStrategy.from_string(rounding) if isinstance(rounding, str) else rounding
 
-    def _get_user_input(self):
+    def _get_user_input(self) -> tuple[float, int]:
         """
         Prompt the user for required scan parameters and log the input.
 
         Returns:
-            Tuple[float, int]: The photo minimum side (cm) and image minimum side (px).
+            tuple[float, int]: The photo minimum side (cm) and image minimum side (px).
         """
         log(self.recorder, ["Requesting user input for scan parameters"])
         print("\nEnter scan parameters")
@@ -133,14 +134,14 @@ class Calculate(Batch):
         """
         print(f"{num:>3}\t{dpi:>10}\t{px:>10}\t{note:<20}")
 
-    def _print_table(self, dpis: list[Tuple[int, int]], rec_dpi: float | None = None, calc_dpi: float | None = None) -> None:
+    def _print_table(self, dpis: Sequence[tuple[int, int]], rec_dpi: float | None = None, calc_dpi: float | None = None) -> None:
         """
         Print a table of DPI calculation results.
 
         Args:
-            dpis (List[Tuple[int, int]]): List of (DPI, pixels) tuples.
-            rec_dpi (float, optional): Recommended DPI value.
-            calc_dpi (float, optional): Calculated DPI value.
+            dpis (Sequence[tuple[int, int]]): List of (DPI, pixels) tuples.
+            rec_dpi (float | None, optional): Recommended DPI value.
+            calc_dpi (float | None, optional): Calculated DPI value.
         """
         log(self.recorder, ["Printing calculation results table"])
         print("\nCalculation results:")
@@ -156,12 +157,12 @@ class Calculate(Batch):
                 )
             )
 
-    def _next(self) -> dict:
+    def _next(self) -> dict[str, Any]:
         """
         Perform a single calculation or data retrieval.
 
         Returns:
-            dict: Dictionary with calculation or file data.
+            dict[str, Any]: Dictionary with calculation or file data.
         """
         log(self.recorder, ["Starting calculation step"])
         photo_min_side, image_min_side = self._get_user_input()
@@ -222,7 +223,7 @@ class Calculate(Batch):
         log(self.recorder, [f"Calculation finished, returning scan_dpi={dpi}"])
         return {"scan_dpi": dpi}
 
-    def __iter__(self):
+    def __iter__(self) -> "Calculate":
         """
         Return self as the iterator object.
 
@@ -231,7 +232,7 @@ class Calculate(Batch):
         """
         return self
 
-    def __next__(self) -> dict | None:
+    def __next__(self) -> dict[str, Any] | None:
         """
         Perform a single calculation and raise StopIteration.
 
@@ -247,12 +248,12 @@ class Scan(Calculate):
     Data source from scanner (infinite) with built-in DPI calculation.
     """
 
-    def __next__(self) -> dict | None:
+    def __next__(self) -> dict[str, Any] | None:
         """
         Infinitely yield scan parameters with calculated DPI.
 
         Returns:
-            dict: Scan parameters with calculated DPI.
+            dict[str, Any]: Scan parameters with calculated DPI.
         """
         return self._next()
 
@@ -264,43 +265,43 @@ class Process(Batch):
     Iterates over files in a directory matching a filter and yields file info.
     """
 
-    def __init__(self, path, file_filter="*.*"):
+    def __init__(self, path: str | Path, file_filter: str = "*.*") -> None:
         """
         Initialize the Process batch.
 
         Args:
-            path (str): Path to the folder.
+            path (str | Path): Path to the folder.
             file_filter (str, optional): File filter pattern (default: "*.*").
         """
-        self.path = path
+        self.path = Path(path)
         self.file_filter = file_filter
         self._validate_path()
         self._files = self._get_matching_files()
         self._index = 0  # Current index for iteration
 
-    def _validate_path(self):
+    def _validate_path(self) -> None:
         """
         Validate that the specified path exists and is a directory.
 
         Raises:
             ValueError: If the folder does not exist.
         """
-        if not os.path.isdir(self.path):
+        if not self.path.is_dir():
             raise ValueError(f"Folder doesn't exist: {self.path}")
 
-    def _get_matching_files(self):
+    def _get_matching_files(self) -> list[str]:
         """
         Get a list of files in the directory matching the filter.
 
         Returns:
-            List[str]: List of matching file names.
+            list[str]: List of matching file names.
         """
         return [
-            f for f in os.listdir(self.path)
-            if self._matches_filter(f) and os.path.isfile(os.path.join(self.path, f))
+            f.name for f in self.path.iterdir()
+            if self._matches_filter(f.name) and f.is_file()
         ]
 
-    def _matches_filter(self, filename):
+    def _matches_filter(self, filename: str) -> bool:
         """
         Check if a filename matches the file filter.
 
@@ -312,13 +313,13 @@ class Process(Batch):
         """
         if self.file_filter == "*.*":
             return True
-        ext = os.path.splitext(filename)[1].lower()
+        ext = Path(filename).suffix.lower()
         filter_ext = self.file_filter.lower()
         if filter_ext.startswith("*"):
             return ext == filter_ext[1:] or ext == filter_ext[2:]
         return ext == filter_ext if filter_ext.startswith(".") else filename.lower().endswith(filter_ext.lower())
 
-    def __iter__(self):
+    def __iter__(self) -> "Process":
         """
         Return self as the iterator object and reset the index.
 
@@ -328,12 +329,12 @@ class Process(Batch):
         self._index = 0  # Reset index for each new iterator
         return self
 
-    def __next__(self):
+    def __next__(self) -> dict[str, str]:
         """
         Return the next file info or raise StopIteration when done.
 
         Returns:
-            dict: Dictionary with file path and filename.
+            dict[str, str]: Dictionary with file path and filename.
 
         Raises:
             StopIteration: When all files have been processed.
@@ -342,7 +343,7 @@ class Process(Batch):
             filename = self._files[self._index]
             self._index += 1
             return {
-                "path": os.path.join(self.path, filename),
+                "path": str(self.path / filename),
                 "filename": filename
             }
         raise StopIteration

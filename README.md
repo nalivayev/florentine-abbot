@@ -29,6 +29,11 @@ Florentine Abbot addresses this with canonical INI profiles and a scripted workf
 - **Command-line interface** with argument validation and help.
 - **Plugin system**: easily extend workflows by adding new plugins.
 
+### Requirements
+
+- Python 3.10+
+- [ExifTool](https://exiftool.org/) must be installed and available in PATH.
+
 ### Usage
 
 Run the main workflow:
@@ -117,25 +122,51 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 {digitization_year:8:>:0}
 ```
 
-## Organization & Archiving (Archive Plugin)
+## Automatic Organization (Archive Organizer)
 
-The `filename_metadata_extractor` is a plugin for [Hump Yard](https://github.com/nalivayev/hump-yard) (folder-monitor) that automates metadata tagging and organization for archival photos.
+A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers) and moves the file into a structured folder hierarchy (`YYYY.M/YYYY.MM.DD.M/SUFFIX`). It also writes this metadata into the file's EXIF/XMP tags.
 
-### Features
-- Parses structured filenames (e.g., `1950.06.15.E.FAM.0001.A.tiff`).
-- Writes metadata to standard EXIF/XMP fields.
-- Supports partial dates (e.g., `1950.00.00`) by using `XMP-photoshop:DateCreated`.
-- **Automatic Organization**: Moves processed files into a structured folder hierarchy (e.g., `processed/1950.E/1950.06.15.E/MSR/`).
-- Configurable fields for Creator, Credit, Rights, etc.
+### Usage
 
-### Requirements
-- **ExifTool**: This plugin requires [ExifTool](https://exiftool.org/) to be installed and available in the system PATH.
+**Batch Mode (process existing files):**
+```sh
+archive-organizer "D:\Scans\Inbox"
+```
+
+**Watch Mode (daemon):**
+```sh
+archive-organizer "D:\Scans\Inbox" --watch
+```
+
+**With Metadata:**
+```sh
+archive-organizer "D:\Scans\Inbox" --creator "John Doe" --rights "All Rights Reserved"
+```
+
+## Archive Integrity (Archive Keeper)
+
+A tool to ensure the long-term integrity of your digital archive. It scans your archive folder, calculates SHA-256 hashes of all files, and stores them in a SQLite database. On subsequent runs, it detects:
+- **New files** (Added)
+- **Modified files** (Content changed)
+- **Moved files** (Same content, different path)
+- **Missing files** (Deleted or moved outside)
+- **Corrupted files** (Bit rot detection)
+
+### Usage
+
+```sh
+archive-keeper "D:\Archive\Photos"
+```
+
+This will create `archive.db` and populate it with the current state of the archive. Subsequent runs will compare the file system against this database.
 
 ## Technical Details
 
 ### Main Utilities
 
 - `scan_batcher/cli.py` — main CLI entry point (used for the `scan-batcher` command).
+- `archive_keeper/cli.py` — CLI for the `archive-keeper` tool.
+- `file_organizer/cli.py` — CLI for the `archive-organizer` tool.
 - `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
 - `scan_batcher/calculator.py` — DPI calculation algorithms.
 - `scan_batcher/parser.py` — command-line argument parsing and validation.
