@@ -1,14 +1,11 @@
 {
-  "_comment": "Configuration for Photo Naming EXIF Plugin",
-  "folders": [
-    {
-      "path": "C:/Scans/Input",
-      "recursive": false,
-      "creator": ["Your Name"],
-      "credit": "Your Family Archive",
-      "rights": "Scan (c) 2025 Your Name",
-      "usage_terms": "Personal use only",
-      "source": "Original physical item location"
-    }
-  ]
+  "_comment": "Configuration for File Organizer",
+  "_creator_comment": "Creator can be a string or array of strings (XMP-dc:Creator supports multiple values)",
+  "creator": ["Your Name", "Co-Author Name"],
+  "credit": "Your Family Archive",
+  "_rights_comment": "Rights is a single string value",
+  "rights": "Scan © 2025 Your Name",
+  "_usage_terms_comment": "Usage terms is a single string value",
+  "usage_terms": "Personal use only",
+  "source": "Original physical item location"
 }
