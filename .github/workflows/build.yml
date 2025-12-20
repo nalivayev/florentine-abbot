@@ -85,7 +85,7 @@ jobs:
       - name: Upload wheel as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: scan-batcher-py${{ matrix.python-version }}
+          name: scan-batcher-wheel
           path: dist/*.whl
 
       - name: Create Release
