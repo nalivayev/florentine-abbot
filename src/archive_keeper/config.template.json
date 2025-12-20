@@ -1,0 +1,8 @@
+{
+  "_comment": "Configuration for Archive Keeper - copy to config.json and edit",
+  "database": "archive.db",
+  "chunk_size": 67108864,
+  "log_progress_threshold": 104857600,
+  "_chunk_size_comment": "Chunk size for file hashing in bytes (default: 64MB)",
+  "_log_progress_comment": "Log progress for files larger than this (default: 100MB)"
+}

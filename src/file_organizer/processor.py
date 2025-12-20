@@ -168,7 +168,12 @@ class ArchiveProcessor:
 
             # 4. Configurable fields
             if config.get('creator'):
-                tags["XMP-dc:Creator"] = config['creator']
+                creator = config['creator']
+                # XMP-dc:Creator is a bag (unordered array), support both string and list
+                if isinstance(creator, list):
+                    tags["XMP-dc:Creator"] = creator
+                else:
+                    tags["XMP-dc:Creator"] = [creator]
             if config.get('credit'):
                 tags["XMP-photoshop:Credit"] = config['credit']
             if config.get('rights'):
