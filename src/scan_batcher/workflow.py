@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-from scan_batcher.recorder import Recorder
-
 
 class Workflow(ABC):
     """
@@ -18,12 +16,11 @@ class Workflow(ABC):
         pass
 
     @abstractmethod
-    def __call__(self, recorder: Recorder, workflow_path: str, templates: dict[str, str]) -> None:
+    def __call__(self, workflow_path: str, templates: dict[str, str]) -> None:
         """
         Execute the workflow.
 
         Args:
-            recorder: Recorder instance for logging.
             workflow_path: Path to the workflow configuration directory.
             templates: Dictionary of template values.
 
