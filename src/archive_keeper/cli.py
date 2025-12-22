@@ -5,20 +5,10 @@ import logging
 import sys
 from pathlib import Path
 
+from common.logging_config import setup_logging
 from .config import Config
 from .engine import DatabaseManager
 from .scanner import ArchiveScanner
-
-def setup_logging(verbose: bool) -> None:
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler("archive_keeper.log")
-        ]
-    )
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Archive Keeper - Digital Preservation Tool")
@@ -29,7 +19,11 @@ def main() -> None:
     
     args = parser.parse_args()
     
-    setup_logging(args.verbose)
+    setup_logging(
+        log_file=Path("archive_keeper.log"),
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        console=True
+    )
     logger = logging.getLogger(__name__)
     
     # Load configuration

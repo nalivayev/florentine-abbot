@@ -5,19 +5,10 @@ import logging
 import sys
 from pathlib import Path
 
+from common.logging_config import setup_logging
 from .processor import ArchiveProcessor
 from .monitor import ArchiveMonitor
 from .config import Config
-
-def setup_logging(verbose: bool) -> None:
-    level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
 
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -31,7 +22,11 @@ def main() -> None:
 
     args = parser.parse_args()
     
-    setup_logging(args.verbose)
+    setup_logging(
+        log_file=Path("file_organizer.log"),
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        console=True
+    )
     logger = logging.getLogger(__name__)
     
     input_path = Path(args.input_path)
