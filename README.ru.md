@@ -214,7 +214,41 @@ pip install --upgrade .
 
 ### Логирование
 
-Все этапы работы и ошибки логируются в файл с тем же именем, что и скрипт, и расширением `.log`.
+Все утилиты записывают логи в централизованное место:
+
+**Расположение по умолчанию:**
+- Linux/macOS: `~/.florentine-abbot/logs/`
+- Windows: `C:\Users\<имя_пользователя>\.florentine-abbot\logs\`
+
+**Файлы логов:**
+- `scan_batcher.log` — активность Scan Batcher
+- `file_organizer.log` — активность File Organizer/Archive Organizer
+- `archive_keeper.log` — активность Archive Keeper
+
+**Пользовательское расположение логов:**
+
+Можно переопределить расположение через переменную окружения `FLORENTINE_LOG_DIR`:
+
+```sh
+# Linux/macOS
+export FLORENTINE_LOG_DIR=/var/log/florentine-abbot
+scan-batcher --workflow examples/workflow.ini
+
+# Windows PowerShell
+$env:FLORENTINE_LOG_DIR = "D:\Logs\florentine-abbot"
+scan-batcher --workflow examples\workflow.ini
+```
+
+Это полезно для:
+- Запуска как systemd-сервис
+- Docker-развертываний
+- Централизованных систем логирования
+
+**Возможности логирования:**
+- Единый формат временных меток: `YYYY.MM.DD HH:MM:SS.mmm`
+- Автоматическая ротация (10 МБ на файл, 5 резервных копий)
+- Вывод в консоль + запись в файл
+- Имя модуля и уровень логирования в каждой записи
 
 ## Документация
 

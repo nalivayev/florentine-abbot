@@ -4,6 +4,7 @@ from typing import Sequence
 from pathlib import Path
 
 from common.logging_config import setup_logging
+from common.log_paths import get_log_file
 from scan_batcher.batch import Batch, Scan
 from scan_batcher.parser import Parser
 from scan_batcher.workflows import get_workflow
@@ -87,7 +88,7 @@ def main() -> None:
     and executes the workflow for each batch item.
     """
     setup_logging(
-        log_file=Path(__file__).with_suffix(".log"),
+        log_file=get_log_file("scan_batcher"),
         level=logging.INFO,
         console=True
     )

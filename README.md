@@ -214,7 +214,41 @@ pip install --upgrade .
 
 ### Logging
 
-All workflow steps and errors are logged to a file with the same name as the script and `.log` extension.
+All utilities write logs to a centralized location:
+
+**Default location:**
+- Linux/macOS: `~/.florentine-abbot/logs/`
+- Windows: `C:\Users\<username>\.florentine-abbot\logs\`
+
+**Log files:**
+- `scan_batcher.log` — Scan Batcher activity
+- `file_organizer.log` — File Organizer/Archive Organizer activity
+- `archive_keeper.log` — Archive Keeper activity
+
+**Custom log location:**
+
+You can override the default location using the `FLORENTINE_LOG_DIR` environment variable:
+
+```sh
+# Linux/macOS
+export FLORENTINE_LOG_DIR=/var/log/florentine-abbot
+scan-batcher --workflow examples/workflow.ini
+
+# Windows PowerShell
+$env:FLORENTINE_LOG_DIR = "D:\Logs\florentine-abbot"
+scan-batcher --workflow examples\workflow.ini
+```
+
+This is useful for:
+- Running as a systemd service
+- Docker deployments
+- Centralized logging systems
+
+**Log features:**
+- Unified timestamp format: `YYYY.MM.DD HH:MM:SS.mmm`
+- Automatic rotation (10 MB per file, 5 backup copies)
+- Console output + file logging
+- Module name and log level in each entry
 
 ## Documentation
 

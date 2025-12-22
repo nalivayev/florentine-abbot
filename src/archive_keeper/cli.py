@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from common.logging_config import setup_logging
+from common.log_paths import get_log_file
 from .config import Config
 from .engine import DatabaseManager
 from .scanner import ArchiveScanner
@@ -20,7 +21,7 @@ def main() -> None:
     args = parser.parse_args()
     
     setup_logging(
-        log_file=Path("archive_keeper.log"),
+        log_file=get_log_file("archive_keeper"),
         level=logging.DEBUG if args.verbose else logging.INFO,
         console=True
     )
