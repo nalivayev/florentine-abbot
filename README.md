@@ -3,7 +3,9 @@
 
 # Florentine Abbot
 
-Florentine Abbot is a project dedicated to the scanning and digital organization of home photo archives. It consists of tools to automate the scanning process and to organize the resulting files with proper metadata.
+Florentine Abbot is a project dedicated to the scanning and digital organization of home photo archives. 
+
+> **⚠️ Project Status**: Currently, only the **Scan Batcher** utility is packaged and ready for use. Additional modules (`file_organizer`, `archive_keeper`) are in development and not yet fully tested or documented.
 
 ## Scanning (Scan Batcher)
 
