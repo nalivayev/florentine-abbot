@@ -227,8 +227,16 @@ pip install --upgrade .
 
 **Пользовательское расположение логов:**
 
-Можно переопределить расположение через переменную окружения `FLORENTINE_LOG_DIR`:
+Можно переопределить расположение двумя способами:
 
+**1. Параметр командной строки (наивысший приоритет):**
+```sh
+scan-batcher --log-dir /custom/logs --workflow examples/workflow.ini
+file-organizer --log-dir /custom/logs /path/to/scans
+archive-keeper --log-dir /custom/logs /path/to/archive
+```
+
+**2. Переменная окружения:**
 ```sh
 # Linux/macOS
 export FLORENTINE_LOG_DIR=/var/log/florentine-abbot
@@ -239,10 +247,16 @@ $env:FLORENTINE_LOG_DIR = "D:\Logs\florentine-abbot"
 scan-batcher --workflow examples\workflow.ini
 ```
 
+**Порядок приоритета:**
+1. Параметр `--log-dir` (переопределение для одной команды)
+2. Переменная окружения `FLORENTINE_LOG_DIR` (для сессии/системы)
+3. По умолчанию: `~/.florentine-abbot/logs/`
+
 Это полезно для:
-- Запуска как systemd-сервис
-- Docker-развертываний
-- Централизованных систем логирования
+- **Разработки**: быстрое переопределение через `--log-dir /tmp/debug`
+- **Daemon-режима**: установка через ENV в systemd unit файлах
+- **Docker**: настройка через `ENV` в Dockerfile
+- **Централизованного логирования**: направление всех утилит в одно место
 
 **Возможности логирования:**
 - Единый формат временных меток: `YYYY.MM.DD HH:MM:SS.mmm`

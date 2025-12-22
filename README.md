@@ -227,8 +227,16 @@ All utilities write logs to a centralized location:
 
 **Custom log location:**
 
-You can override the default location using the `FLORENTINE_LOG_DIR` environment variable:
+You can override the default location using either:
 
+**1. CLI parameter (highest priority):**
+```sh
+scan-batcher --log-dir /custom/logs --workflow examples/workflow.ini
+file-organizer --log-dir /custom/logs /path/to/scans
+archive-keeper --log-dir /custom/logs /path/to/archive
+```
+
+**2. Environment variable:**
 ```sh
 # Linux/macOS
 export FLORENTINE_LOG_DIR=/var/log/florentine-abbot
@@ -239,10 +247,16 @@ $env:FLORENTINE_LOG_DIR = "D:\Logs\florentine-abbot"
 scan-batcher --workflow examples\workflow.ini
 ```
 
+**Priority order:**
+1. `--log-dir` CLI parameter (per-command override)
+2. `FLORENTINE_LOG_DIR` environment variable (session/system-wide)
+3. Default: `~/.florentine-abbot/logs/`
+
 This is useful for:
-- Running as a systemd service
-- Docker deployments
-- Centralized logging systems
+- **Development**: Quick override with `--log-dir /tmp/debug`
+- **Daemon mode**: Set via ENV in systemd unit files
+- **Docker**: Configure via `ENV` in Dockerfile
+- **Centralized logging**: Point all tools to shared location
 
 **Log features:**
 - Unified timestamp format: `YYYY.MM.DD HH:MM:SS.mmm`

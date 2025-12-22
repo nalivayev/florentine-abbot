@@ -20,11 +20,12 @@ def main() -> None:
     parser.add_argument("--watch", action="store_true", help="Run in daemon mode (watch for new files)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--config", help="Path to JSON configuration file (see config.template.json)")
+    parser.add_argument("--log-dir", help="Custom directory for log files (default: ~/.florentine-abbot/logs/)")
 
     args = parser.parse_args()
     
     setup_logging(
-        log_file=get_log_file("file_organizer"),
+        log_file=get_log_file("file_organizer", args.log_dir),
         level=logging.DEBUG if args.verbose else logging.INFO,
         console=True
     )
