@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from common.logging_config import setup_logging
+from common.log_paths import get_log_file
 from .processor import ArchiveProcessor
 from .monitor import ArchiveMonitor
 from .config import Config
@@ -23,7 +24,7 @@ def main() -> None:
     args = parser.parse_args()
     
     setup_logging(
-        log_file=Path("file_organizer.log"),
+        log_file=get_log_file("file_organizer"),
         level=logging.DEBUG if args.verbose else logging.INFO,
         console=True
     )
