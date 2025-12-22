@@ -2,17 +2,22 @@
 
 import os
 from pathlib import Path
+from typing import Optional
 
 
-def get_log_directory() -> Path:
+def get_log_directory(custom_dir: Optional[str] = None) -> Path:
     """
     Get the standard log directory for Scan Batcher.
     
-    Priority:
-    1. SCAN_BATCHER_LOG_DIR environment variable (for custom setups and Docker)
-    2. User home directory: ~/.scan-batcher/logs/ (default for the CLI)
+    Priority (highest to lowest):
+    1. custom_dir parameter (CLI --log-dir argument)
+    2. SCAN_BATCHER_LOG_DIR environment variable (for systemd, Docker)
+    3. User home directory: ~/.scan-batcher/logs/ (default)
     
     The directory is created automatically if it doesn't exist.
+    
+    Args:
+        custom_dir: Optional custom log directory path (from CLI argument).
     
     Returns:
         Path: Absolute path to the log directory.
@@ -21,13 +26,16 @@ def get_log_directory() -> Path:
         Linux/Mac: /home/user/.scan-batcher/logs/
         Windows: C:\\Users\\user\\.scan-batcher\\logs\\
         Docker/systemd: /var/log/scan-batcher/ (if SCAN_BATCHER_LOG_DIR is set)
+        Custom: /custom/path (if --log-dir is specified)
     """
-    # Check environment variable first (for systemd, Docker, custom deployments)
-    env_log_dir = os.getenv("SCAN_BATCHER_LOG_DIR")
-    if env_log_dir:
+    # Priority 1: CLI argument
+    if custom_dir:
+        log_dir = Path(custom_dir)
+    # Priority 2: Environment variable (for systemd, Docker, custom deployments)
+    elif env_log_dir := os.getenv("SCAN_BATCHER_LOG_DIR"):
         log_dir = Path(env_log_dir)
+    # Priority 3: Default (user home directory)
     else:
-        # Default: user home directory
         log_dir = Path.home() / ".scan-batcher" / "logs"
     
     # Ensure directory exists
@@ -36,12 +44,13 @@ def get_log_directory() -> Path:
     return log_dir
 
 
-def get_log_file(module_name: str) -> Path:
+def get_log_file(module_name: str, custom_dir: Optional[str] = None) -> Path:
     """
     Get the standard log file path for a specific module.
     
     Args:
         module_name: Name of the module (e.g., "scan_batcher")
+        custom_dir: Optional custom log directory path (from CLI argument).
     
     Returns:
         Path: Absolute path to the log file.
@@ -49,5 +58,7 @@ def get_log_file(module_name: str) -> Path:
     Example:
         >>> get_log_file("scan_batcher")
         Path('/home/user/.scan-batcher/logs/scan_batcher.log')
+        >>> get_log_file("scan_batcher", "/tmp/logs")
+        Path('/tmp/logs/scan_batcher.log')
     """
-    return get_log_directory() / f"{module_name}.log"
+    return get_log_directory(custom_dir) / f"{module_name}.log"

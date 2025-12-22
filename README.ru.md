@@ -184,8 +184,14 @@ pip install --upgrade .
 
 **Пользовательское расположение логов:**
 
-Можно переопределить расположение через переменную окружения `SCAN_BATCHER_LOG_DIR`:
+Можно переопределить расположение двумя способами:
 
+**1. Параметр командной строки (наивысший приоритет):**
+```sh
+scan-batcher --log-dir /custom/logs --workflow examples/workflow.ini
+```
+
+**2. Переменная окружения:**
 ```sh
 # Linux/macOS
 export SCAN_BATCHER_LOG_DIR=/var/log/scan-batcher
@@ -196,10 +202,14 @@ $env:SCAN_BATCHER_LOG_DIR = "D:\Logs\scan-batcher"
 scan-batcher --workflow examples\workflow.ini
 ```
 
+**Порядок приоритета:**
+1. Параметр `--log-dir` (переопределение для одной команды)
+2. Переменная окружения `SCAN_BATCHER_LOG_DIR` (для сессии/системы)
+3. По умолчанию: `~/.scan-batcher/logs/`
+
 Это полезно для:
-- Запуска как systemd-сервис
-- Docker-развертываний
-- Централизованных систем логирования
+- **Разработки**: быстрое переопределение через `--log-dir /tmp/debug`
+- **Docker**: настройка через `ENV` в Dockerfile
 
 **Возможности логирования:**
 - Единый формат временных меток: `YYYY.MM.DD HH:MM:SS.mmm`

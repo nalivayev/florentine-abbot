@@ -87,16 +87,17 @@ def main() -> None:
     Initializes logging, parses arguments, creates batch and workflow objects,
     and executes the workflow for each batch item.
     """
+    # Parse arguments first to get log-dir
+    parser = Parser()
+    args = parser.parse_args()
+    
     setup_logging(
-        log_file=get_log_file("scan_batcher"),
+        log_file=get_log_file("scan_batcher", args.log_dir),
         level=logging.INFO,
         console=True
     )
     logger = logging.getLogger(__name__)
     logger.info("Script has been started")
-    
-    parser = Parser()
-    args = parser.parse_args()
     batch = create_batch(args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)
 
     workflow = create_workflow(args.engine)

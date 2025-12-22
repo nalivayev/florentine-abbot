@@ -184,8 +184,14 @@ Logs are written to a centralized location:
 
 **Custom log location:**
 
-You can override the default location using the `SCAN_BATCHER_LOG_DIR` environment variable:
+You can override the default location using either:
 
+**1. CLI parameter (highest priority):**
+```sh
+scan-batcher --log-dir /custom/logs --workflow examples/workflow.ini
+```
+
+**2. Environment variable:**
 ```sh
 # Linux/macOS
 export SCAN_BATCHER_LOG_DIR=/var/log/scan-batcher
@@ -196,10 +202,14 @@ $env:SCAN_BATCHER_LOG_DIR = "D:\Logs\scan-batcher"
 scan-batcher --workflow examples\workflow.ini
 ```
 
+**Priority order:**
+1. `--log-dir` CLI parameter (per-command override)
+2. `SCAN_BATCHER_LOG_DIR` environment variable (session/system-wide)
+3. Default: `~/.scan-batcher/logs/`
+
 This is useful for:
-- Running as a systemd service
-- Docker deployments
-- Centralized logging systems
+- **Development**: Quick override with `--log-dir /tmp/debug`
+- **Docker**: Configure via `ENV` in Dockerfile
 
 **Log features:**
 - Unified timestamp format: `YYYY.MM.DD HH:MM:SS.mmm`
