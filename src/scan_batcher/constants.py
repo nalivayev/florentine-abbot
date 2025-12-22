@@ -52,10 +52,6 @@ class RoundingStrategy(str, Enum):
 # Conversion constants
 CM_TO_INCH = 2.54  # Conversion factor from centimeters to inches
 
-# Logging format
-LOG_DATE_FORMAT = "%Y.%m.%d %H:%M:%S"
-LOG_MESSAGE_FORMAT = "%(asctime)s.%(msecs)03d %(message)s"
-
 # EXIF date/time formats
 EXIF_DATE_FORMAT = "%Y:%m:%d"
 EXIF_DATETIME_FORMAT = "%Y:%m:%d %H:%M:%S"

@@ -1,8 +1,9 @@
+import logging
 from sys import stderr, exit
 from typing import Sequence
 from pathlib import Path
 
-from scan_batcher.recorder import log, Recorder
+from common.logging_config import setup_logging
 from scan_batcher.batch import Batch, Scan
 from scan_batcher.parser import Parser
 from scan_batcher.workflows import get_workflow
@@ -27,7 +28,6 @@ def get_subclasses(cls: type) -> list[type]:
     return subclasses
 
 def create_batch(
-    recorder: Recorder, 
     batch: Sequence[str] | None, 
     min_res: int | None, 
     max_res: int | None, 
@@ -39,7 +39,6 @@ def create_batch(
     Supports all direct and indirect subclasses of Batch.
 
     Args:
-        recorder (Recorder): Recorder instance for logging.
         batch (Sequence[str] | None): List where the first element specifies the batch type (e.g., "Scan", "CALCULATE").
         min_res (int | None): Minimum resolution parameter for the batch.
         max_res (int | None): Maximum resolution parameter for the batch.
@@ -53,14 +52,14 @@ def create_batch(
         ValueError: If the batch type is unknown or empty (defaults to Scan if batch is empty/None).
     """
     if not batch or batch[0] == "":
-        return Scan(recorder, min_res, max_res, res_list, rounding)
+        return Scan(min_res, max_res, res_list, rounding)
     
     kind = batch[0].lower()  # Case-insensitive comparison
     
     # Search through all subclasses (including nested)
     for cls in get_subclasses(Batch):
         if cls.__name__.lower() == kind:
-            return cls(recorder, min_res, max_res, res_list, rounding, *batch[1:])
+            return cls(min_res, max_res, res_list, rounding, *batch[1:])
     
     raise ValueError(f"Unknown batch type: {batch[0]}")
 
@@ -87,11 +86,17 @@ def main() -> None:
     Initializes logging, parses arguments, creates batch and workflow objects,
     and executes the workflow for each batch item.
     """
-    recorder = Recorder(Path(__file__).with_suffix(".log"), "workflow")
-    log(recorder, ["Script has been started"])
+    setup_logging(
+        log_file=Path(__file__).with_suffix(".log"),
+        level=logging.INFO,
+        console=True
+    )
+    logger = logging.getLogger(__name__)
+    logger.info("Script has been started")
+    
     parser = Parser()
     args = parser.parse_args()
-    batch = create_batch(recorder, args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)
+    batch = create_batch(args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)
 
     workflow = create_workflow(args.engine)
     for item in batch:
@@ -103,17 +108,17 @@ def main() -> None:
                 merged_templates = {**templates_dict, **batch_dict}
             else:
                 merged_templates = {**templates_dict}
-            workflow(recorder, args.workflow, merged_templates)
+            workflow(args.workflow, merged_templates)
 
         except KeyboardInterrupt:
-            log(recorder, ["Script interrupted by user"])
+            logger.info("Script interrupted by user")
             exit(0)
         except Exception as e:
-            log(recorder, [f"Error: {e}"])
+            logger.error(f"Error: {e}")
             stderr.write(f"Error: {e}\n")
             continue
 
-    log(recorder, ["Script has been completed"])
+    logger.info("Script has been completed")
 
 if __name__ == "__main__":
     main()

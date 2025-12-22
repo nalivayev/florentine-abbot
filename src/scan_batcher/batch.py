@@ -1,9 +1,9 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Sequence
 
-from scan_batcher.recorder import log, Recorder
 from scan_batcher.calculator import Calculator
 from scan_batcher.constants import RoundingStrategy, CM_TO_INCH
 
@@ -40,7 +40,6 @@ class Calculate(Batch):
 
     def __init__(
         self,
-        recorder: Recorder | None = None,
         min_dpi: int | None = None,
         max_dpi: int | None = None,
         dpis: Sequence[int] | None = None,
@@ -50,13 +49,12 @@ class Calculate(Batch):
         Initialize the Calculate batch.
 
         Args:
-            recorder (Recorder | None, optional): Recorder instance for logging.
             min_dpi (int | None, optional): Minimum allowed DPI.
             max_dpi (int | None, optional): Maximum allowed DPI.
             dpis (Sequence[int] | None, optional): List of available DPI values.
             rounding (RoundingStrategy | str, optional): Rounding strategy (default: NEAREST).
         """
-        self.recorder = recorder
+        self.logger = logging.getLogger(__name__)
         self.calculator = Calculator()
         self.min_dpi = min_dpi
         self.max_dpi = max_dpi
@@ -71,12 +69,12 @@ class Calculate(Batch):
         Returns:
             tuple[float, int]: The photo minimum side (cm) and image minimum side (px).
         """
-        log(self.recorder, ["Requesting user input for scan parameters"])
+        self.logger.info("Requesting user input for scan parameters")
         print("\nEnter scan parameters")
         photo_min_side = self._get_float_input("Minimum photo side length in centimeters: ")
         image_min_side = self._get_int_input("Minimum image side length in pixels: ")
 
-        log(self.recorder, [f"User input: photo_min_side={photo_min_side}, image_min_side={image_min_side}"])
+        self.logger.debug(f"User input: photo_min_side={photo_min_side}, image_min_side={image_min_side}")
         return photo_min_side, image_min_side
 
     def _get_float_input(self, prompt: str) -> float:
@@ -92,11 +90,11 @@ class Calculate(Batch):
         while True:
             try:
                 value = float(input(prompt))
-                log(self.recorder, [f"Float input received: {value}"])
+                self.logger.debug(f"Float input received: {value}")
                 return value
             except ValueError:
                 print("Error: Enter a number")
-                log(self.recorder, ["Invalid float input"])
+                self.logger.debug("Invalid float input")
 
     def _get_int_input(self, prompt: str, default: int | None = None) -> int:
         """
@@ -113,14 +111,14 @@ class Calculate(Batch):
             try:
                 value = input(prompt)
                 if default is not None and value == "":
-                    log(self.recorder, [f"Default integer input used: {default}"])
+                    self.logger.debug(f"Default integer input used: {default}")
                     return default
                 int_value = int(value)
-                log(self.recorder, [f"Integer input received: {int_value}"])
+                self.logger.debug(f"Integer input received: {int_value}")
                 return int_value
             except ValueError:
                 print("Error: Enter an integer")
-                log(self.recorder, ["Invalid integer input"])
+                self.logger.debug("Invalid integer input")
 
     def _print_row(self, num: str, dpi: str, px: str, note: str = "") -> None:
         """
@@ -143,7 +141,7 @@ class Calculate(Batch):
             rec_dpi (float | None, optional): Recommended DPI value.
             calc_dpi (float | None, optional): Calculated DPI value.
         """
-        log(self.recorder, ["Printing calculation results table"])
+        self.logger.info("Printing calculation results table")
         print("\nCalculation results:")
         self._print_row("", "DPI", "pixels", "Note")
         for index, item in enumerate(dpis, start=1):
@@ -164,7 +162,7 @@ class Calculate(Batch):
         Returns:
             dict[str, Any]: Dictionary with calculation or file data.
         """
-        log(self.recorder, ["Starting calculation step"])
+        self.logger.info("Starting calculation step")
         photo_min_side, image_min_side = self._get_user_input()
 
         # Calculate DPI using internal calculator
@@ -176,7 +174,7 @@ class Calculate(Batch):
             self.dpis,
             self.rounding
         )
-        log(self.recorder, [f"Calculator returned: calc_dpi={calc_dpi}, rec_dpi={rec_dpi}, dpis={dpis}"])
+        self.logger.debug(f"Calculator returned: calc_dpi={calc_dpi}, rec_dpi={rec_dpi}, dpis={dpis}")
 
         # Convert dpis to set for uniqueness
         dpis = set(dpis)
@@ -206,21 +204,21 @@ class Calculate(Batch):
                     )
                 if index == 0:  # Default case
                     dpi = rec_dpi
-                    log(self.recorder, [f"User selected recommended DPI: {dpi}"])
-                    print("\nUsing recommended DPI:", dpi)
+                    self.logger.info(f\"User selected recommended DPI: {dpi}\")
+                    print(\"\\nUsing recommended DPI:\", dpi)
                     break
                 elif 1 <= index <= len(dpis):
                     dpi = dpis[index - 1][0]  # Get DPI from the selected index
-                    log(self.recorder, [f"User selected DPI: {dpi}"])
-                    print("\nSelected DPI:", dpi)
+                    self.logger.info(f\"User selected DPI: {dpi}\")
+                    print(\"\\nSelected DPI:\", dpi)
                     break
                 else:
-                    print("Error: Invalid selection. Please try again.")
-                    log(self.recorder, ["Invalid DPI selection"])
+                    print(\"Error: Invalid selection. Please try again.\")
+                    self.logger.debug(\"Invalid DPI selection\")
             except ValueError:
-                print("Error: Invalid number entered.")
-                log(self.recorder, ["Invalid number entered for DPI selection"])
-        log(self.recorder, [f"Calculation finished, returning scan_dpi={dpi}"])
+                print(\"Error: Invalid number entered.\")
+                self.logger.debug(\"Invalid number entered for DPI selection\")
+        self.logger.info(f\"Calculation finished, returning scan_dpi={dpi}\")
         return {"scan_dpi": dpi}
 
     def __iter__(self) -> "Calculate":
