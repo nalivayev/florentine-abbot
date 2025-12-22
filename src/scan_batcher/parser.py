@@ -122,6 +122,15 @@ class Arguments:
             )
         }
     }
+    
+    log_dir = {
+        "keys": ["--log-dir"],
+        "values": {
+            "type": str,
+            "default": None,
+            "help": "Custom directory for log files (default: ~/.florentine-abbot/logs/)"
+        }
+    }
 
 
 class Parser(ArgumentParser):
@@ -149,3 +158,4 @@ class Parser(ArgumentParser):
         self.add_argument(*Arguments.max_dpi["keys"], **Arguments.max_dpi["values"])
         self.add_argument(*Arguments.dpis["keys"], **Arguments.dpis["values"])
         self.add_argument(*Arguments.rounding["keys"], **Arguments.rounding["values"])
+        self.add_argument(*Arguments.log_dir["keys"], **Arguments.log_dir["values"])

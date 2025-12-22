@@ -17,11 +17,12 @@ def main() -> None:
     parser.add_argument("--config", help="Path to JSON configuration file")
     parser.add_argument("--db", help="Path to SQLite database (overrides config)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--log-dir", help="Custom directory for log files (default: ~/.florentine-abbot/logs/)")
     
     args = parser.parse_args()
     
     setup_logging(
-        log_file=get_log_file("archive_keeper"),
+        log_file=get_log_file("archive_keeper", args.log_dir),
         level=logging.DEBUG if args.verbose else logging.INFO,
         console=True
     )
