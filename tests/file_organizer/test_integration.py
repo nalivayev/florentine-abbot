@@ -28,13 +28,13 @@ class TestIntegration:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return json.loads(result.stdout)[0]
 
-    def test_process_valid_tiff(self, temp_dir):
+    def test_process_valid_tiff(self, temp_dir, logger):
         # 1. Setup
         filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor()
+        processor = ArchiveProcessor(logger)
         
         # 2. Execute
         result = processor.process(file_path, {})
@@ -65,7 +65,7 @@ class TestIntegration:
         date_created = meta.get("XMP:DateCreated") or meta.get("XMP-photoshop:DateCreated")
         assert date_created == "1950:06:15 12:30:45" or date_created == "1950-06-15T12:30:45"
 
-    def test_process_normalization(self, temp_dir):
+    def test_process_normalization(self, temp_dir, logger):
         # Test that filename is normalized (sequence 1 -> 0001)
         # Input: 1 digit sequence
         filename = "1950.06.15.12.30.45.E.FAM.POR.1.A.MSR.tiff"
@@ -74,7 +74,7 @@ class TestIntegration:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor()
+        processor = ArchiveProcessor(logger)
         
         # Execute
         result = processor.process(file_path, {})
@@ -86,13 +86,13 @@ class TestIntegration:
         expected_path = temp_dir / "processed" / "1950.E" / "1950.06.15.E" / "MSR" / expected_filename
         assert expected_path.exists()
 
-    def test_process_circa_date(self, temp_dir):
+    def test_process_circa_date(self, temp_dir, logger):
         # Test processing of Circa date (no time in EXIF)
         filename = "1950.00.00.00.00.00.C.FAM.POR.0002.A.WEB.jpg"
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor()
+        processor = ArchiveProcessor(logger)
         
         result = processor.process(file_path, {})
         assert result is True
@@ -110,3 +110,5 @@ class TestIntegration:
         assert "XMP:DateCreated" in meta or "XMP-photoshop:DateCreated" in meta
         date_created = meta.get("XMP:DateCreated") or meta.get("XMP-photoshop:DateCreated")
         assert str(date_created) == "1950"
+
+

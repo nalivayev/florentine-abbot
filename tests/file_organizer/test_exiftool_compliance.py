@@ -24,13 +24,13 @@ class TestExiftoolCompliance:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return json.loads(result.stdout)[0]
 
-    def test_full_metadata_compliance(self, temp_dir):
+    def test_full_metadata_compliance(self, temp_dir, logger):
         """Verify that all required metadata fields are written and visible to exiftool."""
         filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor()
+        processor = ArchiveProcessor(logger)
         config = {
             "creator": "John Doe",
             "credit": "The Archive",
@@ -81,13 +81,13 @@ class TestExiftoolCompliance:
         assert meta.get("XMP:Source") == "Box 42" or meta.get("XMP-dc:Source") == "Box 42"
         assert meta.get("XMP:Title") == file_path.stem or meta.get("XMP-dc:Title") == file_path.stem
 
-    def test_partial_date_compliance(self, temp_dir):
+    def test_partial_date_compliance(self, temp_dir, logger):
         """Verify partial date handling with exiftool."""
         filename = "1950.00.00.00.00.00.C.FAM.POR.0002.A.WEB.jpg"
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor()
+        processor = ArchiveProcessor(logger)
         processor.process(file_path, {})
         
         # 1950.C / 1950.00.00.C / WEB
@@ -109,3 +109,71 @@ class TestExiftoolCompliance:
                 found_date = True
                 break
         assert found_date, f"Could not find partial date 1950 in metadata: {meta}"
+
+    def test_datetimedigitized_from_createdate(self, temp_dir, logger):
+        """Verify that DateTimeDigitized is copied from CreateDate if not already set."""
+        filename = "2025.11.29.14.00.00.C.001.001.0001.A.RAW.tiff"
+        file_path = temp_dir / filename
+        self.create_dummy_image(file_path)
+        
+        # Simulate VueScan behavior: write CreateDate but not DateTimeDigitized
+        subprocess.run([
+            "exiftool",
+            "-EXIF:CreateDate=2025:11:29 14:00:00",
+            "-overwrite_original",
+            str(file_path)
+        ], check=True)
+        
+        # Verify CreateDate is set but DateTimeDigitized is not
+        meta_before = self.get_exiftool_json(file_path)
+        assert "EXIF:CreateDate" in meta_before or "ExifIFD:CreateDate" in meta_before
+        assert "EXIF:DateTimeDigitized" not in meta_before
+        assert "ExifIFD:DateTimeDigitized" not in meta_before
+        
+        # Process the file
+        processor = ArchiveProcessor(logger)
+        processor.process(file_path, {})
+        
+        # Check processed file
+        processed_path = temp_dir / "processed" / "2025.C" / "2025.11.29.C" / "RAW" / filename
+        assert processed_path.exists()
+        
+        meta_after = self.get_exiftool_json(processed_path)
+        
+        # DateTimeDigitized should now be set from CreateDate (in XMP namespace)
+        assert "XMP-exif:DateTimeDigitized" in meta_after or "XMP:DateTimeDigitized" in meta_after
+        dt_digitized = meta_after.get("XMP-exif:DateTimeDigitized") or meta_after.get("XMP:DateTimeDigitized")
+        assert dt_digitized == "2025:11:29 14:00:00"
+        
+    def test_datetimedigitized_not_overwritten(self, temp_dir, logger):
+        """Verify that existing DateTimeDigitized is not overwritten."""
+        filename = "2025.11.29.14.00.00.C.001.001.0001.A.RAW.tiff"
+        file_path = temp_dir / filename
+        self.create_dummy_image(file_path)
+        
+        # Set both CreateDate and DateTimeDigitized (use XMP namespace as EXIF IFD doesn't support it in TIFF)
+        subprocess.run([
+            "exiftool",
+            "-EXIF:CreateDate=2025:11:29 14:00:00",
+            "-XMP-exif:DateTimeDigitized=2025:11:29 13:00:00",
+            "-overwrite_original",
+            str(file_path)
+        ], check=True)
+        
+        # Process the file
+        processor = ArchiveProcessor(logger)
+        processor.process(file_path, {})
+        
+        # Check processed file
+        processed_path = temp_dir / "processed" / "2025.C" / "2025.11.29.C" / "RAW" / filename
+        assert processed_path.exists(), f"File not found at {processed_path}"
+        
+        meta_after = self.get_exiftool_json(processed_path)
+        
+        # DateTimeDigitized should remain unchanged (original value, not CreateDate)
+        # Note: Since EXIF:DateTimeDigitized can't be written to TIFF, processor writes to XMP-exif instead
+        dt_digitized = meta_after.get("XMP-exif:DateTimeDigitized") or meta_after.get("XMP:DateTimeDigitized")
+        assert dt_digitized == "2025:11:29 13:00:00"
+
+
+

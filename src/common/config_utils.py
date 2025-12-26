@@ -1,14 +1,11 @@
 """Configuration utilities for florentine-abbot tools."""
 
 import json
-import logging
 import os
 import shutil
 import sys
 from pathlib import Path
 from typing import Any
-
-logger = logging.getLogger(__name__)
 
 
 def get_config_dir() -> Path:
@@ -47,6 +44,7 @@ def get_config_path(tool_name: str, custom_path: str | Path | None = None) -> Pa
 
 
 def ensure_config_exists(
+    logger: Any,
     config_path: Path,
     template_content: dict[str, Any] | None = None,
     template_path: Path | None = None
@@ -55,6 +53,7 @@ def ensure_config_exists(
     Ensure configuration file exists, creating it from template if needed.
     
     Args:
+        logger: Logger instance for logging operations.
         config_path: Path where config should exist.
         template_content: Dictionary with default config (if no template file).
         template_path: Path to template file to copy from.
@@ -65,7 +64,8 @@ def ensure_config_exists(
     if config_path.exists():
         return False
     
-    logger.info(f"Config not found at {config_path}, creating from template")
+    if logger:
+        logger.info(f"Config not found at {config_path}, creating from template")
     
     # Create parent directory
     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -74,31 +74,36 @@ def ensure_config_exists(
     if template_path and template_path.exists():
         try:
             shutil.copy2(template_path, config_path)
-            logger.info(f"Created config from template: {template_path}")
+            if logger:
+                logger.info(f"Created config from template: {template_path}")
             return True
         except Exception as e:
-            logger.warning(f"Failed to copy template: {e}")
+            if logger:
+                logger.warning(f"Failed to copy template: {e}")
     
     # Fall back to template content
     if template_content:
         try:
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(template_content, f, indent=2, ensure_ascii=False)
-            logger.info(f"Created default config at {config_path}")
+            if logger:
+                logger.info(f"Created default config at {config_path}")
             return True
         except Exception as e:
-            logger.error(f"Failed to create default config: {e}")
+            if logger:
+                logger.error(f"Failed to create default config: {e}")
             return False
     
-    logger.error("No template content or file provided")
+    if logger:
+        logger.error("No template content or file provided")
     return False
-
-
-def load_config(config_path: Path) -> dict[str, Any]:
+    
+def load_config(logger: Any, config_path: Path) -> dict[str, Any]:
     """
     Load configuration from JSON file.
     
     Args:
+        logger: Logger instance for logging operations.
         config_path: Path to config file.
         
     Returns:
@@ -107,16 +112,20 @@ def load_config(config_path: Path) -> dict[str, Any]:
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
-        logger.debug(f"Loaded config from {config_path}")
+        if logger:
+            logger.debug(f"Loaded config from {config_path}")
         return config
     except FileNotFoundError:
-        logger.error(f"Config file not found: {config_path}")
+        if logger:
+            logger.error(f"Config file not found: {config_path}")
         return {}
     except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in config file: {e}")
+        if logger:
+            logger.error(f"Invalid JSON in config file: {e}")
         return {}
     except Exception as e:
-        logger.error(f"Error loading config: {e}")
+        if logger:
+            logger.error(f"Error loading config: {e}")
         return {}
 
 

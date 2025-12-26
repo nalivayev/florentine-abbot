@@ -299,11 +299,17 @@ Below describes how file name components and known information should be reflect
 **1. Dates (Date/Time)**
 The logic for filling date fields depends on the date modifier in the file name:
 
-*   **Exact Dates (Modifier `E`):**
-    *   `Exif.Photo.DateTimeOriginal`: The full date and time (`YYYY:MM:DD HH:MM:SS`) from the filename is written. This is the primary field for most software.
+*   **Digitization Date (`Exif.Photo.DateTimeDigitized`):**
+    *   This field records the date and time when the photograph was scanned or digitized.
+    *   **Automated process:** If the scanning software (e.g., VueScan) writes a `CreateDate` tag but does not set `DateTimeDigitized`, the archiving tools should automatically copy `CreateDate` to `DateTimeDigitized`.
+    *   **Preservation:** If `DateTimeDigitized` is already set (e.g., by future versions of scanning software), it should not be overwritten.
+    *   **Format:** `YYYY:MM:DD HH:MM:SS` (full timestamp from the scanning session).
+
+*   **Original Date - Exact Dates (Modifier `E`):**
+    *   `Exif.Photo.DateTimeOriginal`: The full date and time (`YYYY:MM:DD HH:MM:SS`) from the filename is written. This is the primary field for most software and represents when the original photograph was taken.
     *   `XMP-photoshop:DateCreated`: The full timestamp is written (`YYYY-MM-DDTHH:MM:SS`).
 
-*   **Non-Exact Dates (Modifiers `A`, `B`, `C`, `F`):**
+*   **Original Date - Non-Exact Dates (Modifiers `A`, `B`, `C`, `F`):**
     *   `Exif.Photo.DateTimeOriginal`: **Remains empty**. The EXIF standard requires an exact date and does not support partial values. Writing fictitious values (like `01.01`) distorts historical truth.
     *   `XMP-photoshop:DateCreated`: A partial date is written as far as it is known (`YYYY` or `YYYY-MM`). This allows professional software to correctly display the year or month.
 
@@ -326,15 +332,17 @@ For archive protection and attribution, it is recommended to fill in authorship 
 
 #### Summary Table of Examples
 
-| Modifier | Exif.Photo.DateTimeOriginal | XMP-photoshop:DateCreated | Description (Example) |
-|:-|:-|:-|:-|
-| **`A` (Absent)** | *(empty)* | *(empty)* | `Unknown date. Graduation party.` |
-| **`B` (Before)** | *(empty)* | `1940` | `Approximate date: before 1940.` |
-| **`C` (Circa)** | *(empty)* | `1950` | `Approximate date: circa 1950.` |
-| **`C` (Circa)** | *(empty)* | `1950-06` | `Approximate date: circa June 1950.` |
-| **`C` (Circa)** | *(empty)* | `1950-06-15` | `Approximate date: circa June 15, 1950.` |
-| **`E` (Exact)** | `1950:06:15 12:30:45` | `1950-06-15T12:30:45` | `Exact date and time: June 15, 1950, 12:30:45. Date imprinted on the photo.` |
-| **`F` (aFter)** | *(empty)* | `1960` | `Approximate date: after 1960.` |
+| Modifier | Exif.Photo.DateTimeOriginal | Exif.Photo.DateTimeDigitized | XMP-photoshop:DateCreated | Description (Example) |
+|:-|:-|:-|:-|:-|
+| **`A` (Absent)** | *(empty)* | `2025:11:29 14:00:21` | *(empty)* | `Unknown date. Graduation party. Digitized: 2025-11-29.` |
+| **`B` (Before)** | *(empty)* | `2025:11:29 14:00:21` | `1940` | `Approximate date: before 1940. Digitized: 2025-11-29.` |
+| **`C` (Circa)** | *(empty)* | `2025:11:29 14:00:21` | `1950` | `Approximate date: circa 1950. Digitized: 2025-11-29.` |
+| **`C` (Circa)** | *(empty)* | `2025:11:29 14:00:21` | `1950-06` | `Approximate date: circa June 1950. Digitized: 2025-11-29.` |
+| **`C` (Circa)** | *(empty)* | `2025:11:29 14:00:21` | `1950-06-15` | `Approximate date: circa June 15, 1950. Digitized: 2025-11-29.` |
+| **`E` (Exact)** | `1950:06:15 12:30:45` | `2025:11:29 14:00:21` | `1950-06-15T12:30:45` | `Exact date and time: June 15, 1950, 12:30:45. Date imprinted on the photo. Digitized: 2025-11-29.` |
+| **`F` (aFter)** | *(empty)* | `2025:11:29 14:00:21` | `1960` | `Approximate date: after 1960. Digitized: 2025-11-29.` |
+
+**Note:** `DateTimeDigitized` should always be filled with the actual scanning/digitization timestamp (copied from `CreateDate` if not already set by scanning software).
 
 ### 10. Examples
 

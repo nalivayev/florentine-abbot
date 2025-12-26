@@ -3,8 +3,7 @@ from sys import stderr, exit
 from typing import Sequence
 from pathlib import Path
 
-from common.logging_config import setup_logging
-from common.log_paths import get_log_file
+from common.logger import Logger
 from scan_batcher.batch import Batch, Scan
 from scan_batcher.parser import Parser
 from scan_batcher.workflows import get_workflow
@@ -29,6 +28,7 @@ def get_subclasses(cls: type) -> list[type]:
     return subclasses
 
 def create_batch(
+    logger: Logger,
     batch: Sequence[str] | None, 
     min_res: int | None, 
     max_res: int | None, 
@@ -40,6 +40,7 @@ def create_batch(
     Supports all direct and indirect subclasses of Batch.
 
     Args:
+        logger: Logger instance to pass to batch classes.
         batch (Sequence[str] | None): List where the first element specifies the batch type (e.g., "Scan", "CALCULATE").
         min_res (int | None): Minimum resolution parameter for the batch.
         max_res (int | None): Maximum resolution parameter for the batch.
@@ -53,22 +54,27 @@ def create_batch(
         ValueError: If the batch type is unknown or empty (defaults to Scan if batch is empty/None).
     """
     if not batch or batch[0] == "":
-        return Scan(min_res, max_res, res_list, rounding)
+        return Scan(logger, min_res, max_res, res_list, rounding)
     
     kind = batch[0].lower()  # Case-insensitive comparison
     
     # Search through all subclasses (including nested)
     for cls in get_subclasses(Batch):
         if cls.__name__.lower() == kind:
-            return cls(min_res, max_res, res_list, rounding, *batch[1:])
+            # Calculate class needs logger, Process doesn't
+            if cls.__name__.lower() in ["calculate", "scan"]:
+                return cls(logger, min_res, max_res, res_list, rounding, *batch[1:])
+            else:
+                return cls(min_res, max_res, res_list, rounding, *batch[1:])
     
     raise ValueError(f"Unknown batch type: {batch[0]}")
 
-def create_workflow(engine: str = DEFAULT_ENGINE) -> Workflow:
+def create_workflow(logger: Logger, engine: str = DEFAULT_ENGINE) -> Workflow:
     """
     Get a registered workflow class by engine name and return its instance.
 
     Args:
+        logger: Logger instance to pass to workflow.
         engine (str): The type of engine to create (e.g., "vuescan", "silverfast").
 
     Returns:
@@ -78,7 +84,8 @@ def create_workflow(engine: str = DEFAULT_ENGINE) -> Workflow:
         ValueError: If the workflow is not registered.
     """
     workflow_class = get_workflow(engine)
-    return workflow_class()
+    return workflow_class(logger)
+    return workflow_class(logger)
 
 def main() -> None:
     """
@@ -91,16 +98,11 @@ def main() -> None:
     parser = Parser()
     args = parser.parse_args()
     
-    setup_logging(
-        log_file=get_log_file("scan_batcher", args.log_dir),
-        level=logging.INFO,
-        console=True
-    )
-    logger = logging.getLogger(__name__)
+    logger = Logger("scan_batcher", args.log_path, level=logging.INFO, console=True)
     logger.info("Script has been started")
-    batch = create_batch(args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)
+    batch = create_batch(logger, args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)
 
-    workflow = create_workflow(args.engine)
+    workflow = create_workflow(logger, args.engine)
     for item in batch:
         try:
             batch_dict = dict(item) if isinstance(item, list) else item

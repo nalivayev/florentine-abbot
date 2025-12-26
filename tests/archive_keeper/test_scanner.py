@@ -7,6 +7,12 @@ from sqlalchemy import select
 from archive_keeper.scanner import ArchiveScanner
 from archive_keeper.engine import DatabaseManager
 from archive_keeper.models import File, FileStatus, AuditEventType
+from common.logger import Logger
+
+@pytest.fixture
+def logger():
+    """Create a logger for testing."""
+    return Logger("test")
 
 @pytest.fixture
 def db_manager():
@@ -21,9 +27,9 @@ def archive_path(tmp_path):
     return tmp_path
 
 @pytest.fixture
-def scanner(archive_path, db_manager):
+def scanner(archive_path, db_manager, logger):
     """Create an ArchiveScanner instance."""
-    return ArchiveScanner(str(archive_path), db_manager)
+    return ArchiveScanner(logger, str(archive_path), db_manager)
 
 def test_scan_new_file(scanner, archive_path, db_manager):
     """Test detection of a new file."""

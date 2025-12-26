@@ -10,9 +10,9 @@ class TestArchiveProcessor:
     """Test cases for ArchiveProcessor."""
 
     @pytest.fixture
-    def processor(self):
+    def processor(self, logger):
         """Create processor instance."""
-        return ArchiveProcessor()
+        return ArchiveProcessor(logger)
 
     @pytest.fixture
     def parser(self):

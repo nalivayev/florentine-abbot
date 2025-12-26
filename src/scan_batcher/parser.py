@@ -123,8 +123,8 @@ class Arguments:
         }
     }
     
-    log_dir = {
-        "keys": ["--log-dir"],
+    log_path = {
+        "keys": ["--log-path"],
         "values": {
             "type": str,
             "default": None,
@@ -158,4 +158,4 @@ class Parser(ArgumentParser):
         self.add_argument(*Arguments.max_dpi["keys"], **Arguments.max_dpi["values"])
         self.add_argument(*Arguments.dpis["keys"], **Arguments.dpis["values"])
         self.add_argument(*Arguments.rounding["keys"], **Arguments.rounding["values"])
-        self.add_argument(*Arguments.log_dir["keys"], **Arguments.log_dir["values"])
+        self.add_argument(*Arguments.log_path["keys"], **Arguments.log_path["values"])
