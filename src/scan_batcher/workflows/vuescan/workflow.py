@@ -11,9 +11,10 @@ from typing import Any
 import datetime
 
 from common.exifer import Exifer
+from common.logger import Logger
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import Workflow
-from scan_batcher.constants import EXIF_SUPPORTED_EXTENSIONS
+from scan_batcher.constants import EXIF_SUPPORTED_EXTENSIONS, EXIF_DATETIME_FORMAT
 
 
 @register_workflow("vuescan")
@@ -35,11 +36,23 @@ class VuescanWorkflow(Workflow):
         "digitization_minute",
         "digitization_second"
     ]
+    
+    # EXIF tag names for reading date information
+    _EXIF_DATE_TAGS = [
+        "ExifIFD:DateTimeDigitized",
+        "ExifIFD:DateTimeOriginal",
+        "ExifIFD:CreateDate",
+        "IFD0:DateTime"
+    ]
 
-    def __init__(self) -> None:
-        """Initialize the VueScan workflow."""
+    def __init__(self, logger: Logger) -> None:
+        """Initialize the VueScan workflow.
+        
+        Args:
+            logger: Logger instance for this workflow.
+        """
         super().__init__()
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
 
     def _read_settings_file(self, path: Path) -> ConfigParser:
         """
@@ -52,7 +65,7 @@ class VuescanWorkflow(Workflow):
             ConfigParser: Instance with loaded configuration.
 
         Raises:
-            Workflow.Exception: If the file cannot be read or doesn't exist.
+            FileNotFoundError: If the file doesn't exist.
         """
         if path.exists():
             self.logger.info(f"Loading settings from '{str(path)}'")
@@ -61,7 +74,7 @@ class VuescanWorkflow(Workflow):
             self.logger.info("Settings loaded")
             return parser
         else:
-            raise VuescanWorkflow.Exception(f"Error loading settings from file '{path}'")
+            raise FileNotFoundError(f"Error loading settings from file '{path}'")
 
     def _add_system_templates(self) -> None:
         """
@@ -110,7 +123,7 @@ class VuescanWorkflow(Workflow):
         Generate and overwrite VueScan settings file based on workflow configuration.
 
         Raises:
-            Workflow.Exception: If there's an error writing the file.
+            RuntimeError: If there's an error writing the file.
         """
         parser = ConfigParser()
         parser.add_section("VueScan")
@@ -126,8 +139,8 @@ class VuescanWorkflow(Workflow):
         try:
             with open(path, "w") as file:
                 parser.write(file)
-        except (SameFileError, OSError):
-            raise VuescanWorkflow.Exception("Error overwriting the VueScan settings file")
+        except (SameFileError, OSError) as e:
+            raise RuntimeError("Error overwriting the VueScan settings file") from e
         self.logger.info(f"VueScan settings file '{path}' overwritten")
 
     def _run_vuescan(self) -> None:
@@ -135,7 +148,7 @@ class VuescanWorkflow(Workflow):
         Execute the VueScan program with configured settings.
 
         Raises:
-            Workflow.Exception: If VueScan executable is not found.
+            FileNotFoundError: If VueScan executable is not found.
         """
         program_path = Path(
             self._get_script_value("main", "program_path"), self._get_script_value("main", "program_name")
@@ -148,7 +161,7 @@ class VuescanWorkflow(Workflow):
             run([program_path], cwd=self._get_script_value("main", "program_path"), shell=False)
             self.logger.info("VueScan is closed")
         else:
-            raise VuescanWorkflow.Exception(f"File '{program_path}' not found")
+            raise FileNotFoundError(f"File '{program_path}' not found")
 
     def _convert_value(self, value: str) -> str:
         """
@@ -161,7 +174,8 @@ class VuescanWorkflow(Workflow):
             str: Formatted string with the template replaced by its actual value.
 
         Raises:
-            Workflow.Exception: If template is invalid or key not found.
+            KeyError: If template key not found.
+            ValueError: If template format is invalid.
         """
         fields = value.split(":")
         if len(fields) > 0:
@@ -169,7 +183,7 @@ class VuescanWorkflow(Workflow):
             try:
                 value = self._templates[key]
             except KeyError:
-                raise VuescanWorkflow.Exception(f"Key '{key}' not found")
+                raise KeyError(f"Key '{key}' not found")
             try:
                 length = int(fields[1]) if len(fields) > 1 else 0
                 alignment = fields[2] if len(fields) > 2 and fields[2] in ("<", ">", "^") else "<"
@@ -177,10 +191,10 @@ class VuescanWorkflow(Workflow):
                 result = f"{{:{placeholder}{alignment}{length}s}}"
                 result = result.format(str(value))
                 return result
-            except ValueError:
-                raise VuescanWorkflow.Exception("Template conversion error")
+            except ValueError as e:
+                raise ValueError("Template conversion error") from e
         else:
-            raise VuescanWorkflow.Exception("An empty template was found")
+            raise ValueError("An empty template was found")
 
     def _replace_templates_to_value(self, string: str) -> str:
         """
@@ -197,28 +211,11 @@ class VuescanWorkflow(Workflow):
             template = string[match.start():match.end()]
             try:
                 value = self._convert_value(template[1:-1])
-            except VuescanWorkflow.Exception:
-                log(self._recorder, [f"Error converting template '{string[1:-1]}' to value"])
+            except (KeyError, ValueError):
+                self.logger.warning(f"Error converting template '{string[1:-1]}' to value")
                 continue
             result = result.replace(template, value)
         return result
-
-    def _extract_exif_tags(self, path: Path) -> dict[str, Any]:
-        """
-        Extract EXIF metadata from an image file.
-
-        Args:
-            path (Path): Path to the image file.
-
-        Returns:
-            dict[str, Any]: Dictionary of EXIF tags or empty dict if extraction fails.
-        """
-        try:
-            return Exifer.extract(path)
-        except Exifer.Exception as e:
-            log(self._recorder, [str(e)])
-            log(self._recorder, [f"Unable to extract EXIF from file '{path.name}'"])
-            return {}
 
     def _add_output_file_templates(self, path: Path) -> None:
         """
@@ -229,28 +226,21 @@ class VuescanWorkflow(Workflow):
         """
         moment = None
         if path.suffix.lower() in EXIF_SUPPORTED_EXTENSIONS:
-            tags: dict = self._extract_exif_tags(path)
-            
-            # Priority list of tags to check for date information
-            date_tags = ["DateTimeDigitized", "DateTimeOriginal", "CreateDate", "DateTime"]
-            # Priority list of EXIF groups to check
-            groups = [Exifer.EXIFIFD, Exifer.IFD0, "System", "File"]
-            
-            value = ""
-            for group in groups:
-                group_data = tags.get(group, {})
-                for tag in date_tags:
-                    value = group_data.get(tag, "")
+            try:
+                tool = Exifer()
+                tags = tool.read(path, self._EXIF_DATE_TAGS)
+                
+                # Try to get date from any of the tags (in priority order)
+                for tag_name in self._EXIF_DATE_TAGS:
+                    value = tags.get(tag_name)
                     if value:
-                        break
-                if value:
-                    break
-            
-            if value:
-                try:
-                    moment = Exifer.convert_value_to_datetime(value)
-                except Exifer.Exception:
-                    pass
+                        try:
+                            moment = self._parse_exif_datetime(value)
+                            break
+                        except ValueError:
+                            pass
+            except Exception as e:
+                self.logger.warning(f"Unable to extract EXIF from file '{path.name}': {e}")
 
         if moment is None:
             moment = datetime.datetime.fromtimestamp(getmtime(path))
@@ -259,12 +249,31 @@ class VuescanWorkflow(Workflow):
             for key in self._EXIF_TEMPLATE_NAMES:
                 self._templates[key] = getattr(moment, key.replace("digitization_", ""), "")
 
+    @staticmethod
+    def _parse_exif_datetime(value: str) -> datetime.datetime:
+        """Parse EXIF datetime string (YYYY:MM:DD HH:MM:SS) to datetime object.
+        
+        Args:
+            value: EXIF datetime string.
+            
+        Returns:
+            Parsed datetime object.
+            
+        Raises:
+            ValueError: If the value cannot be parsed.
+        """
+        try:
+            return datetime.datetime.strptime(value, EXIF_DATETIME_FORMAT)
+        except ValueError as e:
+            raise ValueError(f"Invalid EXIF datetime format: {value}") from e
+
     def _move_output_file(self) -> None:
         """
         Move the scanned file from VueScan output to final destination.
 
         Raises:
-            Workflow.Exception: If output file not found or move fails.
+            FileNotFoundError: If output file not found.
+            RuntimeError: If file move fails.
         """
         input_path = Path(
             self._get_workflow_value("vuescan", "output_path"),
@@ -285,12 +294,12 @@ class VuescanWorkflow(Workflow):
                     f"Scanned file '{input_path.name}' moved from '{input_path.parent}' to '{output_path.parent}', "
                     f"final name: '{output_path.name}'"
                 )
-            except OSError:
-                raise VuescanWorkflow.Exception(
+            except OSError as e:
+                raise RuntimeError(
                     f"Error moving resulting file from '{input_path}' to '{output_path}'"
-                )
+                ) from e
         else:
-            raise VuescanWorkflow.Exception(f"Output file '{input_path}' not found")
+            raise FileNotFoundError(f"Output file '{input_path}' not found")
 
     def _move_logging_file(self) -> None:
         """
@@ -310,10 +319,10 @@ class VuescanWorkflow(Workflow):
                     f"Logging file '{input_path.name}' moved from '{input_path.parent}' to '{output_path.parent}', "
                     f"final name: '{output_path.name}'"
                 )
-            except OSError:
-                raise VuescanWorkflow.Exception(
+            except OSError as e:
+                raise RuntimeError(
                     f"Error moving resulting file from '{input_path}' to '{output_path}'"
-                )
+                ) from e
         else:
             self.logger.warning("VueScan logging file not found")
 

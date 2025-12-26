@@ -7,10 +7,6 @@ class Workflow(ABC):
     All workflow classes must inherit from this class and implement the __call__ method.
     """
 
-    class Exception(Exception):
-        """Custom exception for workflow errors."""
-        pass
-
     def __init__(self) -> None:
         """Initialize the workflow."""
         pass
@@ -25,6 +21,6 @@ class Workflow(ABC):
             templates: Dictionary of template values.
 
         Raises:
-            Workflow.Exception: For workflow-specific errors.
+            RuntimeError: For workflow-specific errors.
         """
         pass

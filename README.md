@@ -3,8 +3,7 @@
 
 # Scan Batcher
 
-Scan Batcher is a project dedicated to the scanning and digital organization of home photo archives. 
-
+Scan Batcher is a project dedicated to the scanning and digital organization of home photo archives.
 
 ## Scanning
 

@@ -1,9 +1,9 @@
-import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Sequence
 
+from common.logger import Logger
 from scan_batcher.calculator import Calculator
 from scan_batcher.constants import RoundingStrategy, CM_TO_INCH
 
@@ -40,6 +40,7 @@ class Calculate(Batch):
 
     def __init__(
         self,
+        logger: Logger,
         min_dpi: int | None = None,
         max_dpi: int | None = None,
         dpis: Sequence[int] | None = None,
@@ -49,12 +50,13 @@ class Calculate(Batch):
         Initialize the Calculate batch.
 
         Args:
+            logger: Logger instance for this batch.
             min_dpi (int | None, optional): Minimum allowed DPI.
             max_dpi (int | None, optional): Maximum allowed DPI.
             dpis (Sequence[int] | None, optional): List of available DPI values.
             rounding (RoundingStrategy | str, optional): Rounding strategy (default: NEAREST).
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
         self.calculator = Calculator()
         self.min_dpi = min_dpi
         self.max_dpi = max_dpi
@@ -204,21 +206,21 @@ class Calculate(Batch):
                     )
                 if index == 0:  # Default case
                     dpi = rec_dpi
-                    self.logger.info(f\"User selected recommended DPI: {dpi}\")
-                    print(\"\\nUsing recommended DPI:\", dpi)
+                    self.logger.info(f"User selected recommended DPI: {dpi}")
+                    print("\nUsing recommended DPI:", dpi)
                     break
                 elif 1 <= index <= len(dpis):
                     dpi = dpis[index - 1][0]  # Get DPI from the selected index
-                    self.logger.info(f\"User selected DPI: {dpi}\")
-                    print(\"\\nSelected DPI:\", dpi)
+                    self.logger.info(f"User selected DPI: {dpi}")
+                    print("\nSelected DPI:", dpi)
                     break
                 else:
-                    print(\"Error: Invalid selection. Please try again.\")
-                    self.logger.debug(\"Invalid DPI selection\")
+                    print("Error: Invalid selection. Please try again.")
+                    self.logger.debug("Invalid DPI selection")
             except ValueError:
-                print(\"Error: Invalid number entered.\")
-                self.logger.debug(\"Invalid number entered for DPI selection\")
-        self.logger.info(f\"Calculation finished, returning scan_dpi={dpi}\")
+                print("Error: Invalid number entered.")
+                self.logger.debug("Invalid number entered for DPI selection")
+        self.logger.info(f"Calculation finished, returning scan_dpi={dpi}")
         return {"scan_dpi": dpi}
 
     def __iter__(self) -> "Calculate":

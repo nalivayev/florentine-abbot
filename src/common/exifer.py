@@ -1,40 +1,130 @@
 import json
-import logging
 import shutil
 import subprocess
+import atexit
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Sequence
 
 from scan_batcher.constants import EXIF_DATE_FORMAT, EXIF_DATETIME_FORMAT
 
-logger = logging.getLogger(__name__)
-
 
 class Exifer:
     """
     Utility class for extracting and converting EXIF metadata from images.
 
-    Provides static methods for parsing GPS coordinates, altitude, date/time, and extracting EXIF tags.
+    Provides methods for reading specific tags and writing metadata using exiftool.
+    Optimized to use a shared persistent exiftool process (via -stay_open) to avoid
+    process creation overhead for each operation.
     """
-
-    IFD0 = "IFD0"
-    IFD1 = "IFD1"
-    EXIFIFD = "EXIFIFD"
-    GPSIFD = "GPSIFD"
-
-    class Exception(Exception):
-        """Exception raised for EXIF-related errors."""
-        pass
+    
+    # Shared state for persistent processes
+    _processes: dict[str, subprocess.Popen] = {}
+    _locks: dict[str, threading.Lock] = {}
+    _global_lock = threading.Lock()
 
     def __init__(self, executable: str = "exiftool"):
         self.executable = executable
+        if not shutil.which(self.executable):
+             raise FileNotFoundError(f"Exiftool executable '{self.executable}' not found in PATH.")
+
+    @classmethod
+    def _get_process(cls, executable: str) -> subprocess.Popen:
+        """Get or create a persistent exiftool process for the given executable."""
+        with cls._global_lock:
+            if executable not in cls._locks:
+                cls._locks[executable] = threading.Lock()
+                
+        # Double-checked locking optimization not strictly needed here due to GIL, 
+        # but good practice. We just use the lock for the specific executable.
+        with cls._locks[executable]:
+            if executable not in cls._processes or cls._processes[executable].poll() is not None:
+                cls._start_process(executable)
+            return cls._processes[executable]
+
+    @classmethod
+    def _start_process(cls, executable: str) -> None:
+        """Start a new exiftool process in stay_open mode."""
+        cmd = [executable, "-stay_open", "True", "-@", "-"]
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1  # Line buffered
+            )
+            cls._processes[executable] = process
+            # Register cleanup only once per executable
+            # (atexit handles duplicates fine, but let's be clean)
+            pass 
+        except Exception as e:
+            raise RuntimeError(f"Failed to start exiftool: {e}")
+
+    @classmethod
+    def _stop_all(cls) -> None:
+        """Stop all running exiftool processes."""
+        for executable, process in cls._processes.items():
+            if process.poll() is None:
+                try:
+                    if process.stdin:
+                        process.stdin.write("-stay_open\nFalse\n")
+                        process.stdin.flush()
+                    process.communicate(timeout=2)
+                except (IOError, OSError, subprocess.TimeoutExpired):
+                    process.kill()
+                    process.communicate()
+        cls._processes.clear()
 
     def _run(self, args: Sequence[str]) -> str:
-        """Run exiftool with arguments."""
-        if not shutil.which(self.executable):
-             raise Exifer.Exception(f"Exiftool executable '{self.executable}' not found in PATH.")
+        """Run exiftool with arguments using the shared persistent process."""
+        # Check for newlines in args which break -stay_open protocol
+        if any("\n" in str(arg) for arg in args):
+             return self._run_one_off(args)
 
+        try:
+            process = self._get_process(self.executable)
+            
+            # We need to lock usage of the process so multiple threads don't interleave commands
+            with self._locks[self.executable]:
+                # Re-check if process died while waiting for lock
+                if process.poll() is not None:
+                    process = self._get_process(self.executable) # Restart
+                
+                stdin = process.stdin
+                stdout = process.stdout
+                
+                if not stdin or not stdout:
+                    raise RuntimeError("Exiftool process streams are not available")
+
+                # Write args
+                for arg in args:
+                    stdin.write(str(arg) + "\n")
+                
+                stdin.write("-execute\n")
+                stdin.flush()
+                
+                # Read output
+                output_lines = []
+                while True:
+                    line = stdout.readline()
+                    if not line:
+                        break 
+                    if line.strip() == "{ready}":
+                        break
+                    output_lines.append(line)
+                    
+                return "".join(output_lines)
+                
+        except Exception:
+            # Fallback to one-off if persistent process fails
+            return self._run_one_off(args)
+
+    def _run_one_off(self, args: Sequence[str]) -> str:
         cmd = [self.executable] + list(args)
         try:
             # Use utf-8 encoding and ignore errors to be safe with weird metadata
@@ -48,9 +138,9 @@ class Exifer:
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
-            raise Exifer.Exception(f"Exiftool failed: {e.stderr}")
+            raise RuntimeError(f"Exiftool failed: {e.stderr}") from e
         except Exception as e:
-            raise Exifer.Exception(f"Error running exiftool: {e}")
+            raise RuntimeError(f"Error running exiftool: {e}") from e
 
     def read_json(self, file_path: Path, args: Sequence[str] | None = None) -> dict[str, Any]:
         """Read metadata as JSON."""
@@ -66,15 +156,33 @@ class Exifer:
                 return {}
             return data[0]
         except json.JSONDecodeError as e:
-            raise Exifer.Exception(f"Failed to parse exiftool output: {e}")
+            raise ValueError(f"Failed to parse exiftool output: {e}") from e
 
-    def read_structured(self, file_path: Path) -> dict[str, Any]:
-        """Read metadata grouped by IFD/Group (using -g1)."""
-        return self.read_json(file_path, ["-g1"])
-
-    def read_flat(self, file_path: Path) -> dict[str, Any]:
-        """Read metadata with group prefixes (using -G)."""
-        return self.read_json(file_path, ["-G"])
+    def read(self, file_path: Path, tag_names: list[str]) -> dict[str, Any]:
+        """Read specific metadata tags.
+        
+        Args:
+            file_path: Path to the image file.
+            tag_names: List of tag names to read (e.g., ['XMP-exif:DateTimeDigitized', 'ExifIFD:CreateDate']).
+            
+        Returns:
+            Dictionary with tag names as keys and their values.
+        """
+        args = ["-G1"]  # Use -G1 to get group prefixes in output
+        for tag_name in tag_names:
+            args.append(f"-{tag_name}")
+        
+        data = self.read_json(file_path, args)
+        
+        # Extract only the requested tags (exiftool returns full group:tag format)
+        result = {}
+        for key, value in data.items():
+            # Skip non-tag fields
+            if key in ["SourceFile", "ExifTool"]:
+                continue
+            result[key] = value
+        
+        return result
 
     def write(self, file_path: Path, tags: dict[str, Any], overwrite_original: bool = True) -> None:
         """Write metadata tags."""
@@ -87,91 +195,5 @@ class Exifer:
         args.append(str(file_path))
         self._run(args)
 
-    @staticmethod
-    def gps_values_to_date_time(date_value: str, time_values: Sequence[str | float]) -> datetime:
-        """
-        Convert EXIF GPS date and time values to a datetime object.
-
-        Args:
-            date_value (str): Date string in format 'YYYY:MM:DD'.
-            time_values (Sequence[str | float]): List of [hour, minute, second] values.
-
-        Returns:
-            datetime: Combined date and time.
-
-        Raises:
-            Exifer.Exception: If date or time values are invalid.
-        """
-        try:
-            date = datetime.strptime(date_value, EXIF_DATE_FORMAT)
-        except ValueError:
-            raise Exifer.Exception(f"Invalid date input value: {date_value}")
-        try:
-            time = timedelta(
-                hours=int(float(time_values[0])),
-                minutes=int(float(time_values[1])),
-                seconds=int(float(time_values[2]))
-            )
-        except (ValueError, OverflowError):
-            raise Exifer.Exception(f"Invalid time input value: {time_values}")
-        return date + time
-
-    @staticmethod
-    def convert_value_to_datetime(value: str) -> datetime:
-        """
-        Convert EXIF date/time string to a datetime object.
-
-        Args:
-            value (str): Date/time string in format 'YYYY:MM:DD HH:MM:SS'.
-
-        Returns:
-            datetime: Parsed datetime object.
-
-        Raises:
-            Exifer.Exception: If the value cannot be parsed.
-        """
-        try:
-            return datetime.strptime(value, EXIF_DATETIME_FORMAT)
-        except ValueError:
-            raise Exifer.Exception(f"Invalid input value: {value}")
-
-    @staticmethod
-    def extract(path: str | Path) -> dict[str, Any]:
-        """
-        Extract EXIF tags from an image file.
-
-        Args:
-            path (str | Path): Path to the image file.
-
-        Returns:
-            dict[str, Any]: Dictionary of EXIF tags grouped by IFD section.
-
-        Raises:
-            Exifer.Exception: If the file does not exist or is not a valid image.
-        """
-        path_obj = Path(path)
-        if not path_obj.is_file():
-            raise Exifer.Exception(f"File '{path_obj.name}' not found")
-
-        try:
-            tool = Exifer()
-            exif_data = tool.read_structured(path_obj)
-        except Exifer.Exception as e:
-            raise Exifer.Exception(f"Error reading EXIF: {e}")
-        except Exception as e:
-            raise Exifer.Exception(f"Unexpected error: {e}")
-
-        tags = {}
-        
-        # Copy all groups found by exiftool
-        for group, values in exif_data.items():
-            tags[group] = values
-
-        # Add compatibility aliases for known groups if they differ from exiftool output
-        if "ExifIFD" in tags:
-            tags[Exifer.EXIFIFD] = tags["ExifIFD"]
-            
-        if "GPS" in tags:
-            tags[Exifer.GPSIFD] = tags["GPS"]
-            
-        return tags
+# Register cleanup
+atexit.register(Exifer._stop_all)
