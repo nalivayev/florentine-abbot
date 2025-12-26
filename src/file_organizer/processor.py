@@ -1,24 +1,44 @@
 """Core logic for processing files: parsing, metadata extraction, and organization."""
 
-import logging
 import shutil
 import uuid
 from pathlib import Path
 from typing import Any
 
 from common.exifer import Exifer
-from .parser import FilenameParser, ParsedFilename
-from .validator import FilenameValidator
+from common.logger import Logger
+from file_organizer.parser import FilenameParser, ParsedFilename
+from file_organizer.validator import FilenameValidator
 
 
 class ArchiveProcessor:
     """Processor that extracts metadata from structured photo filenames and writes to EXIF/XMP."""
 
     SUPPORTED_EXTENSIONS = {".tiff", ".tif", ".jpg", ".jpeg"}
+    
+    # EXIF tag names for metadata operations
+    TAG_XMP_EXIF_DATETIME_DIGITIZED = "XMP-exif:DateTimeDigitized"
+    TAG_EXIFIFD_DATETIME_DIGITIZED = "ExifIFD:DateTimeDigitized"
+    TAG_EXIFIFD_CREATE_DATE = "ExifIFD:CreateDate"
+    TAG_EXIF_DATETIME_ORIGINAL = "Exif:DateTimeOriginal"
+    TAG_XMP_PHOTOSHOP_DATE_CREATED = "XMP-photoshop:DateCreated"
+    TAG_XMP_XMP_IDENTIFIER = "XMP-xmp:Identifier"
+    TAG_XMP_DC_IDENTIFIER = "XMP-dc:Identifier"
+    TAG_XMP_DC_DESCRIPTION = "XMP-dc:Description"
+    TAG_XMP_DC_TITLE = "XMP-dc:Title"
+    TAG_XMP_DC_CREATOR = "XMP-dc:Creator"
+    TAG_XMP_PHOTOSHOP_CREDIT = "XMP-photoshop:Credit"
+    TAG_XMP_DC_RIGHTS = "XMP-dc:Rights"
+    TAG_XMP_XMPRIGHTS_USAGE_TERMS = "XMP-xmpRights:UsageTerms"
+    TAG_XMP_DC_SOURCE = "XMP-dc:Source"
 
-    def __init__(self) -> None:
-        """Initialize the processor."""
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, logger: Logger) -> None:
+        """Initialize the processor.
+        
+        Args:
+            logger: Logger instance for this processor.
+        """
+        self.logger = logger
         self.parser = FilenameParser()
         self.validator = FilenameValidator()
 
@@ -135,26 +155,56 @@ class ArchiveProcessor:
         """
         try:
             tags = {}
+            tool = Exifer()
             
             # 1. Identifiers (XMP)
             file_uuid = str(uuid.uuid4())
-            tags["XMP-dc:Identifier"] = file_uuid
-            tags["XMP-xmp:Identifier"] = file_uuid
+            tags[self.TAG_XMP_DC_IDENTIFIER] = file_uuid
+            tags[self.TAG_XMP_XMP_IDENTIFIER] = file_uuid
 
             # 2. Description & Title
             description = self._generate_description(parsed)
-            tags["XMP-dc:Description"] = description
-            tags["XMP-dc:Title"] = file_path.stem
+            tags[self.TAG_XMP_DC_DESCRIPTION] = description
+            tags[self.TAG_XMP_DC_TITLE] = file_path.stem
 
             # 3. Dates
+            # 3.1 DateTimeDigitized - preserve the scanning date from CreateDate
+            try:
+                # Read specific tags we need
+                tags_to_read = [
+                    self.TAG_XMP_EXIF_DATETIME_DIGITIZED,
+                    self.TAG_EXIFIFD_DATETIME_DIGITIZED,
+                    self.TAG_EXIFIFD_CREATE_DATE
+                ]
+                existing_tags = tool.read(file_path, tags_to_read)
+                
+                # Check if DateTimeDigitized is already set
+                date_digitized = (
+                    existing_tags.get(self.TAG_XMP_EXIF_DATETIME_DIGITIZED) or
+                    existing_tags.get(self.TAG_EXIFIFD_DATETIME_DIGITIZED)
+                )
+                
+                if not date_digitized:
+                    # Copy from CreateDate if DateTimeDigitized is not set
+                    create_date = existing_tags.get(self.TAG_EXIFIFD_CREATE_DATE)
+                    if create_date:
+                        tags[self.TAG_XMP_EXIF_DATETIME_DIGITIZED] = create_date
+                        self.logger.debug(f"Set DateTimeDigitized from CreateDate: {create_date}")
+                else:
+                    self.logger.debug(f"DateTimeDigitized already set: {date_digitized}")
+                    
+            except Exception as e:
+                self.logger.warning(f"Could not process DateTimeDigitized: {e}")
+            
+            # 3.2 DateTimeOriginal - date from filename (original photo date)
             if parsed.modifier == 'E':
                 # Exact date
                 dt_str = f"{parsed.year:04d}:{parsed.month:02d}:{parsed.day:02d} {parsed.hour:02d}:{parsed.minute:02d}:{parsed.second:02d}"
-                tags["Exif:DateTimeOriginal"] = dt_str
-                tags["XMP-photoshop:DateCreated"] = dt_str.replace(':', '-', 2).replace(' ', 'T')
+                tags[self.TAG_EXIF_DATETIME_ORIGINAL] = dt_str
+                tags[self.TAG_XMP_PHOTOSHOP_DATE_CREATED] = dt_str.replace(':', '-', 2).replace(' ', 'T')
             else:
                 # Partial date
-                tags["Exif:DateTimeOriginal"] = "" # Clear it
+                tags[self.TAG_EXIF_DATETIME_ORIGINAL] = "" # Clear it
                 
                 # XMP DateCreated (partial)
                 if parsed.year > 0:
@@ -164,24 +214,24 @@ class ArchiveProcessor:
                         if parsed.day > 0:
                             date_val += f"-{parsed.day:02d}"
                     
-                    tags["XMP-photoshop:DateCreated"] = date_val
+                    tags[self.TAG_XMP_PHOTOSHOP_DATE_CREATED] = date_val
 
             # 4. Configurable fields
             if config.get('creator'):
                 creator = config['creator']
                 # XMP-dc:Creator is a bag (unordered array), support both string and list
                 if isinstance(creator, list):
-                    tags["XMP-dc:Creator"] = creator
+                    tags[self.TAG_XMP_DC_CREATOR] = creator
                 else:
-                    tags["XMP-dc:Creator"] = [creator]
+                    tags[self.TAG_XMP_DC_CREATOR] = [creator]
             if config.get('credit'):
-                tags["XMP-photoshop:Credit"] = config['credit']
+                tags[self.TAG_XMP_PHOTOSHOP_CREDIT] = config['credit']
             if config.get('rights'):
-                tags["XMP-dc:Rights"] = config['rights']
+                tags[self.TAG_XMP_DC_RIGHTS] = config['rights']
             if config.get('usage_terms'):
-                tags["XMP-xmpRights:UsageTerms"] = config['usage_terms']
+                tags[self.TAG_XMP_XMPRIGHTS_USAGE_TERMS] = config['usage_terms']
             if config.get('source'):
-                tags["XMP-dc:Source"] = config['source']
+                tags[self.TAG_XMP_DC_SOURCE] = config['source']
 
             # Log file size for large files (useful for performance tracking)
             file_size = file_path.stat().st_size
@@ -190,13 +240,12 @@ class ArchiveProcessor:
             else:
                 self.logger.info(f"Running exiftool on {file_path.name}...")
             
-            tool = Exifer()
             tool.write(file_path, tags)
             
             self.logger.info("  Metadata written successfully.")
             return True
 
-        except Exifer.Exception as e:
+        except (FileNotFoundError, RuntimeError, ValueError) as e:
             self.logger.error(f"Exiftool failed: {e}")
             return False
         except Exception as e:

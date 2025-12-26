@@ -1,7 +1,6 @@
 """Archive Scanner - Core Logic."""
 
 import hashlib
-import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,8 +8,9 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import File, FileStatus, AuditLog, AuditEventType, FileMetadata
-from .engine import DatabaseManager
+from common.logger import Logger
+from archive_keeper.models import File, FileStatus, AuditLog, AuditEventType, FileMetadata
+from archive_keeper.engine import DatabaseManager
 
 # 64MB chunks for efficient reading of large files (e.g. 2GB+ TIFFs, RAW scans)
 # Larger chunks = fewer I/O operations = faster hashing for big files
@@ -26,10 +26,11 @@ class ArchiveScanner:
     Optimized for large image files (TIFF, DNG, RAW formats).
     """
     
-    def __init__(self, root_path: str, db_manager: DatabaseManager, chunk_size: int = CHUNK_SIZE) -> None:
+    def __init__(self, logger: Logger, root_path: str, db_manager: DatabaseManager, chunk_size: int = CHUNK_SIZE) -> None:
         """Initialize the scanner.
         
         Args:
+            logger: Logger instance for this scanner.
             root_path: Root directory of the archive to scan.
             db_manager: Database manager for storing file information.
             chunk_size: Size of chunks for file reading (default: 64MB).
@@ -37,8 +38,8 @@ class ArchiveScanner:
         """
         self.root_path = Path(root_path).resolve()
         self.db_manager = db_manager
+        self.logger = logger
         self.chunk_size = chunk_size
-        self.logger = logging.getLogger(__name__)
 
     def calculate_hash(self, file_path: Path) -> str:
         """Calculate SHA-256 hash of a file with progress logging for large files.
@@ -90,12 +91,10 @@ class ArchiveScanner:
         self.logger.info(f"Starting scan of {self.root_path}")
         
         session = self.db_manager.get_session()
+        scan_start_time = datetime.now(timezone.utc)
+        
         try:
-            # 1. Get all known files from DB
-            known_files_map = {f.path: f for f in session.scalars(select(File)).all()}
-            found_paths: set[str] = set()
-
-            # 2. Walk the filesystem
+            # Walk the filesystem
             for root, _, files in os.walk(self.root_path):
                 for filename in files:
                     file_path = Path(root) / filename
@@ -105,24 +104,36 @@ class ArchiveScanner:
                         continue
                         
                     rel_path = str(file_path.relative_to(self.root_path)).replace('\\', '/')
-                    found_paths.add(rel_path)
                     
                     stats = file_path.stat()
                     mtime = stats.st_mtime
                     size = stats.st_size
 
-                    if rel_path in known_files_map:
+                    # Check if file exists in DB
+                    stmt = select(File).where(File.path == rel_path)
+                    db_file = session.scalar(stmt)
+
+                    if db_file:
                         # File exists in DB
-                        db_file = known_files_map[rel_path]
                         self._check_existing_file(session, db_file, file_path, mtime, size)
                     else:
                         # New file
                         self._handle_new_file(session, file_path, rel_path, mtime, size)
+            
+            # Commit changes from the walk phase
+            session.commit()
 
-            # 3. Check for missing files
-            for rel_path, db_file in known_files_map.items():
-                if rel_path not in found_paths:
-                    self._handle_missing_file(session, db_file)
+            # Check for missing files
+            # Files that were NOT updated during this scan will have last_checked_at < scan_start_time
+            # We only care about files that are currently marked OK but weren't found
+            stmt = select(File).where(
+                File.last_checked_at < scan_start_time,
+                File.status != FileStatus.MISSING
+            )
+            
+            # Process missing files
+            for missing_file in session.scalars(stmt):
+                self._handle_missing_file(session, missing_file)
 
             session.commit()
             self.logger.info("Scan completed.")
@@ -163,6 +174,7 @@ class ArchiveScanner:
             # If we updated mtime/size above, the next check might fail or pass depending on values.
             # Let's just return or let it fall through?
             # If we updated db_file.mtime, the next check (db_file.mtime != mtime) will be false.
+            db_file.last_checked_at = datetime.now(timezone.utc)
             return
 
         # If mtime or size changed, we must re-hash

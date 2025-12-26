@@ -2,7 +2,7 @@
 
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm import sessionmaker, Session
-from .models import Base
+from archive_keeper.models import Base
 
 class DatabaseManager:
     """Manages SQLAlchemy database connections and sessions.

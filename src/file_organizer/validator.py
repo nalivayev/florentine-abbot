@@ -1,6 +1,7 @@
 """Validator for parsed filename data."""
 
-from .parser import ParsedFilename
+import calendar
+from file_organizer.parser import ParsedFilename
 
 
 class FilenameValidator:
@@ -13,7 +14,7 @@ class FilenameValidator:
     VALID_MODIFIERS: set[str] = {"A", "B", "C", "E", "F"}
     VALID_SIDES: set[str] = {"A", "R"}
     DAYS_IN_MONTH: dict[int, int] = {
-        1: 31, 2: 29, 3: 31, 4: 30, 5: 31, 6: 30,
+        1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30,
         7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31
     }
 
@@ -82,6 +83,11 @@ class FilenameValidator:
         if parsed.month > 0 and parsed.day > 0:
             # Check if day is valid for the given month
             max_days = self.DAYS_IN_MONTH.get(parsed.month, 0)
+            
+            # Handle leap years for February
+            if parsed.month == 2 and calendar.isleap(parsed.year):
+                max_days = 29
+                
             if parsed.day > max_days:
                 errors.append(
                     f"Invalid day value: {parsed.day} for month {parsed.month} "

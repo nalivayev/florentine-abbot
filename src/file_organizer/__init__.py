@@ -2,7 +2,7 @@
 
 __version__ = "0.1.0"
 
-from .processor import ArchiveProcessor
-from .monitor import ArchiveMonitor
+from file_organizer.processor import ArchiveProcessor
+from file_organizer.monitor import ArchiveMonitor
 
 __all__ = ["ArchiveProcessor", "ArchiveMonitor"]

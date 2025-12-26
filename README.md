@@ -3,9 +3,7 @@
 
 # Florentine Abbot
 
-Florentine Abbot is a project dedicated to the scanning and digital organization of home photo archives. 
-
-> **⚠️ Project Status**: Currently, only the **Scan Batcher** utility is packaged and ready for use. Additional modules (`file_organizer`, `archive_keeper`) are in development and not yet fully tested or documented.
+Florentine Abbot is a project dedicated to the scanning and digital organization of home photo archives.
 
 ## Scanning (Scan Batcher)
 
@@ -126,6 +124,8 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 
 ## Automatic Organization (Archive Organizer)
 
+> **⚠️ Status**: In development. Not yet fully tested or documented.
+
 A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers) and moves the file into a structured folder hierarchy (`YYYY.M/YYYY.MM.DD.M/SUFFIX`). It also writes this metadata into the file's EXIF/XMP tags.
 
 ### Usage
@@ -135,9 +135,9 @@ A tool to automatically organize scanned files based on their filenames. It extr
 archive-organizer "D:\Scans\Inbox"
 ```
 
-**Watch Mode (daemon):**
+**Daemon Mode (continuous monitoring):**
 ```sh
-archive-organizer "D:\Scans\Inbox" --watch
+archive-organizer "D:\Scans\Inbox" --daemon
 ```
 
 **With Metadata:**
@@ -146,6 +146,8 @@ archive-organizer "D:\Scans\Inbox" --creator "John Doe" --rights "All Rights Res
 ```
 
 ## Archive Integrity (Archive Keeper)
+
+> **⚠️ Status**: In development. Not yet fully tested or documented.
 
 A tool to ensure the long-term integrity of your digital archive. It scans your archive folder, calculates SHA-256 hashes of all files, and stores them in a SQLite database. On subsequent runs, it detects:
 - **New files** (Added)

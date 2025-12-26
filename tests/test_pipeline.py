@@ -11,6 +11,7 @@ from archive_keeper.engine import DatabaseManager
 from archive_keeper.scanner import ArchiveScanner
 from archive_keeper.models import File, FileStatus
 from common.exifer import Exifer
+from common.logger import Logger
 
 # Configure logging to capture output during tests
 logging.basicConfig(level=logging.DEBUG)
@@ -20,6 +21,9 @@ class TestPipeline(unittest.TestCase):
         # Create a temporary directory
         self.test_dir = tempfile.mkdtemp()
         self.root_path = Path(self.test_dir)
+        
+        # Create logger for tests
+        self.logger = Logger("test")
         
         # Setup paths
         self.input_dir = self.root_path / "input"
@@ -51,7 +55,7 @@ class TestPipeline(unittest.TestCase):
         print(f"[Pipeline] Processing file: {file_path}")
 
         # --- Step 1: File Organizer ---
-        processor = ArchiveProcessor()
+        processor = ArchiveProcessor(self.logger)
         config = {
             "creator": "Test User",
             "rights": "Public Domain"
@@ -83,7 +87,15 @@ class TestPipeline(unittest.TestCase):
 
         # Verify metadata
         tool = Exifer()
-        metadata = tool.read_flat(processed_path)
+        all_tags = [
+            "XMP-dc:Creator",
+            "XMP-dc:Description",
+            "XMP-xmp:CreateDate",
+            "XMP-photoshop:DateCreated",
+            "EXIF:DateTimeOriginal",
+            "ExifIFD:DateTimeOriginal"
+        ]
+        metadata = tool.read(processed_path, all_tags)
         flat_meta = {k.split(':')[-1]: v for k, v in metadata.items()}
         
         # Creator is an array in XMP, ExifTool may return it as string representation of array
@@ -99,7 +111,8 @@ class TestPipeline(unittest.TestCase):
             
         # Check XMP Date
         if "expected_xmp_date" in scenario:
-            date_created = str(flat_meta.get("DateCreated", ""))
+            # Try both CreateDate and DateCreated
+            date_created = str(flat_meta.get("DateCreated") or flat_meta.get("CreateDate") or "")
             # Normalize separators to colons for comparison, as ExifTool often returns colons
             date_created_norm = date_created.replace("-", ":")
             expected_norm = scenario["expected_xmp_date"].replace("-", ":")
@@ -115,7 +128,7 @@ class TestPipeline(unittest.TestCase):
         # --- Step 2: Archive Keeper ---
         
         # Run Scan
-        scanner = ArchiveScanner(str(self.input_dir), self.db_manager)
+        scanner = ArchiveScanner(self.logger, str(self.input_dir), self.db_manager)
         scanner.scan()
         
         # Verify DB records
@@ -161,7 +174,7 @@ class TestPipeline(unittest.TestCase):
         # Check if exiftool is available
         try:
             Exifer()._run(["-ver"])
-        except Exifer.Exception:
+        except (FileNotFoundError, RuntimeError):
             self.skipTest("ExifTool not found, skipping E2E test")
 
         scenarios = [
@@ -212,3 +225,5 @@ class TestPipeline(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+

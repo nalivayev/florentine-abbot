@@ -1,9 +1,9 @@
 """Configuration management for file organizer."""
 
-import logging
 from pathlib import Path
 from typing import Any
 
+from common.logger import Logger
 from common.config_utils import (
     get_config_path,
     ensure_config_exists,
@@ -11,19 +11,19 @@ from common.config_utils import (
     get_template_path
 )
 
-logger = logging.getLogger(__name__)
-
 
 class Config:
     """Configuration manager for file organizer."""
     
-    def __init__(self, config_path: str | Path | None = None):
+    def __init__(self, logger: Logger, config_path: str | Path | None = None):
         """
         Initialize configuration.
         
         Args:
+            logger: Logger instance for this config.
             config_path: Path to JSON config file. If None, uses standard location.
         """
+        self.logger = logger
         # Get config path (custom or standard location)
         self.config_path = get_config_path('file-organizer', config_path)
         
@@ -38,9 +38,9 @@ class Config:
             "source": None
         }
         
-        if ensure_config_exists(self.config_path, default_config, template_path):
-            logger.info(f"Created new config at {self.config_path}")
-            logger.info("Please edit the configuration file and restart")
+        if ensure_config_exists(self.logger, self.config_path, default_config, template_path):
+            self.logger.info(f"Created new config at {self.config_path}")
+            self.logger.info("Please edit the configuration file and restart")
         
         # Load configuration
         self.data: dict[str, Any] = {}
@@ -48,11 +48,11 @@ class Config:
     
     def _load(self) -> None:
         """Load configuration from file."""
-        self.data = load_config(self.config_path)
+        self.data = load_config(self.logger, self.config_path)
         if self.data:
-            logger.info(f"Loaded configuration from {self.config_path}")
+            self.logger.info(f"Loaded configuration from {self.config_path}")
         else:
-            logger.warning("Using empty configuration")
+            self.logger.warning("Using empty configuration")
     
     def reload(self) -> bool:
         """
@@ -65,10 +65,10 @@ class Config:
         self._load()
         
         if self.data != old_data:
-            logger.info("Configuration reloaded successfully")
+            self.logger.info("Configuration reloaded successfully")
             return True
         else:
-            logger.debug("Configuration unchanged")
+            self.logger.debug("Configuration unchanged")
             return False
     
     def get_metadata(self) -> dict[str, str | None]:

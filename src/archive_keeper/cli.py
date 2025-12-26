@@ -5,11 +5,10 @@ import logging
 import sys
 from pathlib import Path
 
-from common.logging_config import setup_logging
-from common.log_paths import get_log_file
-from .config import Config
-from .engine import DatabaseManager
-from .scanner import ArchiveScanner
+from common.logger import Logger
+from archive_keeper.config import Config
+from archive_keeper.engine import DatabaseManager
+from archive_keeper.scanner import ArchiveScanner
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Archive Keeper - Digital Preservation Tool")
@@ -17,19 +16,19 @@ def main() -> None:
     parser.add_argument("--config", help="Path to JSON configuration file")
     parser.add_argument("--db", help="Path to SQLite database (overrides config)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
-    parser.add_argument("--log-dir", help="Custom directory for log files (default: ~/.florentine-abbot/logs/)")
+    parser.add_argument("--log-path", help="Custom directory for log files (default: ~/.florentine-abbot/logs/)")
     
     args = parser.parse_args()
     
-    setup_logging(
-        log_file=get_log_file("archive_keeper", args.log_dir),
+    logger = Logger(
+        "archive_keeper", 
+        args.log_path,
         level=logging.DEBUG if args.verbose else logging.INFO,
         console=True
     )
-    logger = logging.getLogger(__name__)
     
     # Load configuration
-    config = Config(args.config)
+    config = Config(logger, args.config)
     logger.info(f"Configuration loaded from {config.config_path}")
     
     # CLI --db parameter overrides config
@@ -50,6 +49,7 @@ def main() -> None:
     
     # Run Scan
     scanner = ArchiveScanner(
+        logger,
         str(root_path), 
         db_manager, 
         chunk_size=config.chunk_size

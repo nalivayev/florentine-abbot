@@ -1,6 +1,5 @@
 """File system monitor using watchdog."""
 
-import logging
 import signal
 import time
 from pathlib import Path
@@ -9,8 +8,9 @@ from typing import Any
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileSystemMovedEvent
 
-from .processor import ArchiveProcessor
-from .config import Config
+from common.logger import Logger
+from file_organizer.processor import ArchiveProcessor
+from file_organizer.config import Config
 
 class ArchiveEventHandler(FileSystemEventHandler):
     """Event handler for archive file system events.
@@ -19,16 +19,17 @@ class ArchiveEventHandler(FileSystemEventHandler):
     the structured filename pattern.
     """
 
-    def __init__(self, processor: ArchiveProcessor, monitor: 'ArchiveMonitor') -> None:
+    def __init__(self, logger: Logger, processor: ArchiveProcessor, monitor: 'ArchiveMonitor') -> None:
         """Initialize the event handler.
         
         Args:
+            logger: Logger instance for this handler.
             processor: ArchiveProcessor instance for file processing.
             monitor: ArchiveMonitor instance for accessing config.
         """
         self.processor = processor
         self.monitor = monitor
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger
 
     def on_created(self, event: FileSystemEvent) -> None:
         """Handle file creation events.
@@ -85,18 +86,19 @@ class ArchiveMonitor:
     process them when they appear. Supports config reloading via SIGHUP.
     """
 
-    def __init__(self, path: str, config: Config) -> None:
+    def __init__(self, logger: Logger, path: str, config: Config) -> None:
         """Initialize the monitor.
         
         Args:
+            logger: Logger instance for this monitor.
             path: Directory path to monitor.
             config: Config instance for file processing.
         """
         self.path = Path(path).resolve()
         self.config = config
-        self.processor = ArchiveProcessor()
+        self.logger = logger
+        self.processor = ArchiveProcessor(logger)
         self.observer = Observer()
-        self.logger = logging.getLogger(__name__)
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self) -> None:
@@ -135,7 +137,7 @@ class ArchiveMonitor:
             self.logger.error(f"Path does not exist: {self.path}")
             return
 
-        event_handler = ArchiveEventHandler(self.processor, self)
+        event_handler = ArchiveEventHandler(self.logger, self.processor, self)
         self.observer.schedule(event_handler, str(self.path), recursive=False)
         self.observer.start()
         self.logger.info(f"Started monitoring {self.path}")
