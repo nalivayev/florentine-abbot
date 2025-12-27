@@ -3,11 +3,11 @@ import shutil
 import subprocess
 import atexit
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Sequence
 
-from scan_batcher.constants import EXIF_DATE_FORMAT, EXIF_DATETIME_FORMAT
+from scan_batcher.constants import EXIF_DATETIME_FORMAT
 
 
 class Exifer:

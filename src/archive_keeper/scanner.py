@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from common.logger import Logger
-from archive_keeper.models import File, FileStatus, AuditLog, AuditEventType, FileMetadata
+from archive_keeper.models import File, FileStatus, AuditLog, AuditEventType
 from archive_keeper.engine import DatabaseManager
 
 # 64MB chunks for efficient reading of large files (e.g. 2GB+ TIFFs, RAW scans)
