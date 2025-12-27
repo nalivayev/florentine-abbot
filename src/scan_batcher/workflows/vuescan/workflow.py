@@ -1,4 +1,3 @@
-import logging
 from configparser import ConfigParser, ExtendedInterpolation
 from shutil import SameFileError, move
 from os.path import getmtime
@@ -7,7 +6,6 @@ from subprocess import run
 from pathlib import Path
 from re import finditer
 from os import makedirs
-from typing import Any
 import datetime
 
 from common.exifer import Exifer

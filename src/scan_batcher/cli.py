@@ -1,7 +1,6 @@
 import logging
 from sys import stderr, exit
 from typing import Sequence
-from pathlib import Path
 
 from common.logger import Logger
 from scan_batcher.batch import Batch, Scan
@@ -84,7 +83,6 @@ def create_workflow(logger: Logger, engine: str = DEFAULT_ENGINE) -> Workflow:
         ValueError: If the workflow is not registered.
     """
     workflow_class = get_workflow(engine)
-    return workflow_class(logger)
     return workflow_class(logger)
 
 def main() -> None:
