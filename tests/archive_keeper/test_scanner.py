@@ -19,7 +19,9 @@ def db_manager():
     """Create an in-memory database for testing."""
     manager = DatabaseManager(":memory:")
     manager.init_db()
-    return manager
+    yield manager
+    # Cleanup: close all sessions
+    manager.engine.dispose()
 
 @pytest.fixture
 def archive_path(tmp_path):

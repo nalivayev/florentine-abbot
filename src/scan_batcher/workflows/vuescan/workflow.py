@@ -297,6 +297,7 @@ class VuescanWorkflow(Workflow):
                     f"Error moving resulting file from '{input_path}' to '{output_path}'"
                 ) from e
         else:
+            self.logger.error(f"Output file '{input_path}' not found after scanning")
             raise FileNotFoundError(f"Output file '{input_path}' not found")
 
     def _move_logging_file(self) -> None:
