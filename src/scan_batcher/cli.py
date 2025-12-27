@@ -116,8 +116,7 @@ def main() -> None:
             logger.info("Script interrupted by user")
             exit(0)
         except Exception as e:
-            logger.error(f"Error: {e}")
-            stderr.write(f"Error: {e}\n")
+            logger.error(f"Error processing batch item: {e}", exc_info=True)
             continue
 
     logger.info("Script has been completed")

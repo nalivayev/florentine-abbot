@@ -94,6 +94,9 @@ class ArchiveScanner:
         scan_start_time = datetime.now(timezone.utc)
         
         try:
+            # Track which files we found during this scan
+            found_files = set()
+            
             # Walk the filesystem
             for root, _, files in os.walk(self.root_path):
                 for filename in files:
@@ -104,6 +107,7 @@ class ArchiveScanner:
                         continue
                         
                     rel_path = str(file_path.relative_to(self.root_path)).replace('\\', '/')
+                    found_files.add(rel_path)
                     
                     stats = file_path.stat()
                     mtime = stats.st_mtime
@@ -123,17 +127,13 @@ class ArchiveScanner:
             # Commit changes from the walk phase
             session.commit()
 
-            # Check for missing files
-            # Files that were NOT updated during this scan will have last_checked_at < scan_start_time
-            # We only care about files that are currently marked OK but weren't found
-            stmt = select(File).where(
-                File.last_checked_at < scan_start_time,
-                File.status != FileStatus.MISSING
-            )
+            # Check for missing files - files in DB that we didn't find during the walk
+            stmt = select(File).where(File.status != FileStatus.MISSING)
             
             # Process missing files
-            for missing_file in session.scalars(stmt):
-                self._handle_missing_file(session, missing_file)
+            for db_file in session.scalars(stmt):
+                if db_file.path not in found_files:
+                    self._handle_missing_file(session, db_file)
 
             session.commit()
             self.logger.info("Scan completed.")
