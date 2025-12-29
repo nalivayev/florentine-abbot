@@ -755,7 +755,32 @@ Conclusion: The choice between uppercase and lowercase Latin letters is not just
 - Travel: `TRV.LND`, `TRV.GRP`, `TRV.CIT`
 - Documents: `DOC.TXT`, `DOC.CRD` (cards), `DOC.LET` (letters)
 - Album/series: `001.101`, `001.102`, `002.001`
-- Event/photographer: `023.007` — where `023` is the event/occasion number (e.g., family gathering #23), and `007` is the photographer identifier within the archive.
+
+**Primary recommendation: event-source-number scheme**
+
+For mixed archives with photos from various events, a convenient scheme is:
+- `GGG` = event number (e.g., `023` for "Family gathering, June 2024")
+- `SSS` = source identifier (e.g., `007` — may represent a camera, phone, or photographer)
+- `NNNN` = sequential photo number within this event and source
+
+**Example:** `2024.06.15.14.30.00.E.023.007.0001.A.jpg`
+- Event #23 (family gathering)
+- Source #7 (for example, a particular camera or phone)
+- Photo #1 from this source at this event
+
+**Advantages:**
+- Helps track the origin of each shot
+- Convenient grouping: all photos from one event together, subdivided by source
+- Flexibility: you decide what the source code represents (camera, phone, photographer)
+- Simple expansion: new sources get new codes, existing files remain unchanged
+- Universal: suitable for family archives, professional shoots, expeditions
+
+**Alternative schemes:**
+- **Thematic-type:** `FAM.POR` (if you have a single photographer and clear themes)
+- **Album-series:** `001.101` (for systematic digitization of physical albums)
+- **Location-type:** `MSK.STR` (Moscow-Street) for geographic organization
+
+Choose one scheme and apply it consistently throughout the archive. Mixed approaches are acceptable if well-documented.
 
 This approach is compatible with the sorting and clarity requirements described in Part 1 (sections 4 and 5) and scales without breaking the logic.
 
