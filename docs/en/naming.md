@@ -173,8 +173,8 @@ The file name consists of the following components:
 
 **Full example file name**:
 - `1950.06.15.12.00.00.E.FAM.POR.0001.A.tiff` — exact date (June 15, 1950, 12:00), family portrait, number 0001, obverse.
-- `1950.06.15.12.00.00.E.FAM.POR.0001.R.tiff` — reverse of the same portrait.
 - `1950.00.00.00.00.00.C.001.101.0002.A.tiff` — circa 1950, group 001, subgroup 101, number 0002, obverse.
+- `1950.06.15.12.00.00.E.FAM.POR.0001.R.tiff` — reverse of the same portrait.
 
 ### 2. Date modifier (X)
 The modifier is an uppercase Latin letter indicating the type of date. It provides logical sorting (alphabetical order: A, B, C, E, F), corresponding to the sequence: "unknown" → "before" → "circa" → "exact" → "after".
