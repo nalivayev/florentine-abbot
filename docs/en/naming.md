@@ -275,6 +275,12 @@ The rules completely match those for the group (GGG):
 - `1950.06.15.12.00.00.E.FAM.POR.0001.A.tiff`
 - `1950.06.15.12.00.00.E.FAM.POR.0001.R.tiff`
 
+**Note**
+- The date and time components in the file name (`YYYY.MM.DD.HH.NN.SS`) must always reflect the event (original creation), not the scanning session.
+- For an obverse/reverse pair, use the same event date-time block and differ only by the `A`/`R` suffix.
+- If the exact shooting time is unknown — use `00.00.00` for both files in the pair; the modifier (`A`/`B`/`C`/`E`/`F`) indicates the dating type.
+- The technical scanning timestamp belongs in metadata (`Exif.Photo.DateTimeDigitized`), not in the file name.
+
 ### 8. File version suffixes
 
 - **RAW copy**: `.RAW.tiff` (raw scan, TIFF without compression).
