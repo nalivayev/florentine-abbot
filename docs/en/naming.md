@@ -276,10 +276,9 @@ The rules completely match those for the group (GGG):
 - `1950.06.15.12.00.00.E.FAM.POR.0001.R.tiff`
 
 **Note**
-- The date and time components in the file name (`YYYY.MM.DD.HH.NN.SS`) must always reflect the event (original creation), not the scanning session.
-- For an obverse/reverse pair, use the same event date-time block and differ only by the `A`/`R` suffix.
-- If the exact shooting time is unknown — use `00.00.00` for both files in the pair; the modifier (`A`/`B`/`C`/`E`/`F`) indicates the dating type.
-- The technical scanning timestamp belongs in metadata (`Exif.Photo.DateTimeDigitized`), not in the file name.
+- The date and time components in the filename (`YYYY.MM.DD.HH.NN.SS`) always reflect the event (original creation), not the scanning date.
+- For an obverse/reverse pair, use the same event date, time, and date modifier; only the `A`/`R` suffix differs.
+- The scanning date is stored in metadata, not in the file name.
 
 ### 8. File version suffixes
 
@@ -437,16 +436,15 @@ The structure is built according to the principle `Archive/YYYY.X/YYYY.MM.DD.X/<
 
 ### 4. Special cases (B, F, unknown dates)
 
-For files with modifiers `B` (Before) and `F` (After), a special folder `0000` is used, because there is no exact year to bind them to.
+For files with modifiers `B` (Before) and `F` (After), use the folder of the corresponding year specified in the file name.
 
 **Example 4: Photo "before 1950"**
 - File: `1950.00.00.00.00.00.B.FAM.000.0002.A.tiff`
-- Path: `.../0000.B/1950.00.00.B/MSR/1950.00.00.00.00.00.B.FAM.000.0002.A.MSR.tiff`
-- Logic: All files "before some date" are grouped in the `0000.B` folder, inside — by approximate year.
+- Path: `.../1950.B/1950.00.00.B/MSR/1950.00.00.00.00.00.B.FAM.000.0002.A.MSR.tiff`
 
 **Example 5: Photo "after 1960"**
 - File: `1960.00.00.00.00.00.F.TRV.000.0001.A.tiff`
-- Path: `.../0000.F/1960.00.00.F/RAW/1960.00.00.00.00.00.F.TRV.000.0001.A.RAW.tiff`
+- Path: `.../1960.F/1960.00.00.F/RAW/1960.00.00.00.00.00.F.TRV.000.0001.A.RAW.tiff`
 
 **Example 6: Photo with completely unknown date**
 - File: `0000.00.00.00.00.00.A.UNK.000.0001.A.tiff`
