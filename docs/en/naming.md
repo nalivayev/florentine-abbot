@@ -446,13 +446,13 @@ For each date (`YYYY.MM.DD`), all files are divided by roles. The role is encode
 
 * `RAW` — raw scans / original digital negatives (`.RAW.tiff`, `.ARW`, etc.);
 * `MSR` — master copy (archival master TIFF without compression);
-* `VIEW` — lightweight versions for quick viewing (JPEG);
+* `PRV` — lightweight versions for quick viewing (preview, JPEG);
 * `PRT` — files prepared for printing;
 * auxiliary files required to reproduce the master copy from RAW (logs, profiles, development settings, etc.) use the same prefix as the corresponding RAW/MSR with a different extension.
 
 **Important rule for the date folder:**
 
-* the root of `YYYY.MM.DD/` contains only files with the `VIEW` role — the primary access layer for viewing;
+* the root of `YYYY.MM.DD/` contains only files with the `PRV` role — the primary access layer for viewing;
 * the `SOURCES/` folder stores digital source materials: RAW, master copies, and all auxiliary files necessary for reproducibility;
 * the `DERIVATIVES/` folder stores derived files (print versions, web copies, additional edited TIFF/JPEG, project files, etc.) that can be regenerated from `SOURCES/` if needed.
 
@@ -467,8 +467,8 @@ PHOTO_ARCHIVES/
     0001.Family_Johnson/
         1945/
             1945.06.15/
-                1945.06.15.12.00.00.E.FAM.POR.0001.A.VIEW.jpg
-                1945.06.15.12.00.00.E.FAM.POR.0002.A.VIEW.jpg
+                1945.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg
+                1945.06.15.12.00.00.E.FAM.POR.0002.A.PRV.jpg
                 SOURCES/
                     1945.06.15.12.00.00.E.FAM.POR.0001.A.RAW.tiff
                     1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff
@@ -484,7 +484,7 @@ Here:
 
 * `SOURCES/` — folder with digital source materials for this date: RAW, master copies, and all auxiliary files required to reproduce the master copy from RAW;
 * `DERIVATIVES/` — folder for derived files (print versions, web copies, additional edits, project files, etc.) that can be recreated from the source materials if needed;
-* VIEW files are located in the root of the date folder and represent the primary access layer.
+* PRV files are located in the root of the date folder and represent the primary access layer.
 
 **Path examples:**
 
@@ -500,18 +500,23 @@ Here:
     * file: `0000.00.00.00.00.00.A.UNK.000.0001.A.MSR.tiff`
     * path: `PHOTO_ARCHIVES/0001.Family_Johnson/0000/0000.00.00/SOURCES/0000.00.00.00.00.00.A.UNK.000.0001.A.MSR.tiff`
 
-### 6. Quick viewing (VIEW)
+### 6. Quick viewing (PRV)
 
-All files in the root of `YYYY.MM.DD/` are lightweight viewing versions (`VIEW`).
+All files in the root of `YYYY.MM.DD/` are lightweight viewing versions (`PRV`).
 
-**Recommendations for VIEW files:**
+A PRV file is the **best currently available viewing copy**:
+
+* if a master copy (`MSR`) has not yet been produced, it is acceptable to create `PRV` directly from `RAW` (for example via batch conversion);
+* once an `MSR` exists, PRV files can (and ideally should) be regenerated **from the master copy**, reusing the same `*.PRV.jpg` name.
+
+**Recommendations for PRV files:**
 
 * format: JPEG (for maximum compatibility);
 * resolution: typically 150–300 DPI;
 * long side length: 1600–2400 pixels (depends on use case and storage);
-* file name retains the full naming structure but with the `.VIEW.jpg` suffix.
+* file name retains the full naming structure but with the `.PRV.jpg` suffix.
 
-**Example:** `1945.06.15.12.00.00.E.FAM.POR.0001.A.VIEW.jpg`
+**Example:** `1945.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg`
 
 This allows you to open any date in a file manager and quickly browse all images without touching heavy RAW/MSR files.
 
@@ -536,7 +541,7 @@ Thus, the modifier defines only the semantics of the date and the sorting of nam
 
 The proposed architecture is aligned with FADGI recommendations and common digital repository practice:
 
-* **Separation by file roles.** RAW files and master copies (`MSR`) are physically separated from derivatives (`VIEW`, `PRT`), matching the principle of keeping originals and derivatives distinct.
+* **Separation by file roles.** RAW files and master copies (`MSR`) are physically separated from derivatives (`PRV`, `PRT`), matching the principle of keeping originals and derivatives distinct.
 * **Logical organization by event date.** Grouping by event date rather than processing date preserves the historical context of materials.
 * **Simplicity and predictability.** A single `Archive/Year/Date/` pattern simplifies automation (scripts, tools) and manual navigation.
 * **Independence from fonds/series structure.** Traditional archival levels (fonds/series/file/item) can be represented in metadata and external catalogues without being hard-coded into file paths.
@@ -577,7 +582,7 @@ The proposed architecture is aligned with FADGI recommendations and common digit
     * Example: `1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff` → `.../1968/1968.07.00/SOURCES/1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff`
 
 5. Creating derivative copies:
-    * From Master copies, create files for WEB, PRT, and VIEW.
+    * From Master copies, create files for WEB, PRT, and PRV.
     * Distribute them into corresponding folders within the day.
 
 #### Scenario 2: Batch renaming digital photos
@@ -621,11 +626,11 @@ The proposed architecture is aligned with FADGI recommendations and common digit
 #### Scenario 4: Searching photos in the archive
 
 1. Chronological search:
-    * Use the folder structure. To find photos for July 1968, go to `.../1968/1968.07.00/` (VIEW files `*.VIEW.jpg` will be in the date folder root).
+    * Use the folder structure. To find photos for July 1968, go to `.../1968/1968.07.00/` (PRV files `*.PRV.jpg` will be in the date folder root).
 
 2. Thematic search:
     * Use the operating system’s search.
-    * Example search in Windows: In the Explorer search field enter: `*.VIEW.jpg description:="John Smith"`
+    * Example search in Windows: In the Explorer search field enter: `*.PRV.jpg description:="John Smith"`
 
 3. Search by technical parameters:
     * Use cataloging programs (Adobe Bridge, Lightroom).

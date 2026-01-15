@@ -43,7 +43,6 @@ scan-batcher --workflow <path_to_ini> --engine vuescan --batch scan --min-dpi 30
 ```
 
 The program will **interactively prompt** you for the photo and image dimensions during execution.
-
 On Windows PowerShell, the syntax is the same. For values with spaces, use quotes:
 
 ```powershell
