@@ -287,7 +287,7 @@ class ArchiveProcessor:
 
                 # Build folder structure to mirror archive layout inside "processed":
                 #   processed/YYYY/YYYY.MM.DD/[SOURCES|DERIVATIVES]/
-                #   with VIEW files stored directly in the date folder.
+                #   with preview files (PRV/legacy VIEW) stored directly in the date folder.
                 year_dir = f"{parsed.year:04d}"
                 date_dir = f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}"
 
@@ -295,8 +295,8 @@ class ArchiveProcessor:
 
                 date_root_dir = processed_root / year_dir / date_dir
 
-                if suffix_upper == "VIEW":
-                    # VIEW files live directly in the date folder
+                if suffix_upper in {"PRV", "VIEW"}:
+                    # Preview files (PRV/VIEW) live directly in the date folder
                     processed_dir = date_root_dir
                 else:
                     # RAW/MSR and related sources go to SOURCES/, остальные роли — в DERIVATIVES/

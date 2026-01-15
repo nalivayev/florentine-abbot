@@ -40,7 +40,7 @@ Review imported photos and assign them labels (flags or colors in your software)
 
 *   🔴 **Reject:** Technical defects (blur, closed eyes), accidental shots, exact duplicates. **Delete ruthlessly.**
 *   🟡 **Keep:** Good shots documenting the event. They will go into the archive.
-*   🟢 **Select:** The best 5-10 shots of the event. They will go to print, social media, and the `VIEW` folder.
+*   🟢 **Select:** The best 5-10 shots of the event. They will go to print, social media, and the `PRV` folder.
 
 > **Tip:** If you have 10 similar shots of one subject, keep 1 best and 1 backup. The other 8 are trash that will take up your time and disk space in 10 years.
 

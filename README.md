@@ -43,7 +43,6 @@ scan-batcher --workflow <path_to_ini> --engine vuescan --batch scan --min-dpi 30
 ```
 
 The program will **interactively prompt** you for the photo and image dimensions during execution.
-
 On Windows PowerShell, the syntax is the same. For values with spaces, use quotes:
 
 ```powershell
@@ -124,12 +123,12 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 
 ## Automatic Organization (Archive Organizer)
 
-> **⚠️ Status**: In development. Not yet fully tested or documented.
+> **⚠️ Status**: In development. Not yet fully tested or documented. Not included in the installable package; run from source.
 
 A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers, role suffix) and moves each file into a working `processed/` tree with the layout:
 
 - `processed/YYYY/YYYY.MM.DD/` — per-date folder
-- `processed/YYYY/YYYY.MM.DD/` — `*.VIEW.jpg` files for quick browsing
+- `processed/YYYY/YYYY.MM.DD/` — `*.PRV.jpg` files for quick browsing (preview/access copies)
 - `processed/YYYY/YYYY.MM.DD/SOURCES/` — RAW, master (`MSR`) and related technical files
 - `processed/YYYY/YYYY.MM.DD/DERIVATIVES/` — derivatives such as WEB, PRT and other outputs
 
@@ -152,9 +151,35 @@ archive-organizer "D:\Scans\Inbox" --daemon
 archive-organizer "D:\Scans\Inbox" --creator "John Doe" --rights "All Rights Reserved"
 ```
 
+### Preview Maker (PRV Generator)
+
+> **⚠️ Status**: In development. Not yet fully tested or documented. Not included in the installable package; run from source.
+
+For existing structured archives, a helper tool can generate `PRV` preview JPEGs from `RAW`/`MSR` sources.
+
+- Scans under a root path for `SOURCES/` folders
+- For each structured filename with suffix `RAW` or `MSR`:
+	- prefers `MSR` over `RAW` when both exist for the same base name;
+	- writes a preview `*.PRV.jpg` into the date folder (parent of `SOURCES/`).
+- Existing `PRV` files are kept unless `--overwrite` is specified.
+
+**Batch Mode (generate previews for archive):**
+```sh
+preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
+```
+
+**With Overwrite:**
+```sh
+preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --overwrite
+```
+
+Logging follows the same convention as other tools:
+- default logs: `~/.florentine-abbot/logs/preview_maker.log`
+- override directory via `--log-path` or `FLORENTINE_LOG_DIR`.
+
 ## Archive Integrity (Archive Keeper)
 
-> **⚠️ Status**: In development. Not yet fully tested or documented.
+> **⚠️ Status**: In development. Not yet fully tested or documented. Not included in the installable package; run from source.
 
 A tool to ensure the long-term integrity of your digital archive. It scans your archive folder, calculates SHA-256 hashes of all files, and stores them in a SQLite database. On subsequent runs, it detects:
 - **New files** (Added)
