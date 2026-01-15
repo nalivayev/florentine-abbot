@@ -69,7 +69,7 @@ class TestPipeline(unittest.TestCase):
         # Expected path depends on folder structure logic
         # Level 1: YYYY
         # Level 2: YYYY.MM.DD
-        # Level 3: role folder (SOURCES/ARTEFACTS) or date root for VIEW
+        # Level 3: role folder (SOURCES/DERIVATIVES) or date root for VIEW
         
         # We need to construct expected path based on filename parts
         # But scenario provides expected folder_l1, let's assume standard structure for others

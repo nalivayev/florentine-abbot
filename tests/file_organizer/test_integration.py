@@ -97,8 +97,8 @@ class TestIntegration:
         result = processor.process(file_path, {})
         assert result is True
         
-        # 1950 / 1950.00.00 / ARTEFACTS
-        expected_path = temp_dir / "processed" / "1950" / "1950.00.00" / "ARTEFACTS" / filename
+        # 1950 / 1950.00.00 / DERIVATIVES
+        expected_path = temp_dir / "processed" / "1950" / "1950.00.00" / "DERIVATIVES" / filename
         assert expected_path.exists()
         
         meta = self.get_exiftool_json(expected_path)
@@ -125,15 +125,15 @@ class TestIntegration:
         result = processor.process(file_path, {})
         assert result is True
 
-        # VIEW should be stored in processed/YYYY/YYYY.MM.DD/ (no SOURCES/ARTEFACTS)
+        # VIEW should be stored in processed/YYYY/YYYY.MM.DD/ (no SOURCES/DERIVATIVES)
         expected_dir = temp_dir / "processed" / "1950" / "1950.06.15"
         expected_path = expected_dir / filename
 
         assert expected_path.exists()
         assert not file_path.exists()
 
-        # Sanity check: no SOURCES/ or ARTEFACTS/ subfolder created for this VIEW file
+        # Sanity check: no SOURCES/ or DERIVATIVES/ subfolder created for this VIEW file
         assert not (expected_dir / "SOURCES").exists()
-        assert not (expected_dir / "ARTEFACTS").exists()
+        assert not (expected_dir / "DERIVATIVES").exists()
 
 

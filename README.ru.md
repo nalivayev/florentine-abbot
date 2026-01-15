@@ -131,7 +131,7 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 - `processed/YYYY/YYYY.MM.DD/` — папка конкретной даты
 - `processed/YYYY/YYYY.MM.DD/` — файлы `*.VIEW.jpg` для быстрого просмотра
 - `processed/YYYY/YYYY.MM.DD/SOURCES/` — RAW, мастер‑копии (`MSR`) и связанные с ними служебные файлы
-- `processed/YYYY/YYYY.MM.DD/ARTEFACTS/` — производные файлы (WEB, PRT и другие выходные форматы)
+- `processed/YYYY/YYYY.MM.DD/DERIVATIVES/` — производные файлы (WEB, PRT и другие выходные форматы)
 
 Та же информация о дате записывается в теги EXIF/XMP файла. Подробные правила и примеры смотрите в `docs/ru/naming.md` (Части 2 и 3).
 
