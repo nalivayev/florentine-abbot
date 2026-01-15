@@ -574,7 +574,7 @@ The proposed architecture is aligned with FADGI recommendations and common digit
 
 4. Organizing into the structure:
     * Using batch tools or a file manager, move files from `INCOMING/` to corresponding folders according to the architecture from Part 2.
-    * Example: `1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff` → `/1968.C/1968.07.00.C/RAW/`
+    * Example: `1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff` → `.../1968/1968.07.00/SOURCES/1968.07.00.00.00.00.C.FAM.VAC.0001.A.RAW.tiff`
 
 5. Creating derivative copies:
     * From Master copies, create files for WEB, PRT, and VIEW.
@@ -616,12 +616,12 @@ The proposed architecture is aligned with FADGI recommendations and common digit
 3. Updating metadata and structure:
     * Update the `Exif.Photo.DateTimeOriginal` field in the file.
     * In the `Description` field add: "Date clarified on 2025-01-10 from circa 1950 to exact 1950-06-15 based on the inscription on the back of the original."
-    * Move the file to the new folder: from `/1950.C/1950.00.00.C/` to `/1950.E/1950.06.15.E/`.
+    * Move the file to the new folder: from `.../1950/1950.00.00/` to `.../1950/1950.06.15/`.
 
 #### Scenario 4: Searching photos in the archive
 
 1. Chronological search:
-    * Use the folder structure. To find photos for July 1968, go to `/1968.C/1968.07.00.C/VIEW/`.
+    * Use the folder structure. To find photos for July 1968, go to `.../1968/1968.07.00/` (VIEW files `*.VIEW.jpg` will be in the date folder root).
 
 2. Thematic search:
     * Use the operating system’s search.
