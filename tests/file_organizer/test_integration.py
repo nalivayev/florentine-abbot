@@ -111,11 +111,11 @@ class TestIntegration:
         date_created = meta.get("XMP:DateCreated") or meta.get("XMP-photoshop:DateCreated")
         assert str(date_created) == "1950"
 
-    def test_process_view_file_placed_in_date_root(self, temp_dir, logger):
-        """VIEW files should be placed directly in the date folder root."""
+    def test_process_preview_file_placed_in_date_root(self, temp_dir, logger):
+        """PRV preview files should be placed directly in the date folder root."""
 
-        # Exact date VIEW file
-        filename = "1950.06.15.12.30.45.E.FAM.POR.0003.A.VIEW.jpg"
+        # Exact date preview (PRV) file
+        filename = "1950.06.15.12.30.45.E.FAM.POR.0003.A.PRV.jpg"
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
 
@@ -125,14 +125,14 @@ class TestIntegration:
         result = processor.process(file_path, {})
         assert result is True
 
-        # VIEW should be stored in processed/YYYY/YYYY.MM.DD/ (no SOURCES/DERIVATIVES)
+        # PRV should be stored in processed/YYYY/YYYY.MM.DD/ (no SOURCES/DERIVATIVES)
         expected_dir = temp_dir / "processed" / "1950" / "1950.06.15"
         expected_path = expected_dir / filename
 
         assert expected_path.exists()
         assert not file_path.exists()
 
-        # Sanity check: no SOURCES/ or DERIVATIVES/ subfolder created for this VIEW file
+        # Sanity check: no SOURCES/ or DERIVATIVES/ subfolder created for this PRV file
         assert not (expected_dir / "SOURCES").exists()
         assert not (expected_dir / "DERIVATIVES").exists()
 

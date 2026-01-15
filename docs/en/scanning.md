@@ -97,7 +97,7 @@ DPI (Dots Per Inch) determines detail. The higher the DPI, the more pixels in th
 
 ### 3. File Format
 *   **TIFF (uncompressed or LZW):** The only true choice for the Master Copy. Preserves every pixel exactly as the scanner saw it.
-*   **JPEG:** Lossy format. Use JPEG only for the `WEB` or `VIEW` folder (copies for viewing), but not for the archive.
+*   **JPEG:** Lossy format. Use JPEG only for the `WEB` or `PRV` folder (copies for viewing), but not for the archive.
 *   **PNG:** Acceptable as it is lossless compression, but TIFF is the industry standard for archives and supports metadata better.
 
 ---

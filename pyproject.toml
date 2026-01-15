@@ -28,7 +28,7 @@ package-dir = {"" = "src"}
 packages = [
     "scan_batcher",
     "scan_batcher.workflows",
-    "scan_batcher.workflows.vuescan"
+    "scan_batcher.workflows.vuescan",
 ]
 
 [tool.setuptools.package-data]
