@@ -67,9 +67,9 @@ class TestPipeline(unittest.TestCase):
         # Verify file moved
         processed_root = self.input_dir / "processed"
         # Expected path depends on folder structure logic
-        # Level 1: YYYY.M
-        # Level 2: YYYY.MM.DD.M
-        # Level 3: SUFFIX
+        # Level 1: YYYY
+        # Level 2: YYYY.MM.DD
+        # Level 3: role folder (SOURCES/ARTEFACTS) or date root for VIEW
         
         # We need to construct expected path based on filename parts
         # But scenario provides expected folder_l1, let's assume standard structure for others
@@ -184,7 +184,7 @@ class TestPipeline(unittest.TestCase):
                 "expected_desc": "Exact date: 2023-10-27",
                 "expected_xmp_date": "2023-10-27",
                 "has_exif_date": True,
-                "folder_l1": "2023.E"
+                "folder_l1": "2023"
             },
             {
                 "name": "Circa Year",
@@ -192,7 +192,7 @@ class TestPipeline(unittest.TestCase):
                 "expected_desc": "Circa 1950",
                 "expected_xmp_date": "1950",
                 "has_exif_date": False,
-                "folder_l1": "1950.C"
+                "folder_l1": "1950"
             },
             {
                 "name": "Before Year-Month",
@@ -200,7 +200,7 @@ class TestPipeline(unittest.TestCase):
                 "expected_desc": "Before 1960",
                 "expected_xmp_date": "1960-01",
                 "has_exif_date": False,
-                "folder_l1": "1960.B"
+                "folder_l1": "1960"
             },
              {
                 "name": "After Year-Month-Day",
@@ -208,14 +208,14 @@ class TestPipeline(unittest.TestCase):
                 "expected_desc": "After 1970",
                 "expected_xmp_date": "1970-05-20",
                 "has_exif_date": False,
-                "folder_l1": "1970.F"
+                "folder_l1": "1970"
             },
             {
                 "name": "Absent Date",
                 "filename": "0000.00.00.00.00.00.A.Group.Sub.0005.A.Orig.jpg",
                 "expected_desc": "Date unknown",
                 "has_exif_date": False,
-                "folder_l1": "0000.A"
+                "folder_l1": "0000"
             }
         ]
         
