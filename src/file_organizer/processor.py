@@ -286,7 +286,7 @@ class ArchiveProcessor:
                     dest_log_filename = f"{base_name}.log"
 
                 # Build folder structure to mirror archive layout inside "processed":
-                #   processed/YYYY/YYYY.MM.DD/[SOURCES|ARTEFACTS]/
+                #   processed/YYYY/YYYY.MM.DD/[SOURCES|DERIVATIVES]/
                 #   with VIEW files stored directly in the date folder.
                 year_dir = f"{parsed.year:04d}"
                 date_dir = f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}"
@@ -299,9 +299,9 @@ class ArchiveProcessor:
                     # VIEW files live directly in the date folder
                     processed_dir = date_root_dir
                 else:
-                    # RAW/MSR and related sources go to SOURCES/, остальные роли — в ARTEFACTS/
+                    # RAW/MSR and related sources go to SOURCES/, остальные роли — в DERIVATIVES/
                     source_suffixes = {"RAW", "MSR"}
-                    role_dir_name = "SOURCES" if suffix_upper in source_suffixes else "ARTEFACTS"
+                    role_dir_name = "SOURCES" if suffix_upper in source_suffixes else "DERIVATIVES"
                     processed_dir = date_root_dir / role_dir_name
 
             else:

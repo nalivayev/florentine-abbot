@@ -90,8 +90,8 @@ class TestExiftoolCompliance:
         processor = ArchiveProcessor(logger)
         processor.process(file_path, {})
         
-        # 1950 / 1950.00.00 / ARTEFACTS
-        processed_path = temp_dir / "processed" / "1950" / "1950.00.00" / "ARTEFACTS" / filename
+        # 1950 / 1950.00.00 / DERIVATIVES
+        processed_path = temp_dir / "processed" / "1950" / "1950.00.00" / "DERIVATIVES" / filename
         
         meta = self.get_exiftool_json(processed_path)
         

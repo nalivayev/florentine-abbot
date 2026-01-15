@@ -454,7 +454,7 @@ For each date (`YYYY.MM.DD`), all files are divided by roles. The role is encode
 
 * the root of `YYYY.MM.DD/` contains only files with the `VIEW` role — the primary access layer for viewing;
 * the `SOURCES/` folder stores digital source materials: RAW, master copies, and all auxiliary files necessary for reproducibility;
-* the `ARTEFACTS/` folder stores derived files (print versions, web copies, additional edited TIFF/JPEG, project files, etc.) that can be regenerated from `SOURCES/` if needed.
+* the `DERIVATIVES/` folder stores derived files (print versions, web copies, additional edited TIFF/JPEG, project files, etc.) that can be regenerated from `SOURCES/` if needed.
 
 This guarantees that when browsing the archive in a file manager, the user sees only lightweight, viewable copies, while the technical storage layer remains separate, structured, and fully reproducible.
 
@@ -476,14 +476,14 @@ PHOTO_ARCHIVES/
                     1945.06.15.12.00.00.E.FAM.POR.0001.target.icc
                     1945.06.15.12.00.00.E.FAM.POR.0002.A.RAW.tiff
                     1945.06.15.12.00.00.E.FAM.POR.0002.A.MSR.tiff
-                ARTEFACTS/
+                DERIVATIVES/
                     1945.06.15.12.00.00.E.FAM.POR.0001.A.PRT.jpg
 ```
 
 Here:
 
 * `SOURCES/` — folder with digital source materials for this date: RAW, master copies, and all auxiliary files required to reproduce the master copy from RAW;
-* `ARTEFACTS/` — folder for derived files (print versions, web copies, additional edits, project files, etc.) that can be recreated from the source materials if needed;
+* `DERIVATIVES/` — folder for derived files (print versions, web copies, additional edits, project files, etc.) that can be recreated from the source materials if needed;
 * VIEW files are located in the root of the date folder and represent the primary access layer.
 
 **Path examples:**
