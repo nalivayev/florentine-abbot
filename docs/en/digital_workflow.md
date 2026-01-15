@@ -99,8 +99,26 @@ In digital photography, there is no concept of "Master Copy" in the same sense a
 This is your "digital negative".
 *   **Formats:** Original RAW (`.CR2`, `.NEF`, `.ARW`) or converted `.DNG`.
 *   **Action:** Store forever. Do not edit the file itself (edits are stored in a sidecar `.xmp` file or catalog database).
+*   **File name:** Use the archive naming scheme with suffix `A` (no reverse side), e.g., `...0001.A.ARW` (or `...0001.A.DNG`).
 
-### 2. Export (Result)
-These are files for use (printing, viewing).
-*   **Format:** JPEG (High Quality) or TIFF (for printing).
-*   **Action:** Generate on demand from RAW. Can be deleted if the RAW is preserved.
+### 2. DNG or Native RAW?
+*   **Native RAW (CR2, NEF, ARW...):** Maximum compatibility with the camera vendor's native software.
+*   **DNG (Digital Negative):** Open archival format from Adobe.
+    *   **Pros:** Considered more reliable for long-term preservation (a proprietary vendor format may become obsolete decades later). Allows storing metadata and processing inside the file (without separate `.xmp` sidecars).
+    *   **Recommendation:** Converting to DNG is good archival practice, while keeping original native RAWs is also acceptable.
+
+### 3. Preview / Use files (JPEG, TIFF)
+RAW files are not for direct viewing and require development.
+*   **Export:** Convert from RAW to JPEG (sRGB, quality 80–90%) for everyday use; generate TIFF for printing when needed.
+*   **File name:** Same base name, but with appropriate extension (e.g., `.jpg`). You may add a suffix `.PRV.jpg` for preview/export versions.
+*   **Folder:** Place JPEG/TIFFs in a `PRV` (previews) folder next to `RAW`.
+
+### Example event folder structure
+```
+2024.06.15.E/
+    RAW/
+        2024.06.15.14.30.22.E.FAM.VAC.0001.A.ARW
+        2024.06.15.14.30.22.E.FAM.VAC.0001.A.ARW.xmp  (if edits/metadata are stored externally)
+    PRV/
+        2024.06.15.14.30.22.E.FAM.VAC.0001.A.PRV.jpg
+```
