@@ -186,7 +186,7 @@ You can override the default location using either:
 
 **1. CLI parameter (highest priority):**
 ```sh
-scan-batcher --log-dir /custom/logs --workflow examples/workflow.ini
+scan-batcher --log-path /custom/logs --workflow examples/workflow.ini
 ```
 
 **2. Environment variable:**
@@ -201,12 +201,12 @@ scan-batcher --workflow examples\workflow.ini
 ```
 
 **Priority order:**
-1. `--log-dir` CLI parameter (per-command override)
+1. `--log-path` CLI parameter (per-command override)
 2. `SCAN_BATCHER_LOG_DIR` environment variable (session/system-wide)
 3. Default: `~/.scan-batcher/logs/`
 
 This is useful for:
-- **Development**: Quick override with `--log-dir /tmp/debug`
+- **Development**: Quick override with `--log-path /tmp/debug`
 - **Docker**: Configure via `ENV` in Dockerfile
 
 **Log features:**

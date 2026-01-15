@@ -187,7 +187,7 @@ pip install --upgrade .
 
 **1. Параметр командной строки (наивысший приоритет):**
 ```sh
-scan-batcher --log-dir /custom/logs --workflow examples/workflow.ini
+scan-batcher --log-path /custom/logs --workflow examples/workflow.ini
 ```
 
 **2. Переменная окружения:**
@@ -202,12 +202,12 @@ scan-batcher --workflow examples\workflow.ini
 ```
 
 **Порядок приоритета:**
-1. Параметр `--log-dir` (переопределение для одной команды)
+1. Параметр `--log-path` (переопределение для одной команды)
 2. Переменная окружения `SCAN_BATCHER_LOG_DIR` (для сессии/системы)
 3. По умолчанию: `~/.scan-batcher/logs/`
 
 Это полезно для:
-- **Разработки**: быстрое переопределение через `--log-dir /tmp/debug`
+- **Разработки**: быстрое переопределение через `--log-path /tmp/debug`
 - **Docker**: настройка через `ENV` в Dockerfile
 
 **Возможности логирования:**
