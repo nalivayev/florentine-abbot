@@ -175,6 +175,16 @@ After scanning, you have a **RAW version** (`...RAW.tiff`) — an unprocessed sc
 
 **Important:** Immediately after scanning, fill in the file metadata (description, date, copyright) according to the `naming.md` instructions.
 
+### Optional: Batch Preview Generation (PRV)
+
+Once files are organized into the working `processed/` tree by `file-organizer`, you can generate `PRV` JPEG previews from `RAW`/`MSR` sources in batch mode.
+
+Example:
+
+```sh
+preview-maker --path "D:\Scans\Inbox\processed" --max-size 2000 --quality 80
+```
+
 ### Step 7: Physical Scanning Mark
 
 After successfully scanning and checking the file, it is recommended to make a mark on the original. This records the fact of digitization, the date, and the person responsible, preventing duplicate work in the future.

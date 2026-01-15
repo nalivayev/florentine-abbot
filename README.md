@@ -121,9 +121,9 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 {digitization_year:8:>:0}
 ```
 
-## Automatic Organization (Archive Organizer)
+## Automatic Organization (File Organizer)
 
-> **⚠️ Status**: In development. Not yet fully tested or documented. Not included in the installable package; run from source.
+> **⚠️ Status**: In development. Not yet fully tested or documented.
 
 A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers, role suffix) and moves each file into a working `processed/` tree with the layout:
 
@@ -138,22 +138,22 @@ The same date information is also written into the file's EXIF/XMP tags. For det
 
 **Batch Mode (process existing files):**
 ```sh
-archive-organizer "D:\Scans\Inbox"
+file-organizer "D:\Scans\Inbox"
 ```
 
 **Daemon Mode (continuous monitoring):**
 ```sh
-archive-organizer "D:\Scans\Inbox" --daemon
+file-organizer "D:\Scans\Inbox" --daemon
 ```
 
 **With Metadata:**
 ```sh
-archive-organizer "D:\Scans\Inbox" --creator "John Doe" --rights "All Rights Reserved"
+file-organizer "D:\Scans\Inbox" --creator "John Doe" --rights "All Rights Reserved"
 ```
 
 ### Preview Maker (PRV Generator)
 
-> **⚠️ Status**: In development. Not yet fully tested or documented. Not included in the installable package; run from source.
+> **⚠️ Status**: In development. Not yet fully tested or documented.
 
 For existing structured archives, a helper tool can generate `PRV` preview JPEGs from `RAW`/`MSR` sources.
 
@@ -202,7 +202,7 @@ This will create `archive.db` and populate it with the current state of the arch
 
 - `scan_batcher/cli.py` — main CLI entry point (used for the `scan-batcher` command).
 - `archive_keeper/cli.py` — CLI for the `archive-keeper` tool.
-- `file_organizer/cli.py` — CLI for the `archive-organizer` tool.
+- `file_organizer/cli.py` — CLI for the `file-organizer` tool.
 - `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
 - `scan_batcher/calculator.py` — DPI calculation algorithms.
 - `scan_batcher/parser.py` — command-line argument parsing and validation.
@@ -256,7 +256,7 @@ All utilities write logs to a centralized location:
 
 **Log files:**
 - `scan_batcher.log` — Scan Batcher activity
-- `file_organizer.log` — File Organizer/Archive Organizer activity
+- `file_organizer.log` — File Organizer (`file-organizer`) activity
 - `archive_keeper.log` — Archive Keeper activity
 
 **Custom log location:**
@@ -265,9 +265,9 @@ You can override the default location using either:
 
 **1. CLI parameter (highest priority):**
 ```sh
-scan-batcher --log-dir /custom/logs --workflow examples/workflow.ini
-file-organizer --log-dir /custom/logs /path/to/scans
-archive-keeper --log-dir /custom/logs /path/to/archive
+scan-batcher --log-path /custom/logs --workflow examples/workflow.ini
+file-organizer --log-path /custom/logs /path/to/scans
+archive-keeper --log-path /custom/logs /path/to/archive
 ```
 
 **2. Environment variable:**
@@ -282,12 +282,12 @@ scan-batcher --workflow examples\workflow.ini
 ```
 
 **Priority order:**
-1. `--log-dir` CLI parameter (per-command override)
+1. `--log-path` CLI parameter (per-command override)
 2. `FLORENTINE_LOG_DIR` environment variable (session/system-wide)
 3. Default: `~/.florentine-abbot/logs/`
 
 This is useful for:
-- **Development**: Quick override with `--log-dir /tmp/debug`
+- **Development**: Quick override with `--log-path /tmp/debug`
 - **Daemon mode**: Set via ENV in systemd unit files
 - **Docker**: Configure via `ENV` in Dockerfile
 - **Centralized logging**: Point all tools to shared location
