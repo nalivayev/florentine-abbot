@@ -56,6 +56,5 @@ def main() -> None:
                         count += 1
         
         logger.info(f"Batch processing complete. Processed {count} files.")
-
 if __name__ == "__main__":
     main()

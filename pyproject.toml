@@ -24,7 +24,7 @@ dev = [
 [project.scripts]
 scan-batcher = "scan_batcher.cli:main"
 file-organizer = "file_organizer.cli:main"
-preview-maker = "file_organizer.preview_maker:main"
+preview-maker = "preview_maker.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -33,6 +33,7 @@ packages = [
     "scan_batcher.workflows",
     "scan_batcher.workflows.vuescan",
     "file_organizer",
+    "preview_maker",
     "common",
 ]
 

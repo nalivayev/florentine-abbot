@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from file_organizer.preview_maker import generate_previews_for_sources
+from preview_maker import generate_previews_for_sources
 
 
 class TestPreviewMakerBatch:
