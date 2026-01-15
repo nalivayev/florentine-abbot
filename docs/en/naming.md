@@ -104,7 +104,7 @@ This is even more important than the perfect name! Right-click the file → Prop
 - Shooting location
 
 **Example description:**
-*"Ivan Petrov (grandfather) and Maria Petrova (grandmother) in the garden of the house on Lenin St. The picture was taken approximately in the summer of 1975. Information from Aunt Anna."*
+*"John Smith (grandfather) and Mary Smith (grandmother) in the backyard of their house on Maple St. The picture was taken approximately in the summer of 1975. Information from Aunt Emma."*
 
 ---
 
@@ -399,84 +399,158 @@ These naming rules (`YYYY.MM.DD.HH.NN.SS.[A|B|C|E|F].GGG.SSS.NNNN.[A|R].SUF.EXT`
 
 ### 1. Philosophy: from file to structure
 
-The naming rules described in Part 1 are the core of the archive. It ensures uniqueness and logical order at the level of individual files. The storage architecture is the overlay that organizes these files into an intuitive directory hierarchy for easy navigation, management, and manual browsing.
+The naming rules described in Part 1 are the core of the archive. They ensure uniqueness and logical order at the level of individual files. The storage architecture is the overlay that organizes these files into an intuitive directory hierarchy for easy navigation, management, and manual browsing.
 
-**Key principle:** The directory structure **mirrors the file naming rules**, creating a direct and predictable link between the file name and its place in the archive. This allows working with the archive without specialized software, using only a file manager.
+**Key principle:** The directory structure should be simple, predictable, and cross-platform. It does not need to literally repeat all components of the file name, but it must provide an obvious link "year → date → specific file" and not interfere with the operation of professional tools.
 
-### 2. Recommended directory hierarchy
+### 2. Top level: multiple archives
 
-The structure is built according to the principle `Archive/YYYY.X/YYYY.MM.DD.X/<suffix>/`.
+You can keep multiple independent archives on the same filesystem.
+
+It is recommended to allocate a common root directory (e.g., `PHOTO_ARCHIVES/`) and create separate folders for each archive:
 
 ```
-├─── ARCHIVE/                 // For example, "0001.Ivanov Family Archive"
-│  ├─── YYYY.X/               // Year folder with modifier
-│  │  ├─── YYYY.MM.DD.X/      // Day folder with modifier
-│  │  │  ├── RAW/             // Raw scans
-│  │  │  ├── MSR/             // Master copies
-│  │  │  ├── WEB/             // Web versions
-│  │  │  ├── PRT/             // Print versions
-│  │  │  ├── VIEW/            // Quick viewing files (often copies from WEB or PRT)
+PHOTO_ARCHIVES/
+    0001.Family_Johnson/
+    0002.Tech_Photos/
+    0003.Personal_Author/
 ```
 
-**Important rule:** Folders are created **reactively**, only when at least one file appears for them. This eliminates empty directories.
+The `NNNN.Name` pattern provides:
 
-### 3. Practical organization examples
+* a numeric archive identifier (`NNNN`), convenient for scripts;
+* a human-readable label (`Name`) understandable without documentation;
+* ASCII-only names without Cyrillic or special characters, important for cross-platform compatibility.
 
-**Example 1: Photo with exact date**
-- File: `1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff`
-- Path: `.../1945.E/1945.06.15.E/MSR/1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff`
+The examples below use a single archive, `0001.Family_Johnson/`.
 
-**Example 2: Photo with approximate date (only year known)**
-- File: `1930.00.00.00.00.00.C.HIS.000.0005.A.RAW.tiff`
-- Path: `.../1930.C/1930.00.00.C/RAW/1930.00.00.00.00.00.C.HIS.000.0005.A.RAW.tiff`
+### 3. Chronological hierarchy inside an archive
 
-**Example 3: Photo with approximate date (year and month known)**
-- File: `1955.08.00.00.00.00.C.TRV.LND.0003.A.WEB.jpg`
-- Path: `.../1955.C/1955.08.00.C/WEB/1955.08.00.00.00.00.C.TRV.LND.0003.A.WEB.jpg`
+Within a specific archive, a simple chronological structure is used: top-level year folders, and within each year — folders for individual dates.
 
-### 4. Special cases (B, F, unknown dates)
+Example structure for one archive:
 
-For files with modifiers `B` (Before) and `F` (After), use the folder of the corresponding year specified in the file name.
+```
+PHOTO_ARCHIVES/
+    0001.Family_Johnson/
+        0000/
+            0000.00.00/
+        1930/
+            1930.00.00/
+        1945/
+            1945.06.15/
+        1960/
+            1960.00.00/
+        2024/
+            2024.06.15/
+```
 
-**Example 4: Photo "before 1950"**
-- File: `1950.00.00.00.00.00.B.FAM.000.0002.A.tiff`
-- Path: `.../1950.B/1950.00.00.B/MSR/1950.00.00.00.00.00.B.FAM.000.0002.A.MSR.tiff`
+### 4. File roles in a date folder
 
-**Example 5: Photo "after 1960"**
-- File: `1960.00.00.00.00.00.F.TRV.000.0001.A.tiff`
-- Path: `.../1960.F/1960.00.00.F/RAW/1960.00.00.00.00.00.F.TRV.000.0001.A.RAW.tiff`
+For each date (`YYYY.MM.DD`), all files are divided by roles. The role is encoded in the suffix (`SUF` in the format):
 
-**Example 6: Photo with completely unknown date**
-- File: `0000.00.00.00.00.00.A.UNK.000.0001.A.tiff`
-- Path: `.../0000.A/0000.00.00.A/MSR/0000.00.00.00.00.00.A.UNK.000.0001.A.MSR.tiff`
+* `RAW` — raw scans / original digital negatives (`.RAW.tiff`, `.ARW`, etc.);
+* `MSR` — master copy (archival master TIFF without compression);
+* `VIEW` — lightweight versions for quick viewing (JPEG);
+* `PRT` — files prepared for printing;
+* auxiliary files required to reproduce the master copy from RAW (logs, profiles, development settings, etc.) use the same prefix as the corresponding RAW/MSR with a different extension.
 
-### 5. Quick viewing and derivative files
+**Important rule for the date folder:**
 
-The `VIEW/` folder in the day structure is intended for files optimized for quick viewing on any device.
+* the root of `YYYY.MM.DD/` contains only files with the `VIEW` role — the primary access layer for viewing;
+* the `SOURCES/` folder stores digital source materials: RAW, master copies, and all auxiliary files necessary for reproducibility;
+* the `ARTEFACTS/` folder stores derived files (print versions, web copies, additional edited TIFF/JPEG, project files, etc.) that can be regenerated from `SOURCES/` if needed.
 
-Recommendations for the `VIEW` folder:
-- Use JPEG for broad compatibility.
-- Resolution can be set within 150–300 DPI.
-- Long side size — 1600–2400 pixels.
-- The file name should retain the full naming structure but with the `.VIEW.jpg` suffix.
+This guarantees that when browsing the archive in a file manager, the user sees only lightweight, viewable copies, while the technical storage layer remains separate, structured, and fully reproducible.
 
-Example: `1945.06.15.12.00.00.E.FAM.POR.0001.A.VIEW.jpg`
+### 5. Recommended structure of a date folder
 
-This folder allows opening any day of the archive and quickly viewing all its photos without the need to load heavy Master or RAW files.
+The following structure is recommended for each date:
 
-### 6. FADGI compatibility (for folder structure)
+```
+PHOTO_ARCHIVES/
+    0001.Family_Johnson/
+        1945/
+            1945.06.15/
+                1945.06.15.12.00.00.E.FAM.POR.0001.A.VIEW.jpg
+                1945.06.15.12.00.00.E.FAM.POR.0002.A.VIEW.jpg
+                SOURCES/
+                    1945.06.15.12.00.00.E.FAM.POR.0001.A.RAW.tiff
+                    1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff
+                    1945.06.15.12.00.00.E.FAM.POR.0001.A.RAW.vuescan.log
+                    1945.06.15.12.00.00.E.FAM.POR.0001.target.icc
+                    1945.06.15.12.00.00.E.FAM.POR.0002.A.RAW.tiff
+                    1945.06.15.12.00.00.E.FAM.POR.0002.A.MSR.tiff
+                ARTEFACTS/
+                    1945.06.15.12.00.00.E.FAM.POR.0001.A.PRT.jpg
+```
 
-The proposed architecture matches the spirit of FADGI recommendations:
-- Separation by versions: Clear separation into RAW, Master, and Derivatives (WEB, PRT, VIEW) corresponds to the principle of separating originals and derivative copies.
-- Logical organization: Grouping by event date, not processing date, ensures historical and archival integrity.
-- Predictability: A standardized structure facilitates data migration and process automation.
+Here:
 
-### 7. Recommendations for managing the structure
+* `SOURCES/` — folder with digital source materials for this date: RAW, master copies, and all auxiliary files required to reproduce the master copy from RAW;
+* `ARTEFACTS/` — folder for derived files (print versions, web copies, additional edits, project files, etc.) that can be recreated from the source materials if needed;
+* VIEW files are located in the root of the date folder and represent the primary access layer.
 
-1. Use batch renaming and organization. Tools like Adobe Bridge, Total Commander, or specialized scripts will help automatically distribute files into folders according to their names.
-2. Control path length. Ensure the full file path does not exceed file system limits (e.g., 260 characters in Windows). Use short names for the archive root folder.
-3. Be consistent. Having adopted this structure, use it for the entire archive. This will ensure uniformity and predictability over many years.
-4. Document group codes. Keep a simple text file or spreadsheet with decoding of the `GGG` and `SSS` codes at the root of the archive.
+**Path examples:**
+
+* Exact date, master copy:
+    * file: `1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff`
+    * path: `PHOTO_ARCHIVES/0001.Family_Johnson/1945/1945.06.15/SOURCES/1945.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff`
+
+* Approximate date (year only known):
+    * file: `1930.00.00.00.00.00.C.HIS.000.0005.A.RAW.tiff`
+    * path: `PHOTO_ARCHIVES/0001.Family_Johnson/1930/1930.00.00/SOURCES/1930.00.00.00.00.00.C.HIS.000.0005.A.RAW.tiff`
+
+* Completely unknown date:
+    * file: `0000.00.00.00.00.00.A.UNK.000.0001.A.MSR.tiff`
+    * path: `PHOTO_ARCHIVES/0001.Family_Johnson/0000/0000.00.00/SOURCES/0000.00.00.00.00.00.A.UNK.000.0001.A.MSR.tiff`
+
+### 6. Quick viewing (VIEW)
+
+All files in the root of `YYYY.MM.DD/` are lightweight viewing versions (`VIEW`).
+
+**Recommendations for VIEW files:**
+
+* format: JPEG (for maximum compatibility);
+* resolution: typically 150–300 DPI;
+* long side length: 1600–2400 pixels (depends on use case and storage);
+* file name retains the full naming structure but with the `.VIEW.jpg` suffix.
+
+**Example:** `1945.06.15.12.00.00.E.FAM.POR.0001.A.VIEW.jpg`
+
+This allows you to open any date in a file manager and quickly browse all images without touching heavy RAW/MSR files.
+
+### 7. Special date cases (B, F, unknown dates)
+
+Special modifiers (`B`, `F`, `A`) do not affect the folder structure and are reflected only in file names:
+
+* `B` (Before) — "before the specified date";
+* `F` (aFter) — "after the specified date";
+* `A` (Absent) — date completely unknown.
+
+Placement rules:
+
+* for `1930.00.00.00.00.00.C...` — folder `1930/1930.00.00/`;
+* for `1950.00.00.00.00.00.B...` — folder `1950/1950.00.00/`;
+* for `1960.00.00.00.00.00.F...` — folder `1960/1960.00.00/`;
+* for `0000.00.00.00.00.00.A...` — folder `0000/0000.00.00/`.
+
+Thus, the modifier defines only the semantics of the date and the sorting of names, but does not complicate the directory layout.
+
+### 8. FADGI compatibility (for folder structure)
+
+The proposed architecture is aligned with FADGI recommendations and common digital repository practice:
+
+* **Separation by file roles.** RAW files and master copies (`MSR`) are physically separated from derivatives (`VIEW`, `PRT`), matching the principle of keeping originals and derivatives distinct.
+* **Logical organization by event date.** Grouping by event date rather than processing date preserves the historical context of materials.
+* **Simplicity and predictability.** A single `Archive/Year/Date/` pattern simplifies automation (scripts, tools) and manual navigation.
+* **Independence from fonds/series structure.** Traditional archival levels (fonds/series/file/item) can be represented in metadata and external catalogues without being hard-coded into file paths.
+
+### 9. Recommendations for managing the structure
+
+1. **Use batch renaming and automatic layout.** Scripts or programs can derive the correct year and date from the file name and automatically place the file into the appropriate `SOURCES/` folder for that date.
+2. **Control path length.** Ensure the full file path does not exceed filesystem limits (e.g., 260 characters in Windows). Use short names for archive root folders.
+3. **Be consistent.** Once you adopt this structure, use it for all archives. This ensures uniformity and predictability over many years.
 
 
 
@@ -556,7 +630,7 @@ The proposed architecture matches the spirit of FADGI recommendations:
 
 2. Thematic search:
     * Use the operating system’s search.
-    * Example search in Windows: In the Explorer search field enter: `*.VIEW.jpg description:="Ivan Petrov"`
+    * Example search in Windows: In the Explorer search field enter: `*.VIEW.jpg description:="John Smith"`
 
 3. Search by technical parameters:
     * Use cataloging programs (Adobe Bridge, Lightroom).
@@ -782,7 +856,7 @@ For mixed archives with photos from various events, a convenient scheme is:
 **Alternative schemes:**
 - **Thematic-type:** `FAM.POR` (if you have a single photographer and clear themes)
 - **Album-series:** `001.101` (for systematic digitization of physical albums)
-- **Location-type:** `MSK.STR` (Moscow-Street) for geographic organization
+- **Location-type:** `CITY.STR` (City-Street) for geographic organization
 
 Choose one scheme and apply it consistently throughout the archive. Mixed approaches are acceptable if well-documented.
 
