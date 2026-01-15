@@ -281,21 +281,28 @@ class ArchiveProcessor:
                     f"{parsed.side}.{parsed.suffix}"
                 )
                 dest_filename = f"{base_name}.{parsed.extension}"
-                
+
                 if log_file_path:
                     dest_log_filename = f"{base_name}.log"
 
-                # Build folder structure:
-                # Level 1: YYYY.M (e.g. 1945.E, 1950.B)
-                level1 = f"{parsed.year:04d}.{parsed.modifier}"
+                # Build folder structure to mirror archive layout inside "processed":
+                #   processed/YYYY/YYYY.MM.DD/[SOURCES|ARTEFACTS]/
+                #   with VIEW files stored directly in the date folder.
+                year_dir = f"{parsed.year:04d}"
+                date_dir = f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}"
 
-                # Level 2: YYYY.MM.DD.M (e.g. 1945.06.15.E)
-                level2 = f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}.{parsed.modifier}"
+                suffix_upper = parsed.suffix.upper()
 
-                # Level 3: SUFFIX (e.g. RAW, MSR)
-                level3 = parsed.suffix
+                date_root_dir = processed_root / year_dir / date_dir
 
-                processed_dir = processed_root / level1 / level2 / level3
+                if suffix_upper == "VIEW":
+                    # VIEW files live directly in the date folder
+                    processed_dir = date_root_dir
+                else:
+                    # RAW/MSR and related sources go to SOURCES/, остальные роли — в ARTEFACTS/
+                    source_suffixes = {"RAW", "MSR"}
+                    role_dir_name = "SOURCES" if suffix_upper in source_suffixes else "ARTEFACTS"
+                    processed_dir = date_root_dir / role_dir_name
 
             else:
                 # Fallback for unparsed files (should not happen if should_process is checked)

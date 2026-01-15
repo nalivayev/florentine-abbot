@@ -126,7 +126,14 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 
 > **⚠️ Status**: In development. Not yet fully tested or documented.
 
-A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers) and moves the file into a structured folder hierarchy (`YYYY.M/YYYY.MM.DD.M/SUFFIX`). It also writes this metadata into the file's EXIF/XMP tags.
+A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers, role suffix) and moves each file into a working `processed/` tree with the layout:
+
+- `processed/YYYY/YYYY.MM.DD/` — per-date folder
+- `processed/YYYY/YYYY.MM.DD/` — `*.VIEW.jpg` files for quick browsing
+- `processed/YYYY/YYYY.MM.DD/SOURCES/` — RAW, master (`MSR`) and related technical files
+- `processed/YYYY/YYYY.MM.DD/ARTEFACTS/` — derivatives such as WEB, PRT and other outputs
+
+The same date information is also written into the file's EXIF/XMP tags. For detailed rules and examples, see `docs/en/naming.md` (Parts 2 and 3).
 
 ### Usage
 
