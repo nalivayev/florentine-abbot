@@ -382,11 +382,6 @@ The naming rules are designed in accordance with the recommendations of FADGI (F
   - `1950.00.00.00.00.00.C` → `Description: Date approximate: circa 1950`.
   - `1950.06.15.12.07.25.E` → `DateTimeOriginal: 1950:06:15 12:07:25`, `Description: Date exact: 1950-06-15 12:07:25`.
   - `1950.00.00.00.00.00.F` → `Description: Date approximate: after 1950`.
-- **Case and characters:** Strictly use UPPERCASE Latin letters (`A-Z`) and digits (`0-9`) for components `X`, `GGG`, `SSS`. This ensures:
-  - Cross-OS compatibility
-  - Predictable sorting
-  - No conflicts due to different case
-
 
 
 ### 13. Summary
