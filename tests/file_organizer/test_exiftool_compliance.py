@@ -40,8 +40,8 @@ class TestExiftoolCompliance:
         }
         processor.process(file_path, config)
         
-        # 1950.E / 1950.06.15.E / MSR
-        processed_path = temp_dir / "processed" / "1950.E" / "1950.06.15.E" / "MSR" / filename
+        # 1950 / 1950.06.15 / SOURCES
+        processed_path = temp_dir / "processed" / "1950" / "1950.06.15" / "SOURCES" / filename
         assert processed_path.exists()
         
         meta = self.get_exiftool_json(processed_path)
@@ -90,8 +90,8 @@ class TestExiftoolCompliance:
         processor = ArchiveProcessor(logger)
         processor.process(file_path, {})
         
-        # 1950.C / 1950.00.00.C / WEB
-        processed_path = temp_dir / "processed" / "1950.C" / "1950.00.00.C" / "WEB" / filename
+        # 1950 / 1950.00.00 / ARTEFACTS
+        processed_path = temp_dir / "processed" / "1950" / "1950.00.00" / "ARTEFACTS" / filename
         
         meta = self.get_exiftool_json(processed_path)
         
@@ -134,8 +134,8 @@ class TestExiftoolCompliance:
         processor = ArchiveProcessor(logger)
         processor.process(file_path, {})
         
-        # Check processed file
-        processed_path = temp_dir / "processed" / "2025.C" / "2025.11.29.C" / "RAW" / filename
+        # Check processed file: 2025 / 2025.11.29 / SOURCES
+        processed_path = temp_dir / "processed" / "2025" / "2025.11.29" / "SOURCES" / filename
         assert processed_path.exists()
         
         meta_after = self.get_exiftool_json(processed_path)
@@ -164,8 +164,8 @@ class TestExiftoolCompliance:
         processor = ArchiveProcessor(logger)
         processor.process(file_path, {})
         
-        # Check processed file
-        processed_path = temp_dir / "processed" / "2025.C" / "2025.11.29.C" / "RAW" / filename
+        # Check processed file: 2025 / 2025.11.29 / SOURCES
+        processed_path = temp_dir / "processed" / "2025" / "2025.11.29" / "SOURCES" / filename
         assert processed_path.exists(), f"File not found at {processed_path}"
         
         meta_after = self.get_exiftool_json(processed_path)

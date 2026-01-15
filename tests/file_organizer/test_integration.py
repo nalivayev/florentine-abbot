@@ -42,10 +42,10 @@ class TestIntegration:
         # 3. Verify
         assert result is True
         
-        # Check file moved to processed/YYYY.M/YYYY.MM.DD.M/SUFFIX/
+        # Check file moved to processed/YYYY/YYYY.MM.DD/SOURCES/
         processed_root = temp_dir / "processed"
-        # 1950.E / 1950.06.15.E / MSR
-        expected_path = processed_root / "1950.E" / "1950.06.15.E" / "MSR" / filename
+        # 1950 / 1950.06.15 / SOURCES
+        expected_path = processed_root / "1950" / "1950.06.15" / "SOURCES" / filename
         
         assert expected_path.exists()
         assert not file_path.exists() # Original should be gone
@@ -82,8 +82,8 @@ class TestIntegration:
         assert result is True
         
         # Verify normalized filename in processed folder
-        # 1950.E / 1950.06.15.E / MSR
-        expected_path = temp_dir / "processed" / "1950.E" / "1950.06.15.E" / "MSR" / expected_filename
+        # 1950 / 1950.06.15 / SOURCES
+        expected_path = temp_dir / "processed" / "1950" / "1950.06.15" / "SOURCES" / expected_filename
         assert expected_path.exists()
 
     def test_process_circa_date(self, temp_dir, logger):
@@ -97,8 +97,8 @@ class TestIntegration:
         result = processor.process(file_path, {})
         assert result is True
         
-        # 1950.C / 1950.00.00.C / WEB
-        expected_path = temp_dir / "processed" / "1950.C" / "1950.00.00.C" / "WEB" / filename
+        # 1950 / 1950.00.00 / ARTEFACTS
+        expected_path = temp_dir / "processed" / "1950" / "1950.00.00" / "ARTEFACTS" / filename
         assert expected_path.exists()
         
         meta = self.get_exiftool_json(expected_path)
@@ -110,5 +110,30 @@ class TestIntegration:
         assert "XMP:DateCreated" in meta or "XMP-photoshop:DateCreated" in meta
         date_created = meta.get("XMP:DateCreated") or meta.get("XMP-photoshop:DateCreated")
         assert str(date_created) == "1950"
+
+    def test_process_view_file_placed_in_date_root(self, temp_dir, logger):
+        """VIEW files should be placed directly in the date folder root."""
+
+        # Exact date VIEW file
+        filename = "1950.06.15.12.30.45.E.FAM.POR.0003.A.VIEW.jpg"
+        file_path = temp_dir / filename
+        self.create_dummy_image(file_path)
+
+        processor = ArchiveProcessor(logger)
+
+        # Execute
+        result = processor.process(file_path, {})
+        assert result is True
+
+        # VIEW should be stored in processed/YYYY/YYYY.MM.DD/ (no SOURCES/ARTEFACTS)
+        expected_dir = temp_dir / "processed" / "1950" / "1950.06.15"
+        expected_path = expected_dir / filename
+
+        assert expected_path.exists()
+        assert not file_path.exists()
+
+        # Sanity check: no SOURCES/ or ARTEFACTS/ subfolder created for this VIEW file
+        assert not (expected_dir / "SOURCES").exists()
+        assert not (expected_dir / "ARTEFACTS").exists()
 
 
