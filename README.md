@@ -7,9 +7,9 @@ Florentine Abbot is a project dedicated to the scanning and digital organization
 
 ## Architecture & Standards
 
-The project attempts to implement core concepts of the **Open Archival Information System (OAIS)** reference model (ISO 14721), a standard for long-term data preservation used by archives and libraries around the world, including NASA where it was originally developed.
+The project attempts to implement core concepts of the **[Open Archival Information System (OAIS)](https://public.ccsds.org/pubs/650x0m2.pdf)** reference model (ISO 14721), a standard for long-term data preservation used by archives and libraries around the world, including NASA where it was originally developed. For image capture and quality, it also follows ideas from the **[FADGI Still Image Technical Guidelines](https://www.digitizationguidelines.gov/guidelines/digitize-technical.html)** (Federal Agencies Digital Guidelines Initiative) that are widely used by cultural heritage institutions in the US.
 
-This is an attempt to adapt the key OAIS concepts to the needs of a personal archive. In particular:
+This is an attempt to adapt these concepts to the needs of a personal archive. In particular:
 
 - **Ingest**: Receiving the original data, performing quality control (validation), and preparing it for storage.
 - **Archival Storage**: Moving data into long-term storage and assigning unique identifiers.
