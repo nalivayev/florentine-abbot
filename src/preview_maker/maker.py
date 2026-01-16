@@ -13,6 +13,7 @@ from PIL import Image
 from common.logger import Logger
 from common.naming import FilenameParser
 from common.constants import SOURCES_DIR_NAME
+from common.archive_metadata import ArchiveMetadata
 
 
 class PreviewMaker:
@@ -25,6 +26,7 @@ class PreviewMaker:
 
     def __init__(self, logger: Logger) -> None:
         self._logger = logger
+        self._metadata = ArchiveMetadata()
 
     def __call__(
         self,
@@ -160,5 +162,17 @@ class PreviewMaker:
 
             output_path.parent.mkdir(parents=True, exist_ok=True)
             img.save(output_path, format="JPEG", quality=quality, optimize=True)
+
+        # After pixels are written, propagate archival metadata from source
+        # master (MSR/RAW) to the PRV derivative.
+        try:
+            self._metadata.write_derivative(
+                master_path=input_path,
+                prv_path=output_path,
+                logger=self._logger,
+            )
+        except (FileNotFoundError, RuntimeError, ValueError) as exc:
+            # Treat metadata issues as errors in logs but keep the image.
+            self._logger.error("Failed to copy metadata to PRV %s: %s", output_path, exc)
 
         self._logger.debug("PRV written to %s", output_path)
