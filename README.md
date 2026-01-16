@@ -167,6 +167,11 @@ For existing structured archives, a helper tool can generate `PRV` preview JPEGs
 	- writes a preview `*.PRV.jpg` into the date folder (parent of `SOURCES/`).
 - Existing `PRV` files are kept unless `--overwrite` is specified.
 
+Metadata for previews is derived from the corresponding master files:
+- contextual EXIF/XMP fields (description, creator, rights, source, etc.) are copied from the `RAW`/`MSR` master;
+- each `PRV` receives its own identifier;
+- an explicit relation tag links the `PRV` back to its master.
+
 **Batch Mode (generate previews for archive):**
 ```sh
 preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
@@ -220,6 +225,7 @@ This will create `archive.db` and populate it with the current state of the arch
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
 - `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
 - `common/exifer.py` — EXIF metadata extraction and parsing shared across tools.
+ - `common/archive_metadata.py` — centralized archival metadata policy for masters and derivatives.
  - `file_organizer/organizer.py` — batch workflow for organizing files into the `processed/` tree.
  - `file_organizer/processor.py` — per-file processing logic (parsing, validation, EXIF/XMP writing, moving files).
  - `file_organizer/monitor.py` — filesystem monitor (daemon mode) built on top of watchdog and `FileProcessor`.
