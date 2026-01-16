@@ -5,6 +5,15 @@
 
 Scan Batcher is a project dedicated to the scanning and digital organization of home photo archives.
 
+## Architecture & Standards
+
+Scan Batcher attempts to implement core concepts of the **Open Archival Information System (OAIS)** reference model (ISO 14721), a standard widely used by national archives and libraries (NASA, Library of Congress) for long-term data preservation.
+
+The system adapts these concepts for personal archiving:
+
+- **Ingest (`Scan Batcher`)**: The process of receiving data, quality control (validation), and preparation for storage. It scans, checks, and batches the content.
+
+
 ## Scanning
 
 A utility designed to automate and optimize the scanning workflow using [VueScan](https://www.hamrick.com) by Ed Hamrick.
