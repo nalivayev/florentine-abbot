@@ -7,11 +7,11 @@ Scan Batcher is a project dedicated to the scanning and digital organization of 
 
 ## Architecture & Standards
 
-Scan Batcher attempts to implement core concepts of the **Open Archival Information System (OAIS)** reference model (ISO 14721), a standard widely used by national archives and libraries (NASA, Library of Congress) for long-term data preservation.
+The project attempts to implement core concepts of the **Open Archival Information System (OAIS)** reference model (ISO 14721), a standard for long-term data preservation used by archives and libraries around the world, including NASA where it was originally developed.
 
-The system adapts these concepts for personal archiving:
+This is an attempt to adapt the key OAIS concepts to the needs of a personal archive. In particular:
 
-- **Ingest (`Scan Batcher`)**: The process of receiving data, quality control (validation), and preparation for storage. It scans, checks, and batches the content.
+- **Ingest**: Receiving the original data, performing quality control (validation), and preparing it for storage.
 
 
 ## Scanning
