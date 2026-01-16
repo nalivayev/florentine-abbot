@@ -129,12 +129,12 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 - `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
 - `scan_batcher/calculator.py` — DPI calculation algorithms.
 - `scan_batcher/parser.py` — command-line argument parsing and validation.
-- `scan_batcher/recorder.py` — logging utility.
+- `common/logger.py` — unified logging subsystem.
 - `scan_batcher/constants.py` — centralized constants and enumerations (e.g., `RoundingStrategy`).
 - `scan_batcher/workflow.py` — base class for all workflow plugins.
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
 - `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
-- `scan_batcher/exifer.py` — EXIF metadata extraction and parsing.
+- `common/exifer.py` — EXIF metadata extraction and parsing shared across tools.
 
 ### Installation
 
@@ -150,7 +150,9 @@ To install the package locally from the source directory, use:
 pip install .
 ```
 
-This will install all required dependencies and make the `scan-batcher` CLI command available in your system.
+This will install all required dependencies and make the main CLI commands available in your system:
+
+- `scan-batcher`
 
 > **Note:**  
 > It is recommended to use a [virtual environment](https://docs.python.org/3/library/venv.html) for installation and development.
@@ -219,6 +221,7 @@ This is useful for:
 
 - Documentation index: [docs/README.md](docs/README.md)
 - File naming guide (EN): [docs/en/naming.md](docs/en/naming.md)
+- Scanning workflow (EN): [docs/en/scanning.md](docs/en/scanning.md)
 
 ---
 

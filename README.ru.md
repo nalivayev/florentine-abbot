@@ -130,12 +130,12 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 - `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
 - `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
 - `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
-- `scan_batcher/recorder.py` — модуль логирования.
+- `common/logger.py` — единая подсистема логирования.
 - `scan_batcher/constants.py` — централизованные константы и перечисления (например, `RoundingStrategy`).
 - `scan_batcher/workflow.py` — базовый класс для всех workflow-плагинов.
 - `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.
 - `scan_batcher/workflows/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
-- `scan_batcher/exifer.py` — извлечение и обработка EXIF-метаданных.
+- `common/exifer.py` — извлечение и обработка EXIF-метаданных.
 
 ### Установка
 
@@ -151,7 +151,9 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 pip install .
 ```
 
-Это установит все необходимые зависимости и сделает команду `scan-batcher` доступной в вашей системе.
+Это установит все необходимые зависимости и сделает основные CLI-команды доступными в вашей системе:
+
+- `scan-batcher`
 
 > **Примечание:**  
 > Рекомендуется использовать [виртуальное окружение](https://docs.python.org/3/library/venv.html) для установки и разработки.
@@ -220,6 +222,7 @@ scan-batcher --workflow examples\workflow.ini
 
 - Индекс документации: [docs/README.ru.md](docs/README.ru.md)
 - Руководство по именованию (RU): [docs/ru/naming.md](docs/ru/naming.md)
+- Процесс сканирования (RU): [docs/ru/scanning.md](docs/ru/scanning.md)
 
 ---
 
