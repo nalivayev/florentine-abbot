@@ -146,9 +146,13 @@ file-organizer "D:\Scans\Inbox"
 file-organizer "D:\Scans\Inbox" --daemon
 ```
 
-**With Metadata:**
+**With Metadata (using JSON config):**
+1. Run `file-organizer` once without `--config` to generate a default config file based on `config.template.json`.
+2. Open the created JSON file (typically under the user config directory) and fill in fields such as `creator`, `credit`, `rights`, `usage_terms`, `source`.
+3. Use `--config` to point to this file explicitly if needed:
+
 ```sh
-file-organizer "D:\Scans\Inbox" --creator "John Doe" --rights "All Rights Reserved"
+file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 ```
 
 ## Preview Maker (PRV Generator)
@@ -206,7 +210,7 @@ This will create `archive.db` and populate it with the current state of the arch
 - `archive_keeper/cli.py` — CLI for the `archive-keeper` tool.
 - `file_organizer/cli.py` — CLI for the `file-organizer` tool.
 - `preview_maker/cli.py` — CLI for the `preview-maker` tool.
-- `preview_maker/core.py` — core implementation for Preview Maker (PRV generation logic).
+- `preview_maker/maker.py` — core implementation for Preview Maker (PRV generation logic).
 - `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
 - `scan_batcher/calculator.py` — DPI calculation algorithms.
 - `scan_batcher/parser.py` — command-line argument parsing and validation.
@@ -216,6 +220,9 @@ This will create `archive.db` and populate it with the current state of the arch
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
 - `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
 - `common/exifer.py` — EXIF metadata extraction and parsing shared across tools.
+ - `file_organizer/organizer.py` — batch workflow for organizing files into the `processed/` tree.
+ - `file_organizer/processor.py` — per-file processing logic (parsing, validation, EXIF/XMP writing, moving files).
+ - `file_organizer/monitor.py` — filesystem monitor (daemon mode) built on top of watchdog and `FileProcessor`.
 
 ### Installation
 
@@ -311,6 +318,8 @@ This is useful for:
 
 - Documentation index: [docs/README.md](docs/README.md)
 - File naming guide (EN): [docs/en/naming.md](docs/en/naming.md)
+- Scanning workflow (EN): [docs/en/scanning.md](docs/en/scanning.md)
+- Digital workflow for born-digital photos (EN): [docs/en/digital_workflow.md](docs/en/digital_workflow.md)
 
 ---
 

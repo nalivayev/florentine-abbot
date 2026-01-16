@@ -1,12 +1,11 @@
 """Preview Maker package.
 
-The actual implementation lives in :mod:`preview_maker.core`.
-This ``__init__`` re-exports the public API for convenience.
+Public API for the Preview Maker.
+
+The core implementation lives in :mod:`preview_maker.maker` as the
+class :class:`PreviewMaker`.
 """
 
-from __future__ import annotations
+from preview_maker.maker import PreviewMaker
 
-from .core import convert_to_prv, generate_previews_for_sources, main
-
-__all__ = ["convert_to_prv", "generate_previews_for_sources", "main"]
-
+__all__ = ["PreviewMaker"]

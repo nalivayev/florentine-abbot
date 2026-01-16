@@ -1,8 +1,7 @@
 """Tests for leap year validation."""
 
 import pytest
-from file_organizer.parser import FilenameParser
-from file_organizer.validator import FilenameValidator
+from common.naming import FilenameParser, FilenameValidator
 
 class TestLeapYearValidation:
     """Test cases for leap year validation."""

@@ -6,7 +6,7 @@ import subprocess
 import pytest
 from pathlib import Path
 from PIL import Image
-from file_organizer.processor import ArchiveProcessor
+from file_organizer.organizer import FileOrganizer
 
 class TestIntegration:
     @pytest.fixture
@@ -34,7 +34,7 @@ class TestIntegration:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor(logger)
+        processor = FileOrganizer(logger)
         
         # 2. Execute
         result = processor.process(file_path, {})
@@ -74,7 +74,7 @@ class TestIntegration:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor(logger)
+        processor = FileOrganizer(logger)
         
         # Execute
         result = processor.process(file_path, {})
@@ -92,7 +92,7 @@ class TestIntegration:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor(logger)
+        processor = FileOrganizer(logger)
         
         result = processor.process(file_path, {})
         assert result is True
@@ -119,7 +119,7 @@ class TestIntegration:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
 
-        processor = ArchiveProcessor(logger)
+        processor = FileOrganizer(logger)
 
         # Execute
         result = processor.process(file_path, {})

@@ -9,81 +9,15 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileSystemMovedEvent
 
 from common.logger import Logger
-from file_organizer.processor import ArchiveProcessor
 from file_organizer.config import Config
+from file_organizer.processor import FileProcessor
 
-class ArchiveEventHandler(FileSystemEventHandler):
-    """Event handler for archive file system events.
-    
-    Monitors file creation and movement events, processing files that match
-    the structured filename pattern.
-    """
 
-    def __init__(self, logger: Logger, processor: ArchiveProcessor, monitor: 'ArchiveMonitor') -> None:
-        """Initialize the event handler.
-        
-        Args:
-            logger: Logger instance for this handler.
-            processor: ArchiveProcessor instance for file processing.
-            monitor: ArchiveMonitor instance for accessing config.
-        """
-        self.processor = processor
-        self.monitor = monitor
-        self.logger = logger
+class FileMonitor(FileSystemEventHandler):
+    """Monitor for input folders using watchdog.
 
-    def on_created(self, event: FileSystemEvent) -> None:
-        """Handle file creation events.
-        
-        Args:
-            event: File system event containing file information.
-        """
-        if event.is_directory:
-            return
-        
-        self._process_file(str(event.src_path))
-
-    def on_moved(self, event: FileSystemEvent) -> None:
-        """Handle file movement events.
-        
-        Args:
-            event: File system event containing file information.
-        """
-        if event.is_directory:
-            return
-        
-        if isinstance(event, FileSystemMovedEvent):
-            self._process_file(str(event.dest_path))
-
-    def _process_file(self, file_path_str: str) -> None:
-        """Process a file if it matches the criteria.
-        
-        Args:
-            file_path_str: String path to the file to process.
-        """
-        file_path = Path(file_path_str)
-        
-        # Basic check if file exists (it might have been moved/deleted quickly)
-        if not file_path.exists():
-            return
-
-        if self.processor.should_process(file_path):
-            # Small delay to ensure file write is complete (simple heuristic)
-            # For large files, this might not be enough, but it's a start.
-            # A more robust solution would check for file stability (size not changing).
-            time.sleep(1) 
-            
-            try:
-                # Get fresh metadata from config (in case it was reloaded)
-                metadata = self.monitor.get_metadata()
-                self.processor.process(file_path, metadata)
-            except Exception as e:
-                self.logger.error(f"Error processing {file_path}: {e}")
-
-class ArchiveMonitor:
-    """Monitor for archive folders.
-    
-    Uses watchdog to monitor a directory for new files and automatically
-    process them when they appear. Supports config reloading via SIGHUP.
+    Watches a directory for new files and automatically processes them
+    using :class:`FileProcessor`. Supports config reloading via SIGHUP.
     """
 
     def __init__(self, logger: Logger, path: str, config: Config) -> None:
@@ -94,10 +28,11 @@ class ArchiveMonitor:
             path: Directory path to monitor.
             config: Config instance for file processing.
         """
+        super().__init__()
         self.path = Path(path).resolve()
         self.config = config
         self.logger = logger
-        self.processor = ArchiveProcessor(logger)
+        self.processor = FileProcessor(logger)
         self.observer = Observer()
         self._setup_signal_handlers()
 
@@ -127,6 +62,49 @@ class ArchiveMonitor:
         """
         return self.config.get_metadata()
 
+    # ------------------------------------------------------------------
+    # Watchdog event handling
+    # ------------------------------------------------------------------
+
+    def on_created(self, event: FileSystemEvent) -> None:
+        """Handle file creation events."""
+
+        if event.is_directory:
+            return
+
+        self._process_file(str(event.src_path))
+
+    def on_moved(self, event: FileSystemEvent) -> None:
+        """Handle file movement events."""
+
+        if event.is_directory:
+            return
+
+        if isinstance(event, FileSystemMovedEvent):
+            self._process_file(str(event.dest_path))
+
+    def _process_file(self, file_path_str: str) -> None:
+        """Process a file if it matches the criteria."""
+
+        file_path = Path(file_path_str)
+
+        # Basic check if file exists (it might have been moved/deleted quickly)
+        if not file_path.exists():
+            return
+
+        if self.processor.should_process(file_path):
+            # Small delay to ensure file write is complete (simple heuristic)
+            # For large files, this might not be enough, but it's a start.
+            # A more robust solution would check for file stability (size not changing).
+            time.sleep(1)
+
+            try:
+                # Get fresh metadata from config (in case it was reloaded)
+                metadata = self.get_metadata()
+                self.processor.process(file_path, metadata)
+            except Exception as e:
+                self.logger.error(f"Error processing {file_path}: {e}")
+
     def start(self) -> None:
         """Start monitoring.
         
@@ -137,8 +115,7 @@ class ArchiveMonitor:
             self.logger.error(f"Path does not exist: {self.path}")
             return
 
-        event_handler = ArchiveEventHandler(self.logger, self.processor, self)
-        self.observer.schedule(event_handler, str(self.path), recursive=False)
+        self.observer.schedule(self, str(self.path), recursive=False)
         self.observer.start()
         self.logger.info(f"Started monitoring {self.path}")
         self.logger.info("Send SIGHUP to reload configuration (Unix) or restart the process (Windows)")

@@ -1,4 +1,10 @@
-"""Core logic for processing files: parsing, metadata extraction, and organization."""
+"""Per-file processing logic for the File Organizer.
+
+This module contains :class:`FileProcessor`, which is responsible for
+parsing structured filenames, validating them, writing EXIF/XMP metadata,
+and moving files into the ``processed/`` tree. Higher-level orchestration
+(batch/daemon) is handled by :class:`file_organizer.organizer.FileOrganizer`.
+"""
 
 import shutil
 import uuid
@@ -7,15 +13,15 @@ from typing import Any
 
 from common.exifer import Exifer
 from common.logger import Logger
-from file_organizer.parser import FilenameParser, ParsedFilename
-from file_organizer.validator import FilenameValidator
+from common.naming import FilenameParser, ParsedFilename, FilenameValidator
+from common.constants import SOURCES_DIR_NAME, DERIVATIVES_DIR_NAME
 
 
-class ArchiveProcessor:
-    """Processor that extracts metadata from structured photo filenames and writes to EXIF/XMP."""
+class FileProcessor:
+    """Processor that extracts metadata and organizes individual files."""
 
     SUPPORTED_EXTENSIONS = {".tiff", ".tif", ".jpg", ".jpeg"}
-    
+
     # EXIF tag names for metadata operations
     TAG_XMP_EXIF_DATETIME_DIGITIZED = "XMP-exif:DateTimeDigitized"
     TAG_EXIFIFD_DATETIME_DIGITIZED = "ExifIFD:DateTimeDigitized"
@@ -33,11 +39,6 @@ class ArchiveProcessor:
     TAG_XMP_DC_SOURCE = "XMP-dc:Source"
 
     def __init__(self, logger: Logger) -> None:
-        """Initialize the processor.
-        
-        Args:
-            logger: Logger instance for this processor.
-        """
         self.logger = logger
         self.parser = FilenameParser()
         self.validator = FilenameValidator()
@@ -301,7 +302,7 @@ class ArchiveProcessor:
                 else:
                     # RAW/MSR and related sources go to SOURCES/, остальные роли — в DERIVATIVES/
                     source_suffixes = {"RAW", "MSR"}
-                    role_dir_name = "SOURCES" if suffix_upper in source_suffixes else "DERIVATIVES"
+                    role_dir_name = SOURCES_DIR_NAME if suffix_upper in source_suffixes else DERIVATIVES_DIR_NAME
                     processed_dir = date_root_dir / role_dir_name
 
             else:

@@ -1,0 +1,164 @@
+"""Core implementation for Preview Maker.
+
+Provides utilities to generate PRV (preview) JPEGs from RAW/MSR sources.
+
+The primary API is exposed via the :class:`PreviewMaker` class, which is
+configured with parameters and then executed via :meth:`__call__`.
+"""
+
+from pathlib import Path
+
+from PIL import Image
+
+from common.logger import Logger
+from common.naming import FilenameParser
+from common.constants import SOURCES_DIR_NAME
+
+
+class PreviewMaker:
+    """Preview generator that can be executed like a function.
+
+    In line with other workflow-like classes (such as :class:`VuescanWorkflow`),
+    a :class:`Logger` instance is provided at construction time, while
+    call-specific parameters are passed to :meth:`__call__`.
+    """
+
+    def __init__(self, logger: Logger) -> None:
+        self._logger = logger
+
+    def __call__(
+        self,
+        *,
+        path: Path,
+        overwrite: bool = False,
+        max_size: int = 2000,
+        quality: int = 80,
+    ) -> int:
+        """Run batch preview generation under ``path``.
+
+        This is the primary workflow-style entry point and mirrors how other
+        workflow classes are executed.
+        """
+
+        return self._generate_previews_for_sources(
+            path=path,
+            overwrite=overwrite,
+            max_size=max_size,
+            quality=quality,
+        )
+
+    def _generate_previews_for_sources(
+        self,
+        *,
+        path: Path,
+        overwrite: bool,
+        max_size: int,
+        quality: int,
+    ) -> int:
+        """Walk under ``path`` and generate PRV JPEGs for ``SOURCES/`` files."""
+
+        parser = FilenameParser()
+        written = 0
+
+        self._logger.debug(
+            "Starting batch preview generation under %s (overwrite=%s, max_size=%d, quality=%d)",
+            path,
+            overwrite,
+            max_size,
+            quality,
+        )
+
+        for dirpath in path.rglob(SOURCES_DIR_NAME):
+            if not dirpath.is_dir():
+                continue
+
+            self._logger.debug("Scanning %s directory: %s", SOURCES_DIR_NAME, dirpath)
+
+            date_dir = dirpath.parent
+
+            for src_path in dirpath.iterdir():
+                if not src_path.is_file():
+                    continue
+
+                parsed = parser.parse(src_path.name)
+                if not parsed:
+                    continue
+
+                suffix = parsed.suffix.upper()
+                if suffix not in {"RAW", "MSR"}:
+                    continue
+
+                if suffix == "RAW":
+                    msr_name = src_path.name.replace(".RAW.", ".MSR.")
+                    msr_candidate = src_path.with_name(msr_name)
+                    if msr_candidate.exists():
+                        # Prefer MSR when both RAW and MSR exist for the same base.
+                        self._logger.debug(
+                            "Skipping RAW in favour of MSR: %s (found %s)",
+                            src_path,
+                            msr_candidate,
+                        )
+                        continue
+
+                base = (
+                    f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}."
+                    f"{parsed.hour:02d}.{parsed.minute:02d}.{parsed.second:02d}."
+                    f"{parsed.modifier}.{parsed.group}.{parsed.subgroup}."
+                    f"{int(parsed.sequence):04d}.{parsed.side}.PRV.jpg"
+                )
+
+                prv_path = date_dir / base
+
+                if prv_path.exists() and not overwrite:
+                    self._logger.debug("Skipping existing PRV (overwrite disabled): %s", prv_path)
+                    continue
+
+                self._logger.debug("Creating PRV from %s to %s", src_path, prv_path)
+
+                self._convert_to_prv(
+                    input_path=src_path,
+                    output_path=prv_path,
+                    max_size=max_size,
+                    quality=quality,
+                )
+                written += 1
+
+        self._logger.debug("Finished batch preview generation under %s: %d file(s) written", path, written)
+
+        return written
+
+    def _convert_to_prv(
+        self,
+        *,
+        input_path: Path,
+        output_path: Path,
+        max_size: int,
+        quality: int,
+    ) -> None:
+        """Convert a single source image to a PRV JPEG."""
+
+        if not input_path.exists():
+            self._logger.error("Input file does not exist: %s", input_path)
+            raise FileNotFoundError(f"Input file does not exist: {input_path}")
+
+        Image.MAX_IMAGE_PIXELS = None
+
+        self._logger.debug(
+            "Opening source image for PRV conversion: %s (max_size=%d, quality=%d)",
+            input_path,
+            max_size,
+            quality,
+        )
+
+        with Image.open(input_path) as img:
+            img.load()
+
+            if img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+
+            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            img.save(output_path, format="JPEG", quality=quality, optimize=True)
+
+        self._logger.debug("PRV written to %s", output_path)

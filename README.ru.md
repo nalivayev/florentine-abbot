@@ -147,9 +147,13 @@ file-organizer "D:\Scans\Inbox"
 file-organizer "D:\Scans\Inbox" --daemon
 ```
 
-**С метаданными:**
+**С метаданными (через JSON-конфиг):**
+1. Один раз запустите `file-organizer` без `--config`, чтобы он создал файл конфигурации на основе `config.template.json`.
+2. Откройте созданный JSON-файл (обычно в пользовательском конфиг‑каталоге) и заполните поля `creator`, `credit`, `rights`, `usage_terms`, `source`.
+3. При необходимости явно укажите путь к конфигу через `--config`:
+
 ```sh
-file-organizer "D:\Scans\Inbox" --creator "Иван Иванов" --rights "Все права защищены"
+file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 ```
 
 ## Preview Maker (генератор PRV)
@@ -204,7 +208,7 @@ python -m archive_keeper.cli "D:\Archive\Photos"
 - `archive_keeper/cli.py` — CLI для утилиты `archive-keeper`.
 - `file_organizer/cli.py` — CLI для утилиты `file-organizer`.
 - `preview_maker/cli.py` — CLI для утилиты `preview-maker`.
-- `preview_maker/core.py` — ядро Preview Maker (логика генерации PRV-превью).
+- `preview_maker/maker.py` — ядро Preview Maker (логика генерации PRV-превью).
 - `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
 - `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
 - `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
@@ -309,6 +313,8 @@ scan-batcher --workflow examples\workflow.ini
 
 - Индекс документации: [docs/README.ru.md](docs/README.ru.md)
 - Руководство по именованию (RU): [docs/ru/naming.md](docs/ru/naming.md)
+- Процесс сканирования (RU): [docs/ru/scanning.md](docs/ru/scanning.md)
+- Цифровой workflow для born-digital фото (RU): [docs/ru/digital_workflow.md](docs/ru/digital_workflow.md)
 
 ---
 

@@ -1,18 +1,18 @@
-"""Unit tests for ArchiveProcessor."""
+"""Unit tests for FileOrganizer (processing logic)."""
 
 import pytest
 from pathlib import Path
-from file_organizer.processor import ArchiveProcessor
-from file_organizer.parser import FilenameParser
+from file_organizer.organizer import FileOrganizer
+from common.naming import FilenameParser
 
 
-class TestArchiveProcessor:
-    """Test cases for ArchiveProcessor."""
+class TestFileOrganizer:
+    """Test cases for FileOrganizer processing API."""
 
     @pytest.fixture
     def processor(self, logger):
-        """Create processor instance."""
-        return ArchiveProcessor(logger)
+        """Create organizer instance."""
+        return FileOrganizer(logger)
 
     @pytest.fixture
     def parser(self):

@@ -5,7 +5,8 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from preview_maker import generate_previews_for_sources
+from preview_maker import PreviewMaker
+from common.logger import Logger
 
 
 class TestPreviewMakerBatch:
@@ -34,7 +35,8 @@ class TestPreviewMakerBatch:
         self._create_tiff(raw_path)
         self._create_tiff(msr_path)
 
-        count = generate_previews_for_sources(temp_dir, overwrite=False, max_size=1000, quality=70)
+        maker = PreviewMaker(Logger("test_preview_maker"))
+        count = maker(path=temp_dir, overwrite=False, max_size=1000, quality=70)
         assert count == 1
 
         prv_path = date_dir / "1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
@@ -58,14 +60,16 @@ class TestPreviewMakerBatch:
         # Create an initial PRV with a small size
         self._create_tiff(prv_path, size=(500, 500))
 
+        maker = PreviewMaker(Logger("test_preview_maker"))
+
         # Without overwrite, nothing should change
-        count_no_overwrite = generate_previews_for_sources(temp_dir, overwrite=False, max_size=800, quality=70)
+        count_no_overwrite = maker(path=temp_dir, overwrite=False, max_size=800, quality=70)
         assert count_no_overwrite == 0
         with Image.open(prv_path) as img:
             assert max(img.size) == 500
 
         # With overwrite, PRV should be regenerated and respect new max_size
-        count_overwrite = generate_previews_for_sources(temp_dir, overwrite=True, max_size=800, quality=70)
+        count_overwrite = maker(path=temp_dir, overwrite=True, max_size=800, quality=70)
         assert count_overwrite == 1
         with Image.open(prv_path) as img:
             assert max(img.size) <= 800

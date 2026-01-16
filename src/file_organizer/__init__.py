@@ -1,8 +1,6 @@
-"""Archive Organizer - Metadata Extraction and Organization Tool."""
+"""File Organizer - Metadata Extraction and Organization Tool."""
 
-__version__ = "0.1.0"
+from file_organizer.organizer import FileOrganizer
+from file_organizer.monitor import FileMonitor
 
-from file_organizer.processor import ArchiveProcessor
-from file_organizer.monitor import ArchiveMonitor
-
-__all__ = ["ArchiveProcessor", "ArchiveMonitor"]
+__all__ = ["FileOrganizer", "FileMonitor"]

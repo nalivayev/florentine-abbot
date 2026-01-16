@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 import pytest
 from PIL import Image
-from file_organizer.processor import ArchiveProcessor
+from file_organizer.organizer import FileOrganizer
 
 class TestExiftoolCompliance:
     @pytest.fixture
@@ -30,7 +30,7 @@ class TestExiftoolCompliance:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor(logger)
+        processor = FileOrganizer(logger)
         config = {
             "creator": "John Doe",
             "credit": "The Archive",
@@ -87,7 +87,7 @@ class TestExiftoolCompliance:
         file_path = temp_dir / filename
         self.create_dummy_image(file_path)
         
-        processor = ArchiveProcessor(logger)
+        processor = FileOrganizer(logger)
         processor.process(file_path, {})
         
         # 1950 / 1950.00.00 / DERIVATIVES
@@ -131,7 +131,7 @@ class TestExiftoolCompliance:
         assert "ExifIFD:DateTimeDigitized" not in meta_before
         
         # Process the file
-        processor = ArchiveProcessor(logger)
+        processor = FileOrganizer(logger)
         processor.process(file_path, {})
         
         # Check processed file: 2025 / 2025.11.29 / SOURCES
@@ -161,7 +161,7 @@ class TestExiftoolCompliance:
         ], check=True)
         
         # Process the file
-        processor = ArchiveProcessor(logger)
+        processor = FileOrganizer(logger)
         processor.process(file_path, {})
         
         # Check processed file: 2025 / 2025.11.29 / SOURCES

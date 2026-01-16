@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from sqlalchemy import select
 
-from file_organizer.processor import ArchiveProcessor
+from file_organizer.organizer import FileOrganizer
 from archive_keeper.engine import DatabaseManager
 from archive_keeper.scanner import ArchiveScanner
 from archive_keeper.models import File, FileStatus
@@ -55,7 +55,7 @@ class TestPipeline(unittest.TestCase):
         print(f"[Pipeline] Processing file: {file_path}")
 
         # --- Step 1: File Organizer ---
-        processor = ArchiveProcessor(self.logger)
+        processor = FileOrganizer(self.logger)
         config = {
             "creator": "Test User",
             "rights": "Public Domain"
