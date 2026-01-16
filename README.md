@@ -7,15 +7,15 @@ Florentine Abbot is a project dedicated to the scanning and digital organization
 
 ## Architecture & Standards
 
-Florentine Abbot attempts to implement core concepts of the **Open Archival Information System (OAIS)** reference model (ISO 14721), a standard widely used by national archives and libraries (NASA, Library of Congress) for long-term data preservation.
+The project attempts to implement core concepts of the **Open Archival Information System (OAIS)** reference model (ISO 14721), a standard for long-term data preservation used by archives and libraries around the world, including NASA where it was originally developed.
 
-The system adapts these concepts for personal archiving:
+This is an attempt to adapt the key OAIS concepts to the needs of a personal archive. In particular:
 
-- **Ingest (`Scan Batcher`)**: The process of receiving data, quality control (validation), and preparation for storage. It scans, checks, and batches the content.
-- **Archival Storage (`File Organizer`)**: The long-term preservation component. It moves data to the "Masters" storage (`2_Masters`), assigning immutable identifiers and creating **Archival Information Packages (AIP)**.
-- **Access (`Preview Maker`)**: The access component. Archives do not serve original Master files to users to prevent damage or loss. Instead, they create "user copies" (previews, PDFs, lower-res JPEGs). This module generates **Dissemination Information Packages (DIP)**.
+- **Ingest**: Receiving the original data, performing quality control (validation), and preparing it for storage.
+- **Archival Storage**: Moving data into long-term storage and assigning unique identifiers.
+- **Access**: Providing an access layer. Archives do not give users the original master files to avoid damage or loss. Instead, they provide “user copies” (previews, PDFs, lighter JPEGs).
 
-This architecture ensures that the "Masters" remain untouched and secure while providing convenient access through lightweight derivatives.
+This architecture helps keep the master files untouched and safe while still providing convenient access through lightweight derivatives.
 
 ## Scanning (Scan Batcher)
 
