@@ -128,10 +128,10 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 
 Инструмент для автоматической организации отсканированных файлов на основе их имён. Он извлекает метаданные из имени файла (дата, модификаторы, роль по суффиксу) и перемещает каждый файл во вспомогательное дерево `processed/` со следующей структурой:
 
-- `processed/YYYY/YYYY.MM.DD/` — папка конкретной даты
-- `processed/YYYY/YYYY.MM.DD/` — файлы `*.PRV.jpg` для быстрого просмотра (просмотровые копии)
+- `processed/YYYY/YYYY.MM.DD/` — папка конкретной даты (корень дерева для этой даты)
 - `processed/YYYY/YYYY.MM.DD/SOURCES/` — RAW, мастер‑копии (`MSR`) и связанные с ними служебные файлы
 - `processed/YYYY/YYYY.MM.DD/DERIVATIVES/` — производные файлы (WEB, PRT и другие выходные форматы)
+- `processed/YYYY/YYYY.MM.DD/` — файлы `*.PRV.jpg` для быстрого просмотра (просмотровые копии), лежащие прямо в папке даты
 
 Та же информация о дате записывается в теги EXIF/XMP файла. Подробные правила и примеры смотрите в `docs/ru/naming.md` (Части 2 и 3).
 
@@ -152,7 +152,7 @@ file-organizer "D:\Scans\Inbox" --daemon
 file-organizer "D:\Scans\Inbox" --creator "Иван Иванов" --rights "Все права защищены"
 ```
 
-### Preview Maker (генератор PRV)
+## Preview Maker (генератор PRV)
 
 > **⚠️ Статус**: В разработке. Пока не полностью протестирована или документирована.
 
@@ -188,8 +188,10 @@ preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --
 
 ### Использование
 
+Запускайте утилиту напрямую из исходников через модульную точку входа:
+
 ```sh
-archive-keeper "D:\Archive\Photos"
+python -m archive_keeper.cli "D:\Archive\Photos"
 ```
 
 Это создаст файл `archive.db` и заполнит его текущим состоянием архива. Последующие запуски будут сравнивать файловую систему с этой базой данных.
@@ -201,15 +203,17 @@ archive-keeper "D:\Archive\Photos"
 - `scan_batcher/cli.py` — основной CLI-модуль (используется для команды `scan-batcher`).
 - `archive_keeper/cli.py` — CLI для утилиты `archive-keeper`.
 - `file_organizer/cli.py` — CLI для утилиты `file-organizer`.
+- `preview_maker/cli.py` — CLI для утилиты `preview-maker`.
+- `preview_maker/core.py` — ядро Preview Maker (логика генерации PRV-превью).
 - `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
 - `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
 - `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
-- `scan_batcher/recorder.py` — модуль логирования.
+- `common/logger.py` — единая подсистема логирования для всех утилит.
 - `scan_batcher/constants.py` — централизованные константы и перечисления (например, `RoundingStrategy`).
 - `scan_batcher/workflow.py` — базовый класс для всех workflow-плагинов.
 - `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.
 - `scan_batcher/workflows/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
-- `scan_batcher/exifer.py` — извлечение и обработка EXIF-метаданных.
+- `common/exifer.py` — извлечение и обработка EXIF-метаданных, общая для всех утилит.
 
 ### Установка
 
@@ -225,7 +229,11 @@ archive-keeper "D:\Archive\Photos"
 pip install .
 ```
 
-Это установит все необходимые зависимости и сделает команду `scan-batcher` доступной в вашей системе.
+Это установит все необходимые зависимости и сделает основные CLI-команды доступными в вашей системе:
+
+- `scan-batcher`
+- `file-organizer`
+- `preview-maker`
 
 > **Примечание:**  
 > Рекомендуется использовать [виртуальное окружение](https://docs.python.org/3/library/venv.html) для установки и разработки.
@@ -256,6 +264,7 @@ pip install --upgrade .
 - `scan_batcher.log` — активность Scan Batcher
 - `file_organizer.log` — активность File Organizer (`file-organizer`)
 - `archive_keeper.log` — активность Archive Keeper
+ - `preview_maker.log` — активность Preview Maker (`preview-maker`)
 
 **Пользовательское расположение логов:**
 

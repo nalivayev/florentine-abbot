@@ -127,10 +127,10 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 
 A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers, role suffix) and moves each file into a working `processed/` tree with the layout:
 
-- `processed/YYYY/YYYY.MM.DD/` — per-date folder
-- `processed/YYYY/YYYY.MM.DD/` — `*.PRV.jpg` files for quick browsing (preview/access copies)
+- `processed/YYYY/YYYY.MM.DD/` — per-date folder (root of the date tree)
 - `processed/YYYY/YYYY.MM.DD/SOURCES/` — RAW, master (`MSR`) and related technical files
 - `processed/YYYY/YYYY.MM.DD/DERIVATIVES/` — derivatives such as WEB, PRT and other outputs
+- `processed/YYYY/YYYY.MM.DD/` — `*.PRV.jpg` files for quick browsing (preview/access copies) stored directly in the date folder
 
 The same date information is also written into the file's EXIF/XMP tags. For detailed rules and examples, see `docs/en/naming.md` (Parts 2 and 3).
 
@@ -151,7 +151,7 @@ file-organizer "D:\Scans\Inbox" --daemon
 file-organizer "D:\Scans\Inbox" --creator "John Doe" --rights "All Rights Reserved"
 ```
 
-### Preview Maker (PRV Generator)
+## Preview Maker (PRV Generator)
 
 > **⚠️ Status**: In development. Not yet fully tested or documented.
 
@@ -190,8 +190,10 @@ A tool to ensure the long-term integrity of your digital archive. It scans your 
 
 ### Usage
 
+Run the tool directly from the source tree using the module entry point:
+
 ```sh
-archive-keeper "D:\Archive\Photos"
+python -m archive_keeper.cli "D:\Archive\Photos"
 ```
 
 This will create `archive.db` and populate it with the current state of the archive. Subsequent runs will compare the file system against this database.
@@ -203,15 +205,17 @@ This will create `archive.db` and populate it with the current state of the arch
 - `scan_batcher/cli.py` — main CLI entry point (used for the `scan-batcher` command).
 - `archive_keeper/cli.py` — CLI for the `archive-keeper` tool.
 - `file_organizer/cli.py` — CLI for the `file-organizer` tool.
+- `preview_maker/cli.py` — CLI for the `preview-maker` tool.
+- `preview_maker/core.py` — core implementation for Preview Maker (PRV generation logic).
 - `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
 - `scan_batcher/calculator.py` — DPI calculation algorithms.
 - `scan_batcher/parser.py` — command-line argument parsing and validation.
-- `scan_batcher/recorder.py` — logging utility.
+- `common/logger.py` — unified logging subsystem used by all tools.
 - `scan_batcher/constants.py` — centralized constants and enumerations (e.g., `RoundingStrategy`).
 - `scan_batcher/workflow.py` — base class for all workflow plugins.
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
 - `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
-- `scan_batcher/exifer.py` — EXIF metadata extraction and parsing.
+- `common/exifer.py` — EXIF metadata extraction and parsing shared across tools.
 
 ### Installation
 
@@ -227,7 +231,11 @@ To install the package locally from the source directory, use:
 pip install .
 ```
 
-This will install all required dependencies and make the `scan-batcher` CLI command available in your system.
+This will install all required dependencies and make the main CLI commands available in your system:
+
+- `scan-batcher`
+- `file-organizer`
+- `preview-maker`
 
 > **Note:**  
 > It is recommended to use a [virtual environment](https://docs.python.org/3/library/venv.html) for installation and development.
@@ -258,6 +266,7 @@ All utilities write logs to a centralized location:
 - `scan_batcher.log` — Scan Batcher activity
 - `file_organizer.log` — File Organizer (`file-organizer`) activity
 - `archive_keeper.log` — Archive Keeper activity
+ - `preview_maker.log` — Preview Maker (`preview-maker`) activity
 
 **Custom log location:**
 
