@@ -5,6 +5,18 @@
 
 Florentine Abbot is a project dedicated to the scanning and digital organization of home photo archives.
 
+## Architecture & Standards
+
+Florentine Abbot attempts to implement core concepts of the **Open Archival Information System (OAIS)** reference model (ISO 14721), a standard widely used by national archives and libraries (NASA, Library of Congress) for long-term data preservation.
+
+The system adapts these concepts for personal archiving:
+
+- **Ingest (`Scan Batcher`)**: The process of receiving data, quality control (validation), and preparation for storage. It scans, checks, and batches the content.
+- **Archival Storage (`File Organizer`)**: The long-term preservation component. It moves data to the "Masters" storage (`2_Masters`), assigning immutable identifiers and creating **Archival Information Packages (AIP)**.
+- **Access (`Preview Maker`)**: The access component. Archives do not serve original Master files to users to prevent damage or loss. Instead, they create "user copies" (previews, PDFs, lower-res JPEGs). This module generates **Dissemination Information Packages (DIP)**.
+
+This architecture ensures that the "Masters" remain untouched and secure while providing convenient access through lightweight derivatives.
+
 ## Scanning (Scan Batcher)
 
 A utility designed to automate and optimize the scanning workflow using [VueScan](https://www.hamrick.com) by Ed Hamrick.
