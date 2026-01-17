@@ -16,11 +16,11 @@ OAIS is published as:
 For image digitization, the project also relies on recommendations from the **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
 - **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (May 2023)
 
-This is an attempt to apply these concepts to the needs of a personal archive. In particular:
+The project implements three functional blocks of OAIS:
 
-- **Ingest**: Receiving the original data, performing quality control (validation), and preparing it for storage.
-- **Archival Storage**: Moving data into long-term storage and assigning unique identifiers.
-- **Access**: Providing access. Archives do not give users the original master files to avoid damage or loss. Instead, they provide "user copies" in the form of PDFs or lightweight JPEGs.
+- **Ingest** is implemented in `scan-batcher` and `file-organizer` — scanning automation, structured filename parsing, and metadata validation
+- **Archival Storage** is implemented in `file-organizer` and `archive-keeper` — file organization, UUID assignment, XMP/EXIF metadata writing, and SHA-256 integrity control
+- **Access** is implemented in `preview-maker` — generation of lightweight JPEG previews from master files
 
 ## Scanning (Scan Batcher)
 

@@ -16,10 +16,11 @@ OAIS опубликован как:
 Для оцифровки изображений проект опирается на рекомендации **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
 - **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (Май 2023)
 
-Это попытка применения этих концепций для задач ведения личного архива. В частности:
-- **Ingest / Прием**: Получение исходных данных, контроль (валидация) и подготовка к хранению.
-- **Archival Storage / Архивное хранение**: Перемещние данных в хранилище с присвоением уникальных идентификаторов.
-- **Access / Доступ**: Обеспечение доступа. Архивы не выдают пользователям оригинальные мастер-файлы, чтобы избежать их порчи или утраты. Вместо этого создаются "пользовательские копии" в виде PDF или облегченных изображений JPEG.
+Проект реализует три функциональных блока OAIS:
+
+- **Ingest (Прием данных)** реализован в `scan-batcher` и `file-organizer` — автоматизация сканирования, разбор структурированных имен файлов и валидация метаданных
+- **Archival Storage (Архивное хранение)** реализовано в `file-organizer` и `archive-keeper` — раскладка файлов, присвоение UUID-идентификаторов, запись метаданных в XMP/EXIF, контроль целостности через SHA-256
+- **Access (Доступ)** реализован в `preview-maker` — генерация облегченных JPEG-изображений из мастер-файлов
 
 ## Сканирование (Scan Batcher)
 
