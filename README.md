@@ -7,7 +7,7 @@ Florentine Abbot is a project dedicated to the scanning and digital organization
 
 ## Architecture & Standards
 
-The project implements to some extent approaches from the **OAIS (Open Archival Information System)** reference model, developed by the **[Consultative Committee for Space Data Systems (CCSDS)](https://public.ccsds.org/)** — a standard for long-term data preservation used by archives and libraries, including NASA where it was originally developed.
+The project implements to some extent approaches from the **OAIS (Open Archival Information System)** reference model, developed by the **[Consultative Committee for Space Data Systems (CCSDS)](https://public.ccsds.org/)** — a standard for long-term data preservation used by archives and libraries.
 
 OAIS is published as:
 - **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — current version, freely available
