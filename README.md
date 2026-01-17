@@ -16,9 +16,7 @@ OAIS is published as:
 For image digitization, the project also relies on recommendations from the **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
 - **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (May 2023)
 
-This is an attempt to apply these concepts to the needs of a personal archive. In particular:
-
-- **Ingest**: Receiving the original data, performing quality control (validation), and preparing it for storage.
+The project implements the **Ingest** functional block of OAIS: scanning automation, structured filename parsing, and metadata writing (XMP/EXIF).
 
 ## Scanning
 

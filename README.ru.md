@@ -16,8 +16,7 @@ OAIS опубликован как:
 Для оцифровки изображений проект опирается на рекомендации **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
 - **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (Май 2023)
 
-Это попытка применения этих концепций для задач ведения личного архива. В частности:
-- **Ingest / Прием**: Получение исходных данных, контроль (валидация) и подготовка к хранению.
+Проект реализует функциональный блок OAIS **Ingest (Приём данных)**: автоматизацию сканирования, разбор структурированных имён файлов и запись метаданных (XMP/EXIF).
 
 ## Сканирование
 
