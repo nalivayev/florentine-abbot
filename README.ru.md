@@ -7,7 +7,7 @@ Scan Batcher — это проект, посвященный сканирова�
 
 ## Архитектура и стандарты
 
-Проект в некоторой степени реализует подходы эталонной модели **OAIS (Open Archival Information System)**, разработанной **[Consultative Committee for Space Data Systems (CCSDS)](https://public.ccsds.org/)** — стандарта для долгосрочного хранения данных, используемого архивами и библиотеками, например в NASA, где и был разработан. 
+Проект в некоторой степени реализует подходы эталонной модели **OAIS (Open Archival Information System)**, разработанной **[Consultative Committee for Space Data Systems (CCSDS)](https://public.ccsds.org/)** — стандарта для долгосрочного хранения данных, используемого архивами и библиотеками.
 
 OAIS опубликован как:
 - **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — актуальная версия, свободно доступна
