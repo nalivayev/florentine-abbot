@@ -7,12 +7,18 @@ Scan Batcher is a project dedicated to the scanning and digital organization of 
 
 ## Architecture & Standards
 
-The project attempts to implement core concepts of the **[Open Archival Information System (OAIS)](https://public.ccsds.org/pubs/650x0m2.pdf)** reference model (ISO 14721), a standard for long-term data preservation used by archives and libraries around the world, including NASA where it was originally developed. For image capture and quality, it also follows ideas from the **[FADGI Still Image Technical Guidelines](https://www.digitizationguidelines.gov/guidelines/digitize-technical.html)** (Federal Agencies Digital Guidelines Initiative) that are widely used by cultural heritage institutions in the US.
+The project implements to some extent approaches from the **OAIS (Open Archival Information System)** reference model, developed by the **[Consultative Committee for Space Data Systems (CCSDS)](https://public.ccsds.org/)** — a standard for long-term data preservation used by archives and libraries, including NASA where it was originally developed.
 
-This is an attempt to adapt these concepts to the needs of a personal archive. In particular:
+OAIS is published as:
+- **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — current version, freely available
+- **[ISO 14721:2025](https://www.iso.org/standard/87471.html)** — formal international standard (identical to CCSDS 650.0-M-2 in content)
+
+For image digitization, the project also relies on recommendations from the **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
+- **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (May 2023)
+
+This is an attempt to apply these concepts to the needs of a personal archive. In particular:
 
 - **Ingest**: Receiving the original data, performing quality control (validation), and preparing it for storage.
-
 
 ## Scanning
 
@@ -143,7 +149,7 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 - `scan_batcher/workflow.py` — base class for all workflow plugins.
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
 - `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
-- `common/exifer.py` — EXIF metadata extraction and parsing shared across tools.
+- `common/exifer.py` — EXIF metadata extraction and processing.
 
 ### Installation
 

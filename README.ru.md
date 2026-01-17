@@ -7,7 +7,14 @@ Scan Batcher — это проект, посвященный сканирова�
 
 ## Архитектура и стандарты
 
-Проект в некоторой степени реализует подходы эталонной модели **[OAIS (Open Archival Information System)](https://public.ccsds.org/pubs/650x0m2.pdf)** (ISO 14721) — стандарта для долгосрочного хранения данных, используемого архивами и библиотеками, например в NASA, где, собственно, и был разработан. Для оцифровки и качества изображения он также опирается на идеи рекомендаций **[FADGI по оцифровке изображений](https://www.digitizationguidelines.gov/guidelines/digitize-technical.html)** (Federal Agencies Digital Guidelines Initiative), широко применяемых в учреждениях культурного наследия.
+Проект в некоторой степени реализует подходы эталонной модели **OAIS (Open Archival Information System)**, разработанной **[Consultative Committee for Space Data Systems (CCSDS)](https://public.ccsds.org/)** — стандарта для долгосрочного хранения данных, используемого архивами и библиотеками, например в NASA, где и был разработан. 
+
+OAIS опубликован как:
+- **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — актуальная версия, свободно доступна
+- **[ISO 14721:2025](https://www.iso.org/standard/87471.html)** — формальный международный стандарт (идентичен CCSDS 650.0-M-2 по содержанию)
+
+Для оцифровки изображений проект опирается на рекомендации **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
+- **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (Май 2023)
 
 Это попытка применения этих концепций для задач ведения личного архива. В частности:
 - **Ingest / Прием**: Получение исходных данных, контроль (валидация) и подготовка к хранению.
