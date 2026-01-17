@@ -78,7 +78,7 @@ def test_organizer_to_maker_metadata_consistency(tmp_path: Path) -> None:
     description = "Family portrait"
 
     # Act: organizer writes master tags
-    am.write_master(
+    am.write_master_tags(
         file_path=master,
         description=description,
         parsed=parsed,
@@ -87,7 +87,7 @@ def test_organizer_to_maker_metadata_consistency(tmp_path: Path) -> None:
     )
 
     # Then maker writes derivative based on master
-    am.write_derivative(master_path=master, prv_path=prv, logger=logger)
+    am.write_derivative_tags(master_path=master, prv_path=prv, logger=logger)
 
     # Assert: compare contextual/date tags equality
     master_tags = exifer.store.get(master, {})

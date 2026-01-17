@@ -67,7 +67,7 @@ def test_write_master_exact_date_sets_original_and_created(tmp_path: Path) -> No
     description = "Trip to Baikal — best shot"
 
     # Act
-    am.write_master(
+    am.write_master_tags(
         file_path=file_path,
         description=description,
         parsed=parsed,
@@ -128,7 +128,7 @@ def test_write_master_partial_date_sets_xmp_created_only(tmp_path: Path) -> None
     )
 
     # Act
-    am.write_master(
+    am.write_master_tags(
         file_path=file_path,
         description="Circa 1950 portrait",
         parsed=parsed,
@@ -173,7 +173,7 @@ def test_write_derivative_inherits_context_and_links_to_master(tmp_path: Path) -
     am = ArchiveMetadata(exifer=exifer)
 
     # Act
-    am.write_derivative(master_path=master, prv_path=prv)
+    am.write_derivative_tags(master_path=master, prv_path=prv)
 
     # Assert
     assert exifer.writes, "Expected metadata write for PRV"

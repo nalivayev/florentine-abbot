@@ -166,7 +166,7 @@ class PreviewMaker:
         # After pixels are written, propagate archival metadata from source
         # master (MSR/RAW) to the PRV derivative.
         try:
-            self._metadata.write_derivative(
+            self._metadata.write_derivative_tags(
                 master_path=input_path,
                 prv_path=output_path,
                 logger=self._logger,

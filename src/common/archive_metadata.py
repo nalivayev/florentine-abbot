@@ -66,7 +66,7 @@ class ArchiveMetadata:
     # ------------------------------------------------------------------
 
     @classmethod
-    def tags_needed_for_master_read(cls) -> list[str]:
+    def _get_master_tags(cls) -> list[str]:
         """Tags that may be read from the source before writing master.
 
         Used primarily to derive XMP-exif:DateTimeDigitized from
@@ -80,7 +80,7 @@ class ArchiveMetadata:
         ]
 
     @classmethod
-    def tags_needed_for_derivative_read(cls) -> list[str]:
+    def _get_derivative_tags(cls) -> list[str]:
         """Tags that should be read from the master before writing PRV."""
 
         # Also include EXIFIFD DateTimeDigitized as a fallback source for
@@ -89,11 +89,7 @@ class ArchiveMetadata:
             cls.TAG_EXIFIFD_DATETIME_DIGITIZED,
         ]
 
-    # ------------------------------------------------------------------
-    # Master / derivative write operations
-    # ------------------------------------------------------------------
-
-    def write_master(
+    def write_master_tags(
         self,
         *,
         file_path: Path,
@@ -130,7 +126,7 @@ class ArchiveMetadata:
         try:
             existing_tags = self._exifer.read(
                 file_path,
-                self.tags_needed_for_master_read(),
+                self._get_master_tags(),
             )
 
             date_digitized = (
@@ -208,7 +204,7 @@ class ArchiveMetadata:
         self._exifer.write(file_path, tags)
         logger.info("  Metadata written successfully.")
 
-    def write_derivative(
+    def write_derivative_tags(
         self,
         *,
         master_path: Path,
@@ -225,7 +221,7 @@ class ArchiveMetadata:
 
         existing = self._exifer.read(
             master_path,
-            self.tags_needed_for_derivative_read(),
+            self._get_derivative_tags(),
         )
 
         tags_to_write: dict[str, Any] = {}

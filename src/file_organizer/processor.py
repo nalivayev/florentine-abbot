@@ -140,7 +140,7 @@ class FileProcessor:
         """
         try:
             description = self._generate_description(parsed)
-            self._metadata.write_master(
+            self._metadata.write_master_tags(
                 file_path=file_path,
                 description=description,
                 parsed=parsed,
