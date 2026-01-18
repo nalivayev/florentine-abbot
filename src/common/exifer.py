@@ -124,7 +124,7 @@ class Exifer:
             # Fallback to one-off if persistent process fails
             return self._run_one_off(args)
 
-    def _run_one_off(self, args: Sequence[str]) -> str:
+    def _run_one_off(self, args: Sequence[str], timeout: int | None = None) -> str:
         cmd = [self.executable] + list(args)
         try:
             # Use utf-8 encoding and ignore errors to be safe with weird metadata
@@ -134,9 +134,12 @@ class Exifer:
                 text=True,
                 check=True,
                 encoding="utf-8",
-                errors="replace"
+                errors="replace",
+                timeout=timeout
             )
             return result.stdout
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(f"Exiftool timed out after {timeout} seconds") from e
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"Exiftool failed: {e.stderr}") from e
         except Exception as e:
@@ -184,8 +187,15 @@ class Exifer:
         
         return result
 
-    def write(self, file_path: Path, tags: dict[str, Any], overwrite_original: bool = True) -> None:
-        """Write metadata tags."""
+    def write(self, file_path: Path, tags: dict[str, Any], overwrite_original: bool = True, timeout: int | None = None) -> None:
+        """Write metadata tags.
+        
+        Args:
+            file_path: Path to the file.
+            tags: Dictionary of tag names and values to write.
+            overwrite_original: Whether to overwrite the original file.
+            timeout: Timeout in seconds for large files (uses one-off mode if set).
+        """
         args = ["-overwrite_original"] if overwrite_original else []
         for tag, value in tags.items():
             if value is None:
@@ -193,7 +203,12 @@ class Exifer:
             args.append(f"-{tag}={value}")
         
         args.append(str(file_path))
-        self._run(args)
+        
+        # Use one-off mode with timeout for large files to avoid hangs
+        if timeout is not None:
+            self._run_one_off(args, timeout=timeout)
+        else:
+            self._run(args)
 
 # Register cleanup
 atexit.register(Exifer._stop_all)
