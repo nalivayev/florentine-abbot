@@ -6,3 +6,7 @@ that tools like File Organizer and Preview Maker stay in sync.
 
 SOURCES_DIR_NAME = "SOURCES"
 DERIVATIVES_DIR_NAME = "DERIVATIVES"
+
+# ExifTool timeout for large files (in seconds)
+# Large files (>100MB) use one-off mode with timeout to prevent hanging
+EXIFTOOL_LARGE_FILE_TIMEOUT = 600  # 10 minutes

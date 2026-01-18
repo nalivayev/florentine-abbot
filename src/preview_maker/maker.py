@@ -82,6 +82,10 @@ class PreviewMaker:
                 if not src_path.is_file():
                     continue
 
+                # Skip non-image files (e.g., .log files)
+                if src_path.suffix.lower() not in {".tif", ".tiff", ".jpg", ".jpeg", ".png"}:
+                    continue
+
                 parsed = parser.parse(src_path.name)
                 if not parsed:
                     continue

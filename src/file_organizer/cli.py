@@ -18,6 +18,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("input_path", help="Path to the folder to process or monitor")
     parser.add_argument("--daemon", action="store_true", help="Run in daemon mode (monitor for new files)")
+    parser.add_argument("-r", "--recursive", action="store_true", help="Process files recursively in subdirectories")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--config", help="Path to JSON configuration file (see config.template.json)")
     parser.add_argument("--log-path", help="Custom directory for log files (default: ~/.florentine-abbot/logs/)")
@@ -54,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
             organizer(
                 input_path=input_path,
                 config_path=args.config,
+                recursive=args.recursive,
             )
     except Exception as exc:  # pragma: no cover - generic CLI error reporting
         print(f"[file_organizer] Error: {exc}", file=sys.stderr)

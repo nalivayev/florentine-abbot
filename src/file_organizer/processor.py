@@ -21,11 +21,12 @@ class FileProcessor:
 
     SUPPORTED_EXTENSIONS = {".tiff", ".tif", ".jpg", ".jpeg"}
 
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: Logger, root_path: Path | None = None) -> None:
         self.logger = logger
         self.parser = FilenameParser()
         self.validator = FilenameValidator()
         self._metadata = ArchiveMetadata()
+        self._root_path = root_path
 
     def should_process(self, file_path: Path) -> bool:
         """Check if the file should be processed.
@@ -167,9 +168,13 @@ class FileProcessor:
             True if move successful, False otherwise.
         """
         try:
-            # Determine the base directory (parent of the file)
-            file_dir = file_path.parent
-            processed_root = file_dir / "processed"
+            # Determine the base directory for processed folder
+            # If root_path is set (recursive mode), use it; otherwise use file's parent
+            if self._root_path:
+                processed_root = self._root_path / "processed"
+            else:
+                file_dir = file_path.parent
+                processed_root = file_dir / "processed"
 
             # Determine destination filename
             dest_filename = file_path.name

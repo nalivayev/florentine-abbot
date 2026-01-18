@@ -45,44 +45,65 @@ class FileOrganizer:
         *,
         input_path: Path,
         config_path: str | Path | None = None,
+        recursive: bool = False,
     ) -> int:
         """Run the organizer in batch mode.
 
         Args:
             input_path: Root folder to process.
             config_path: Optional path to the JSON configuration file.
+            recursive: If True, process files in subdirectories recursively.
 
         Returns:
             The number of successfully processed files.
         """
-        return self._run_batch(input_path=input_path, config_path=config_path)
+        return self._run_batch(input_path=input_path, config_path=config_path, recursive=recursive)
 
     def _load_config(self, config_path: str | Path | None) -> Config:
         """Create a :class:`Config` instance bound to this organizer's logger."""
 
         return Config(self._logger, config_path)
 
-    def _run_batch(self, *, input_path: Path, config_path: str | Path | None) -> int:
-        """Process existing files under ``input_path`` once and exit."""
+    def _run_batch(self, *, input_path: Path, config_path: str | Path | None, recursive: bool = False) -> int:
+        """Process existing files under ``input_path`` once and exit.
+        
+        Args:
+            input_path: Root folder to process.
+            config_path: Optional path to the JSON configuration file.
+            recursive: If True, process files in subdirectories recursively.
+            
+        Returns:
+            The number of successfully processed files.
+        """
 
         config = self._load_config(config_path)
         metadata: dict[str, Any] = config.get_metadata()
 
-        self._logger.info(f"Starting File Organizer in BATCH mode on {input_path}")
+        # Create a new processor with root_path set for recursive mode
+        processor = FileProcessor(self._logger, root_path=input_path if recursive else None)
+
+        mode_str = "RECURSIVE" if recursive else "BATCH"
+        self._logger.info(f"Starting File Organizer in {mode_str} mode on {input_path}")
 
         count = 0
+        skipped = 0
 
-        for file_path in input_path.iterdir():
+        # Choose iterator based on recursive flag
+        iterator = input_path.rglob('*') if recursive else input_path.iterdir()
+
+        for file_path in iterator:
             if not file_path.is_file():
                 continue
 
-            if not self._processor.should_process(file_path):
+            if not processor.should_process(file_path):
+                self._logger.warning(f"Skipped file (invalid filename format or unsupported): {file_path.name}")
+                skipped += 1
                 continue
 
-            if self._processor.process(file_path, metadata):
+            if processor.process(file_path, metadata):
                 count += 1
 
-        self._logger.info(f"Batch processing complete. Processed {count} files.")
+        self._logger.info(f"Batch processing complete. Processed {count} files, skipped {skipped} files.")
 
         return count
 

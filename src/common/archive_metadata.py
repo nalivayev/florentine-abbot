@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
 from common.exifer import Exifer
 from common.logger import Logger
 
@@ -198,10 +199,12 @@ class ArchiveMetadata:
                 file_size / (1024**2),
                 file_path.name,
             )
+            # Use timeout for large files to prevent hanging
+            self._exifer.write(file_path, tags, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
         else:
             logger.info("Running exiftool on %s...", file_path.name)
-
-        self._exifer.write(file_path, tags)
+            self._exifer.write(file_path, tags)
+        
         logger.info("  Metadata written successfully.")
 
     def write_derivative_tags(
