@@ -145,8 +145,12 @@ class Exifer:
         except Exception as e:
             raise RuntimeError(f"Error running exiftool: {e}") from e
 
-    def read_json(self, file_path: Path, args: Sequence[str] | None = None) -> dict[str, Any]:
-        """Read metadata as JSON."""
+    def _read_json(self, file_path: Path, args: Sequence[str] | None = None) -> dict[str, Any]:
+        """Read metadata as JSON.
+
+        Internal helper used by :meth:`read` to fetch raw JSON output
+        from exiftool and decode it into a Python dictionary.
+        """
         cmd_args = ["-json"]
         if args:
             cmd_args.extend(args)
@@ -175,7 +179,7 @@ class Exifer:
         for tag_name in tag_names:
             args.append(f"-{tag_name}")
         
-        data = self.read_json(file_path, args)
+        data = self._read_json(file_path, args)
         
         # Extract only the requested tags (exiftool returns full group:tag format)
         result = {}
