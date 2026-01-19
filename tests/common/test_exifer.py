@@ -5,7 +5,7 @@ from common.exifer import Exifer
 
 class TestExifer(unittest.TestCase):
 
-    @patch.object(Exifer, 'read_json')
+    @patch.object(Exifer, '_read_json')
     def test_read_success(self, mock_read_json):
         # Setup mock
         mock_read_json.return_value = {
@@ -27,7 +27,7 @@ class TestExifer(unittest.TestCase):
         self.assertNotIn("SourceFile", result)
         self.assertNotIn("ExifTool", result)
 
-    @patch.object(Exifer, 'read_json')
+    @patch.object(Exifer, '_read_json')
     def test_read_scanned_file(self, mock_read_json):
         """Test reading specific tags from a simulated scanned file (e.g. VueScan output)."""
         mock_read_json.return_value = {
