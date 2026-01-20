@@ -68,19 +68,22 @@ def test_organizer_to_maker_metadata_consistency(tmp_path: Path) -> None:
     )
 
     config = {
-        "creator": ["Alice", "Bob"],
-        "credit": "Family Archive",
-        "rights": "CC BY-NC",
-        "usage_terms": "Personal use",
-        "source": "Album 1",
+        "languages": {
+            "en-US": {
+                "default": True,
+                "creator": ["Alice", "Bob"],
+                "credit": "Family Archive",
+                "rights": "CC BY-NC",
+                "terms": "Personal use",
+                "source": "Album 1",
+                "description": "Family portrait",
+            }
+        }
     }
-
-    description = "Family portrait"
 
     # Act: organizer writes master tags
     am.write_master_tags(
         file_path=master,
-        description=description,
         parsed=parsed,
         config=config,
         logger=logger,

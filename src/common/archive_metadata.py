@@ -94,7 +94,6 @@ class ArchiveMetadata:
         self,
         *,
         file_path: Path,
-        description: str,
         parsed: Any,
         config: dict[str, Any],
         logger: Logger,
@@ -118,8 +117,28 @@ class ArchiveMetadata:
         tags[self.TAG_XMP_DC_IDENTIFIER] = file_uuid
         tags[self.TAG_XMP_XMP_IDENTIFIER] = file_uuid
 
-        # 2. Description & Title
-        tags[self.TAG_XMP_DC_DESCRIPTION] = description
+        def _normalize_text(value: Any) -> str | None:
+            """Normalize config text field to a single string.
+
+            Supports both scalar strings and lists of strings. Lists are
+            joined with newlines so that multi-line / bilingual values end up
+            in a single XMP field. Empty values result in None.
+            """
+
+            if value is None:
+                return None
+
+            if isinstance(value, list):
+                joined = "\n".join(str(item) for item in value if item)
+                return joined or None
+
+            if isinstance(value, str):
+                return value or None
+
+            return str(value)
+
+        # 2. Title (description is handled in configurable fields section
+        # to support per-language values and x-default mapping).
         tags[self.TAG_XMP_DC_TITLE] = file_path.stem
 
         # 3. Dates
@@ -167,29 +186,75 @@ class ArchiveMetadata:
 
                 tags[self.TAG_XMP_PHOTOSHOP_DATE_CREATED] = date_val
 
-        # 4. Configurable fields
-        creator_value = config.get("creator")
-        if creator_value:
-            if isinstance(creator_value, list):
-                tags[self.TAG_XMP_DC_CREATOR] = creator_value
-            else:
-                tags[self.TAG_XMP_DC_CREATOR] = [creator_value]
+        # 4. Configurable fields (new multi-language configuration only)
+        #
+        # Config is expected to contain a "languages" mapping where each key
+        # is a BCP-47 language code (e.g. "ru-RU", "en-US"), and each value
+        # is a dict with optional fields: creator, credit, description,
+        # rights, terms, source. One language may be marked with
+        # "default": true to indicate which value should become x-default /
+        # plain XMP tag.
 
-        credit = config.get("credit")
-        if credit:
-            tags[self.TAG_XMP_PHOTOSHOP_CREDIT] = credit
+        if not isinstance(config, dict) or "languages" not in config:
+            raise ValueError("ArchiveMetadata.write_master_tags expects config with 'languages' mapping")
 
-        rights = config.get("rights")
-        if rights:
-            tags[self.TAG_XMP_DC_RIGHTS] = rights
+        languages = config["languages"]
+        if not isinstance(languages, dict) or not languages:
+            raise ValueError("ArchiveMetadata.write_master_tags requires non-empty 'languages' mapping")
 
-        usage_terms = config.get("usage_terms")
-        if usage_terms:
-            tags[self.TAG_XMP_XMPRIGHTS_USAGE_TERMS] = usage_terms
+        # Choose default language block (first with default=True, else fall
+        # back to the first language in the mapping for stability).
+        default_lang_code: str | None = None
+        default_block: dict[str, Any] | None = None
+        for lang_code, block in languages.items():
+            if isinstance(block, dict) and block.get("default"):
+                default_lang_code = lang_code
+                default_block = block
+                break
 
-        source = config.get("source")
-        if source:
-            tags[self.TAG_XMP_DC_SOURCE] = source
+        if default_block is None:
+            # Fallback: pick the first language deterministically
+            default_lang_code, default_block = next(iter(languages.items()))
+
+        # Creator is not LangAlt in XMP – it is a bag of names. We take it
+        # from the default language block (if present) and encode it once, as
+        # a list of authors.
+        if isinstance(default_block, dict):
+            creator_value = default_block.get("creator")
+            if creator_value:
+                if isinstance(creator_value, list):
+                    tags[self.TAG_XMP_DC_CREATOR] = creator_value
+                else:
+                    tags[self.TAG_XMP_DC_CREATOR] = [creator_value]
+
+        # Language-aware text fields. For each language we write TAG-langCode,
+        # and for the default language we also write the plain TAG (which
+        # exiftool maps to x-default for LangAlt tags).
+        text_field_map = {
+            "description": self.TAG_XMP_DC_DESCRIPTION,
+            "credit": self.TAG_XMP_PHOTOSHOP_CREDIT,
+            "rights": self.TAG_XMP_DC_RIGHTS,
+            "terms": self.TAG_XMP_XMPRIGHTS_USAGE_TERMS,
+            "source": self.TAG_XMP_DC_SOURCE,
+        }
+
+        for lang_code, block in languages.items():
+            if not isinstance(block, dict):
+                continue
+
+            for field_name, tag_base in text_field_map.items():
+                raw_value = block.get(field_name)
+                normalized = _normalize_text(raw_value)
+                if not normalized:
+                    continue
+
+                # Language-specific variant
+                lang_tag = f"{tag_base}-{lang_code}"
+                tags[lang_tag] = normalized
+
+                # Default/plain variant for the chosen default language
+                if block is default_block:
+                    tags[tag_base] = normalized
 
         # Log file size for large files (useful for performance tracking)
         file_size = file_path.stat().st_size

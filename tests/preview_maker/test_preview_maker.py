@@ -130,11 +130,18 @@ class TestPreviewMakerBatch:
         # Step 1: run FileOrganizer to write canonical metadata to MSR
         organizer = FileOrganizer(logger)
         config = {
-            "creator": "John Doe",
-            "credit": "The Archive",
-            "rights": "Public Domain",
-            "usage_terms": "Free to use",
-            "source": "Box 42",
+            "metadata": {
+                "languages": {
+                    "en-US": {
+                        "default": True,
+                        "creator": "John Doe",
+                        "credit": "The Archive",
+                        "rights": "Public Domain",
+                        "terms": "Free to use",
+                        "source": "Box 42",
+                    }
+                }
+            }
         }
 
         assert organizer.process(msr_path, config)

@@ -24,6 +24,24 @@ class TestExiftoolCompliance:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return json.loads(result.stdout)[0]
 
+    def _minimal_config(self) -> dict:
+        """Return minimal organizer config with required metadata languages."""
+        return {
+            "metadata": {
+                "languages": {
+                    "en-US": {
+                        "default": True,
+                        "creator": "Test Author",
+                        "credit": "Test Archive",
+                        "rights": "Test Rights",
+                        "terms": "Test Terms",
+                        "source": "Test Source",
+                        "description": "Test description",
+                    }
+                }
+            }
+        }
+
     def test_full_metadata_compliance(self, temp_dir, logger):
         """Verify that all required metadata fields are written and visible to exiftool."""
         filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
@@ -32,11 +50,19 @@ class TestExiftoolCompliance:
         
         processor = FileOrganizer(logger)
         config = {
-            "creator": "John Doe",
-            "credit": "The Archive",
-            "rights": "Public Domain",
-            "usage_terms": "Free to use",
-            "source": "Box 42"
+            "metadata": {
+                "languages": {
+                    "en-US": {
+                        "default": True,
+                        "creator": "John Doe",
+                        "credit": "The Archive",
+                        "rights": "Public Domain",
+                        "terms": "Free to use",
+                        "source": "Box 42",
+                        "description": "Test description for 1950-06-15 image",
+                    }
+                }
+            }
         }
         processor.process(file_path, config)
         
@@ -66,10 +92,16 @@ class TestExiftoolCompliance:
         date_created = meta.get("XMP:DateCreated") or meta.get("XMP-photoshop:DateCreated")
         assert "1950:06:15 12:30:45" in date_created or "1950-06-15" in date_created
 
-        # 4. Check Description
-        assert "XMP:Description" in meta or "XMP-dc:Description" in meta
-        desc = meta.get("XMP:Description") or meta.get("XMP-dc:Description")
-        assert "Exact date: 1950-06-15" in desc
+        # 4. Check Description (now driven by config, language-specific)
+        # We expect the default language (en-US) to be visible via
+        # XMP:Description / XMP-dc:Description-*.
+        desc = (
+            meta.get("XMP:Description")
+            or meta.get("XMP-dc:Description-en-US")
+            or meta.get("XMP-dc:Description")
+        )
+        assert desc is not None
+        assert "Test description for 1950-06-15 image" in str(desc)
 
         # 5. Check Configurable Fields
         # XMP-dc:Creator is an array/bag, so ExifTool returns it as a string representation of array
@@ -88,7 +120,7 @@ class TestExiftoolCompliance:
         self.create_dummy_image(file_path)
         
         processor = FileOrganizer(logger)
-        processor.process(file_path, {})
+        processor.process(file_path, self._minimal_config())
         
         # 1950 / 1950.00.00 / DERIVATIVES
         processed_path = temp_dir / "processed" / "1950" / "1950.00.00" / "DERIVATIVES" / filename
@@ -132,7 +164,7 @@ class TestExiftoolCompliance:
         
         # Process the file
         processor = FileOrganizer(logger)
-        processor.process(file_path, {})
+        processor.process(file_path, self._minimal_config())
         
         # Check processed file: 2025 / 2025.11.29 / SOURCES
         processed_path = temp_dir / "processed" / "2025" / "2025.11.29" / "SOURCES" / filename
@@ -162,7 +194,7 @@ class TestExiftoolCompliance:
         
         # Process the file
         processor = FileOrganizer(logger)
-        processor.process(file_path, {})
+        processor.process(file_path, self._minimal_config())
         
         # Check processed file: 2025 / 2025.11.29 / SOURCES
         processed_path = temp_dir / "processed" / "2025" / "2025.11.29" / "SOURCES" / filename

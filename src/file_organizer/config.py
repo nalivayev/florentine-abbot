@@ -31,11 +31,13 @@ class Config:
         template_path = get_template_path('file_organizer', 'config.template.json')
         default_config = {
             "_comment": "Configuration for File Organizer",
-            "creator": None,
-            "credit": None,
-            "rights": None,
-            "usage_terms": None,
-            "source": None
+            "metadata": {
+                "_comment": [
+                    "Human-readable metadata texts (see config.template.json for full example).",
+                    "languages: keys are BCP-47 codes like 'ru-RU', 'en-US'."
+                ],
+                "languages": {}
+            }
         }
         
         if ensure_config_exists(self.logger, self.config_path, default_config, template_path):
@@ -71,20 +73,20 @@ class Config:
             self.logger.debug("Configuration unchanged")
             return False
     
-    def get_metadata(self) -> dict[str, str | None]:
+    def get_metadata(self) -> dict[str, Any]:
+        """Get metadata configuration block used for XMP fields.
+
+        Returns the raw ``metadata`` section from the config, which is
+        expected to contain a ``languages`` mapping. ``ArchiveMetadata`` is
+        responsible for interpreting this structure and writing appropriate
+        XMP/LangAlt tags.
         """
-        Get metadata configuration for XMP fields.
-        
-        Returns:
-            Dictionary with XMP field values.
-        """
-        return {
-            "creator": self.data.get("creator"),
-            "credit": self.data.get("credit"),
-            "rights": self.data.get("rights"),
-            "usage_terms": self.data.get("usage_terms"),
-            "source": self.data.get("source"),
-        }
+
+        metadata = self.data.get("metadata")
+        if not isinstance(metadata, dict):
+            raise ValueError("File Organizer config must contain a 'metadata' object")
+
+        return metadata
     
     def get(self, key: str, default: Any = None) -> Any:
         """

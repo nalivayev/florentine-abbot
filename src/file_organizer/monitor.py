@@ -62,10 +62,6 @@ class FileMonitor(FileSystemEventHandler):
         """
         return self.config.get_metadata()
 
-    # ------------------------------------------------------------------
-    # Watchdog event handling
-    # ------------------------------------------------------------------
-
     def on_created(self, event: FileSystemEvent) -> None:
         """Handle file creation events."""
 

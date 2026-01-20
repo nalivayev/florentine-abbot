@@ -108,26 +108,6 @@ class FileProcessor:
 
         return parsed
 
-    def _generate_description(self, parsed: ParsedFilename) -> str:
-        """Generate a human-readable description from parsed data."""
-        parts = []
-        
-        # Date description
-        if parsed.modifier == 'E':
-            parts.append(f"Exact date: {parsed.year:04d}-{parsed.month:02d}-{parsed.day:02d}")
-        elif parsed.modifier == 'C':
-            parts.append(f"Circa {parsed.year:04d}")
-        elif parsed.modifier == 'B':
-            parts.append(f"Before {parsed.year:04d}")
-        elif parsed.modifier == 'F':
-            parts.append(f"After {parsed.year:04d}")
-        elif parsed.modifier == 'A':
-            parts.append("Date unknown")
-            
-        # Add other parts if needed (Group, Subgroup etc)
-        
-        return ". ".join(parts)
-
     def _write_metadata(self, file_path: Path, parsed: ParsedFilename, config: dict[str, Any]) -> bool:
         """Write metadata to EXIF/XMP fields using exiftool.
 
@@ -140,10 +120,8 @@ class FileProcessor:
             True if all metadata written successfully, False otherwise.
         """
         try:
-            description = self._generate_description(parsed)
             self._metadata.write_master_tags(
                 file_path=file_path,
-                description=description,
                 parsed=parsed,
                 config=config,
                 logger=self.logger,

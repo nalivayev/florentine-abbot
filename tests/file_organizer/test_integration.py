@@ -28,6 +28,24 @@ class TestIntegration:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return json.loads(result.stdout)[0]
 
+    def _minimal_config(self) -> dict:
+        """Return minimal organizer config with required metadata languages."""
+        return {
+            "metadata": {
+                "languages": {
+                    "en-US": {
+                        "default": True,
+                        "creator": "Test Author",
+                        "credit": "Test Archive",
+                        "rights": "Test Rights",
+                        "terms": "Test Terms",
+                        "source": "Test Source",
+                        "description": "Test description",
+                    }
+                }
+            }
+        }
+
     def test_process_valid_tiff(self, temp_dir, logger):
         # 1. Setup
         filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
@@ -35,9 +53,9 @@ class TestIntegration:
         self.create_dummy_image(file_path)
         
         processor = FileOrganizer(logger)
-        
+
         # 2. Execute
-        result = processor.process(file_path, {})
+        result = processor.process(file_path, self._minimal_config())
         
         # 3. Verify
         assert result is True
@@ -75,9 +93,9 @@ class TestIntegration:
         self.create_dummy_image(file_path)
         
         processor = FileOrganizer(logger)
-        
+
         # Execute
-        result = processor.process(file_path, {})
+        result = processor.process(file_path, self._minimal_config())
         
         assert result is True
         
@@ -93,8 +111,8 @@ class TestIntegration:
         self.create_dummy_image(file_path)
         
         processor = FileOrganizer(logger)
-        
-        result = processor.process(file_path, {})
+
+        result = processor.process(file_path, self._minimal_config())
         assert result is True
         
         # 1950 / 1950.00.00 / DERIVATIVES
@@ -122,7 +140,7 @@ class TestIntegration:
         processor = FileOrganizer(logger)
 
         # Execute
-        result = processor.process(file_path, {})
+        result = processor.process(file_path, self._minimal_config())
         assert result is True
 
         # PRV should be stored in processed/YYYY/YYYY.MM.DD/ (no SOURCES/DERIVATIVES)

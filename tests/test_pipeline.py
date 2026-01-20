@@ -85,8 +85,15 @@ class TestPipeline(unittest.TestCase):
         # --- Step 1: File Organizer ---
         organizer = FileOrganizer(self.logger)
         config = {
-            "creator": "Test User",
-            "rights": "Public Domain",
+            "metadata": {
+                "languages": {
+                    "en-US": {
+                        "default": True,
+                        "creator": "Test User",
+                        "rights": "Public Domain",
+                    }
+                }
+            }
         }
 
         success = organizer.process(file_path, config)
@@ -143,8 +150,15 @@ class TestPipeline(unittest.TestCase):
         # Step 1: organize MSR into processed/YYYY/YYYY.MM.DD/SOURCES
         organizer = FileOrganizer(self.logger)
         config = {
-            "creator": "Test User",
-            "rights": "Public Domain",
+            "metadata": {
+                "languages": {
+                    "en-US": {
+                        "default": True,
+                        "creator": "Test User",
+                        "rights": "Public Domain",
+                    }
+                }
+            }
         }
 
         success = organizer.process(file_path, config)

@@ -165,7 +165,41 @@ file-organizer "D:\Scans\Inbox" --daemon
 
 **With Metadata (using JSON config):**
 1. Run `file-organizer` once without `--config` to generate a default config file based on `config.template.json`.
-2. Open the created JSON file (typically under the user config directory) and fill in fields such as `creator`, `credit`, `rights`, `usage_terms`, `source`.
+2. Open the created JSON file (typically under the user config directory) and edit the `metadata.languages` section. Each key under `languages` is a BCP‑47 language code (for example, `"ru-RU"`, `"en-US"`) with a block of human‑readable fields:
+
+	 ```jsonc
+	 "metadata": {
+		 "languages": {
+			 "ru-RU": {
+				 "default": true,
+				 "creator": ["Имя Фамилия", "Соавтор"],
+				 "credit": "Название архива или коллекции",
+				 "description": [
+					 "Краткое описание серии или набора снимков.",
+					 "Можно в несколько строк."
+				 ],
+				 "rights": "Строка про права и ограничения.",
+				 "terms": "Условия использования (если нужны).",
+				 "source": "Физический источник: коробка, альбом и т.п."
+			 },
+			 "en-US": {
+				 "default": false,
+				 "creator": ["Name Surname", "Co-author"],
+				 "credit": "Archive or collection name",
+				 "description": [
+					 "Short description of the series or image set.",
+					 "Can span multiple lines."
+				 ],
+				 "rights": "Rights and restrictions text.",
+				 "terms": "Usage terms (if needed).",
+				 "source": "Physical source: box, album, etc."
+			 }
+		 }
+	 }
+	 ```
+
+	 One language block should have `"default": true`; its values are also written into the plain XMP fields (x‑default). The `creator` field is taken from the default language block and written once as a list of names; all other text fields (`description`, `credit`, `rights`, `terms`, `source`) are written per language.
+
 3. Use `--config` to point to this file explicitly if needed:
 
 ```sh

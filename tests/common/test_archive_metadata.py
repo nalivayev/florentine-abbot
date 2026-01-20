@@ -62,14 +62,21 @@ def test_write_master_exact_date_sets_original_and_created(tmp_path: Path) -> No
         suffix="ARW",
         extension="arw",
     )
-
-    config = {"creator": "John Doe", "rights": "\u00A9 2026", "source": "Family Album"}
-    description = "Trip to Baikal — best shot"
+    config = {
+        "languages": {
+            "en-US": {
+                "default": True,
+                "creator": "John Doe",
+                "rights": "\u00A9 2026",
+                "source": "Family Album",
+                "description": "Trip to Baikal  best shot",
+            }
+        }
+    }
 
     # Act
     am.write_master_tags(
         file_path=file_path,
-        description=description,
         parsed=parsed,
         config=config,
         logger=logger,
@@ -85,8 +92,10 @@ def test_write_master_exact_date_sets_original_and_created(tmp_path: Path) -> No
     assert "XMP-xmp:Identifier" in tags
     _assert_uuid(tags["XMP-dc:Identifier"])  # uuid format
 
-    # Description & Title
-    assert tags["XMP-dc:Description"] == description
+    # Description & Title (default language value)
+    assert tags["XMP-dc:Description"] == config["languages"]["en-US"]["description"]
+    # Language-specific variant also written
+    assert tags["XMP-dc:Description-en-US"] == config["languages"]["en-US"]["description"]
     assert tags["XMP-dc:Title"] == file_path.stem
 
     # Dates
@@ -96,10 +105,12 @@ def test_write_master_exact_date_sets_original_and_created(tmp_path: Path) -> No
     # DateTimeDigitized derived from CreateDate fallback
     assert tags.get("XMP-exif:DateTimeDigitized") == create_date
 
-    # Configurable fields
+    # Configurable fields (taken from default language block)
     assert tags["XMP-dc:Creator"] == ["John Doe"]
     assert tags["XMP-dc:Rights"] == "\u00A9 2026"
+    assert tags["XMP-dc:Rights-en-US"] == "\u00A9 2026"
     assert tags["XMP-dc:Source"] == "Family Album"
+    assert tags["XMP-dc:Source-en-US"] == "Family Album"
 
 
 def test_write_master_partial_date_sets_xmp_created_only(tmp_path: Path) -> None:
@@ -130,9 +141,12 @@ def test_write_master_partial_date_sets_xmp_created_only(tmp_path: Path) -> None
     # Act
     am.write_master_tags(
         file_path=file_path,
-        description="Circa 1950 portrait",
         parsed=parsed,
-        config={},
+        config={
+            "languages": {
+                "en-US": {"default": True, "description": "Circa 1950 portrait"}
+            }
+        },
         logger=logger,
     )
 
