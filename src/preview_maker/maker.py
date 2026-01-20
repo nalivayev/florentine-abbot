@@ -12,7 +12,7 @@ from PIL import Image
 
 from common.logger import Logger
 from common.naming import FilenameParser
-from common.constants import SOURCES_DIR_NAME
+from common.constants import SOURCES_DIR_NAME, SUPPORTED_IMAGE_EXTENSIONS
 from common.archive_metadata import ArchiveMetadata
 
 
@@ -82,8 +82,10 @@ class PreviewMaker:
                 if not src_path.is_file():
                     continue
 
-                # Skip non-image files (e.g., .log files)
-                if src_path.suffix.lower() not in {".tif", ".tiff", ".jpg", ".jpeg", ".png"}:
+                # Only consider real image files as PRV sources; skip logs and
+                # other sidecar/auxiliary files that may share the same base
+                # name (e.g. *.RAW.log, *.icc).
+                if src_path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
                     continue
 
                 parsed = parser.parse(src_path.name)

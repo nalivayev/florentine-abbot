@@ -24,36 +24,37 @@ The project implements three functional blocks of OAIS:
 
 ## Scanning (Scan Batcher)
 
-A utility designed to automate and optimize the scanning workflow using [VueScan](https://www.hamrick.com) by Ed Hamrick.
+A utility for automating and stabilizing the scanning workflow using external scanning software (for example, [VueScan](https://www.hamrick.com) by Ed Hamrick).
 
 ### Why this matters 
 
-VueScan is powerful, but its flexibility becomes a liability at scale: hundreds of settings across different tabs are easy to change by accident or miss.
+Modern scanning applications are powerful and flexible, but at scale their rich settings often turn into a problem: hundreds of options across multiple tabs are easy to change accidentally or forget to update.
 
-Florentine Abbot addresses this with canonical INI profiles and a scripted workflow that deliver:
-- **Predictability** — the same settings for every scan
+Florentine Abbot addresses this with canonical INI profiles and a scripted workflow that provide:
+- **Predictability** — the same settings for every scan run
 - **Reproducibility** — the ability to repeat the process exactly, even months later
-- **Standardization** — a single workflow shared by the team
-- **Automation** — fewer manual steps and less chance of human error
+- **Standardization** — a single, shared workflow for the whole team
+- **Automation** — fewer manual steps and less room for human error
 
 ### Features
 
-- **Automatic calculation of optimal scanning DPI** based on photo and output requirements.
+- **Automatic calculation of optimal scanning DPI** based on photo characteristics and output requirements.
 - **Batch processing**: interactive, single calculation, or folder-based workflows.
 - **Flexible template system** for file naming and metadata, including EXIF extraction.
-- **Workflow automation**: run VueScan with generated settings, move and rename output files, extract EXIF metadata.
+- **Workflow automation**: run the selected scan engine (e.g. VueScan) with generated settings, move and rename output files, extract EXIF metadata.
 - **Comprehensive logging** for all workflow steps.
 - **Command-line interface** with argument validation and help.
-- **Plugin system**: easily extend workflows by adding new plugins.
+- **Plugin / engine system**: extend workflows by adding new scan engines or plugins.
 
 ### Requirements
 
 - Python 3.10+
 - [ExifTool](https://exiftool.org/) must be installed and available in PATH.
+- At least one supported scanning engine (by default, the project provides integration with VueScan).
 
 ### Usage
 
-Run the main workflow:
+Run the main workflow (example with VueScan as the engine):
 
 ```sh
 scan-batcher --workflow <path_to_ini> --engine vuescan --batch scan --min-dpi 300 --max-dpi 4800 --dpis 600 1200 2400 4800
@@ -63,7 +64,7 @@ The program will **interactively prompt** you for the photo and image dimensions
 On Windows PowerShell, the syntax is the same. For values with spaces, use quotes:
 
 ```powershell
-scan-batcher --workflow .\examples\workflow.ini --batch scan --dpis 300 600 1200 2400 --templates author="John Doe" project="Family Archive"
+scan-batcher --workflow .\examples\workflow.ini --engine vuescan --batch scan --dpis 300 600 1200 2400 --templates author="John Doe" project="Family Archive"
 ```
 
 For a full list of arguments and options, use:

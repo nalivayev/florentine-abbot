@@ -12,14 +12,12 @@ from typing import Any
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename, FilenameValidator
-from common.constants import SOURCES_DIR_NAME, DERIVATIVES_DIR_NAME
+from common.constants import SOURCES_DIR_NAME, DERIVATIVES_DIR_NAME, SUPPORTED_IMAGE_EXTENSIONS
 from common.archive_metadata import ArchiveMetadata
 
 
 class FileProcessor:
     """Processor that extracts metadata and organizes individual files."""
-
-    SUPPORTED_EXTENSIONS = {".tiff", ".tif", ".jpg", ".jpeg"}
 
     def __init__(self, logger: Logger, root_path: Path | None = None) -> None:
         self.logger = logger
@@ -48,7 +46,7 @@ class FileProcessor:
             return False
 
         # Check extension
-        if file_path.suffix.lower() not in self.SUPPORTED_EXTENSIONS:
+        if file_path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
             return False
 
         # Try to parse and validate filename
