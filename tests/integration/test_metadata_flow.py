@@ -1,12 +1,14 @@
 from pathlib import Path
 import uuid
+from typing import Any
 
 from common.archive_metadata import ArchiveMetadata
 from common.naming import ParsedFilename
 from common.logger import Logger
+from common.exifer import Exifer
 
 
-class StoreExifer:
+class StoreExifer(Exifer):
     """Exifer double that keeps an in-memory store of tags per file.
 
     - read() returns requested tags from the store (or all known for the file).
@@ -15,16 +17,24 @@ class StoreExifer:
     """
 
     def __init__(self) -> None:
-        self.store: dict[Path, dict[str, str]] = {}
+        # Avoid starting real exiftool; we only keep an in-memory store.
+        self.executable = "exiftool"
+        self.store: dict[Path, dict[str, Any]] = {}
 
-    def read(self, file_path: Path, tag_names: list[str]) -> dict[str, str]:
+    def read(self, file_path: Path, tag_names: list[str]) -> dict[str, Any]:
         tags = self.store.get(file_path, {})
         if not tag_names:
             return dict(tags)
         # Return only requested keys if known
         return {k: v for k, v in tags.items() if k in tag_names or k in tags}
 
-    def write(self, file_path: Path, tags: dict[str, str]) -> None:
+    def write(
+        self,
+        file_path: Path,
+        tags: dict[str, Any],
+        overwrite_original: bool = True,
+        timeout: int | None = None,
+    ) -> None:
         existing = self.store.setdefault(file_path, {})
         existing.update({k: v for k, v in tags.items() if v is not None})
 

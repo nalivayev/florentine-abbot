@@ -29,7 +29,8 @@ class TestFileOrganizer:
 
     def test_should_process_invalid_extension(self, processor):
         """Test should_process rejects invalid extension."""
-        assert processor.should_process(Path('1950.06.15.12.00.00.E.FAM.POR.000001.A.MSR.png')) is False
+        # PNG is a supported image extension; use a truly invalid one here
+        assert processor.should_process(Path('1950.06.15.12.00.00.E.FAM.POR.000001.A.MSR.txt')) is False
 
     def test_should_process_invalid_filename(self, processor):
         """Test should_process rejects invalid filename format."""
