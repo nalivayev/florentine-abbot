@@ -81,9 +81,16 @@ def test_write_master_exact_date_sets_original_and_created(tmp_path: Path) -> No
                 "creator": "John Doe",
                 "rights": "\u00A9 2026",
                 "source": "Family Album",
-                "description": "Trip to Baikal  best shot",
-            }
-        }
+                "description": "Trip to Baikal \u0014 best shot",
+            },
+            "ru-RU": {
+                "default": False,
+                "creator": "Джон До",
+                "rights": "\u00A9 2026 (RU)",
+                "source": "Семейный альбом",
+                "description": "Поездка на Байкал — лучший кадр",
+            },
+        },
     }
 
     # Act
@@ -103,6 +110,29 @@ def test_write_master_exact_date_sets_original_and_created(tmp_path: Path) -> No
     assert "XMP-dc:Identifier" in tags
     assert "XMP-xmp:Identifier" in tags
     _assert_uuid(tags["XMP-dc:Identifier"])  # uuid format
+
+    # Description & Title (default language value)
+    assert tags["XMP-dc:Description"] == config["languages"]["en-US"]["description"]
+    # Language-specific variants also written for each language
+    assert tags["XMP-dc:Description-en-US"] == config["languages"]["en-US"]["description"]
+    assert tags["XMP-dc:Description-ru-RU"] == config["languages"]["ru-RU"]["description"]
+    assert tags["XMP-dc:Title"] == file_path.stem
+
+    # Dates
+    assert tags["Exif:DateTimeOriginal"] == "2024:06:15 14:30:22"
+    # XMP-photoshop:DateCreated uses ISO with T separator
+    assert tags["XMP-photoshop:DateCreated"] == "2024-06-15T14:30:22"
+    # DateTimeDigitized derived from CreateDate fallback
+    assert tags.get("XMP-exif:DateTimeDigitized") == create_date
+
+    # Configurable fields (taken from default language block)
+    assert tags["XMP-dc:Creator"] == ["John Doe"]
+    assert tags["XMP-dc:Rights"] == "\u00A9 2026"
+    assert tags["XMP-dc:Rights-en-US"] == "\u00A9 2026"
+    assert tags["XMP-dc:Rights-ru-RU"] == "\u00A9 2026 (RU)"
+    assert tags["XMP-dc:Source"] == "Family Album"
+    assert tags["XMP-dc:Source-en-US"] == "Family Album"
+    assert tags["XMP-dc:Source-ru-RU"] == "Семейный альбом"
 
     # Description & Title (default language value)
     assert tags["XMP-dc:Description"] == config["languages"]["en-US"]["description"]
