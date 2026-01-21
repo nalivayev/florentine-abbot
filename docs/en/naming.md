@@ -458,6 +458,12 @@ For each date (`YYYY.MM.DD`), all files are divided by roles. The role is encode
 
 This guarantees that when browsing the archive in a file manager, the user sees only lightweight, viewable copies, while the technical storage layer remains separate, structured, and fully reproducible.
 
+The names are chosen deliberately:
+
+* `SOURCES` emphasizes that everything needed to faithfully recreate the event (RAW + master + processing context) lives in one place and must be preserved.
+* `DERIVATIVES` emphasizes that its contents are **reproducible** from `SOURCES` and can be safely regenerated or discarded if storage needs change.
+* PRV files in the date root form the **access layer**: you can browse the archive by year/date without ever touching heavy preservation files unless you explicitly dive into `SOURCES/` or `DERIVATIVES/`.
+
 ### 5. Recommended structure of a date folder
 
 The following structure is recommended for each date:
@@ -480,11 +486,7 @@ PHOTO_ARCHIVES/
                     1945.06.15.12.00.00.E.FAM.POR.0001.A.PRT.jpg
 ```
 
-Here:
-
-* `SOURCES/` — folder with digital source materials for this date: RAW, master copies, and all auxiliary files required to reproduce the master copy from RAW;
-* `DERIVATIVES/` — folder for derived files (print versions, web copies, additional edits, project files, etc.) that can be recreated from the source materials if needed;
-* PRV files are located in the root of the date folder and represent the primary access layer.
+This example illustrates the rule described above in practice: PRV files sit at the root of the date folder, while source materials and derivatives are separated into `SOURCES/` and `DERIVATIVES/`.
 
 **Path examples:**
 
