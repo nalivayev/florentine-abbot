@@ -54,7 +54,7 @@ class FileMonitor(FileSystemEventHandler):
             # Windows doesn't have SIGHUP
             self.logger.debug("SIGHUP not available on this platform")
 
-    def get_metadata(self) -> dict[str, Any]:
+    def _get_metadata(self) -> dict[str, Any]:
         """Get current metadata configuration.
         
         Returns:
@@ -96,7 +96,7 @@ class FileMonitor(FileSystemEventHandler):
 
             try:
                 # Get fresh metadata from config (in case it was reloaded)
-                metadata = self.get_metadata()
+                metadata = self._get_metadata()
                 self.processor.process(file_path, metadata)
             except Exception as e:
                 self.logger.error(f"Error processing {file_path}: {e}")

@@ -10,7 +10,7 @@ from scan_batcher.workflow import Workflow
 from scan_batcher.constants import DEFAULT_ENGINE, RoundingStrategy
 
 
-def get_subclasses(cls: type) -> list[type]:
+def _get_subclasses(cls: type) -> list[type]:
     """
     Recursively find all subclasses of a given class, including subclasses of subclasses.
 
@@ -23,10 +23,10 @@ def get_subclasses(cls: type) -> list[type]:
     subclasses = []
     for subclass in cls.__subclasses__():
         subclasses.append(subclass)
-        subclasses.extend(get_subclasses(subclass))
+        subclasses.extend(_get_subclasses(subclass))
     return subclasses
 
-def create_batch(
+def _create_batch(
     logger: Logger,
     batch: Sequence[str] | None, 
     min_res: int | None, 
@@ -58,7 +58,7 @@ def create_batch(
     kind = batch[0].lower()  # Case-insensitive comparison
     
     # Search through all subclasses (including nested)
-    for cls in get_subclasses(Batch):
+    for cls in _get_subclasses(Batch):
         if cls.__name__.lower() == kind:
             # Calculate class needs logger, Process doesn't
             if cls.__name__.lower() in ["calculate", "scan"]:
@@ -68,7 +68,7 @@ def create_batch(
     
     raise ValueError(f"Unknown batch type: {batch[0]}")
 
-def create_workflow(logger: Logger, engine: str = DEFAULT_ENGINE) -> Workflow:
+def _create_workflow(logger: Logger, engine: str = DEFAULT_ENGINE) -> Workflow:
     """
     Get a registered workflow class by engine name and return its instance.
 
@@ -98,9 +98,9 @@ def main() -> None:
     
     logger = Logger("scan_batcher", args.log_path, level=logging.INFO, console=True)
     logger.info("Script has been started")
-    batch = create_batch(logger, args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)
+    batch = _create_batch(logger, args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)
 
-    workflow = create_workflow(logger, args.engine)
+    workflow = _create_workflow(logger, args.engine)
     for item in batch:
         try:
             batch_dict = dict(item) if isinstance(item, list) else item

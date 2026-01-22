@@ -74,5 +74,3 @@ class TestFileOrganizer:
         """Test _parse_and_validate with invalid date."""
         result = processor._parse_and_validate('1950.13.15.00.00.00.E.FAM.POR.000001.A.MSR.tiff')
         assert result is None
-
-
