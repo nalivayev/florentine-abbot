@@ -4,7 +4,7 @@ from typing import Any, Sequence
 from scan_batcher.constants import RoundingStrategy, DEFAULT_ENGINE
 
 
-class KeyValueAction(Action):
+class _KeyValueAction(Action):
     """
     Custom argparse action to parse key-value pairs from command-line arguments.
 
@@ -76,7 +76,7 @@ class Parser(ArgumentParser):
             "--templates",
             type=str,
             nargs="+",
-            action=KeyValueAction,
+            action=_KeyValueAction,
             help=(
                 "List of template key-value pairs for file naming or metadata, "
                 "e.g. -t year=2024 author=Smith"
