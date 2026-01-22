@@ -4,6 +4,19 @@ This log summarizes the most recent changes in the repository, with commit IDs, 
 
 ## Commits
 
+### [Pending] — 2026-01-22
+feat: add extensible configuration for metadata tags and suffix routing
+- Added: `src/file_organizer/tags.template.json`, `src/file_organizer/routes.template.json`, `tests/file_organizer/test_processor.py`
+- Modified: `src/common/archive_metadata.py`, `src/common/config_utils.py`, `src/common/constants.py`, `src/file_organizer/config.py`, `src/file_organizer/organizer.py`, `src/file_organizer/processor.py`, `tests/file_organizer/test_organizer.py`, `tests/test_pipeline.py`, `pyproject.toml`, `README.md`, `README.ru.md`, `docs/change_log.md`
+- Features:
+  - Optional `tags.json` for customizing metadata field to XMP tag mapping
+  - Optional `routes.json` for customizing file suffix routing rules
+  - Both configs fall back to hardcoded defaults if files missing
+  - Added `load_optional_config()` utility function
+  - Refactored routing logic to use concrete folder names (SOURCES, DERIVATIVES, .)
+  - 7 new routing tests in `test_processor.py`
+  - All 72 tests passing
+
 ### 4bdda45 — 2026-01-15 22:55 (+03:00)
 docs(en/digital_workflow): expand Part 5 to mirror RU — RAW vs DNG guidance, PRV folder, example structure
 - Modified: `docs/en/digital_workflow.md`

@@ -1,0 +1,36 @@
+{
+  "_comment": [
+    "Metadata field to XMP tag mapping.",
+    "This file defines which XMP tags are used for metadata fields in the archive.",
+    "Each key is a field name used in config.json languages section.",
+    "Each value is the corresponding XMP tag name that will be written to image files.",
+    "",
+    "Standard fields:",
+    "  - description: General description of the image/archive",
+    "  - credit: Attribution/credit line (e.g., archive name)",
+    "  - rights: Copyright notice",
+    "  - terms: Usage terms and restrictions",
+    "  - source: Physical location or source of the original item",
+    "",
+    "All fields except 'creator' are written as XMP LangAlt tags with language variants.",
+    "'creator' is handled separately as XMP-dc:Creator (bag of names, not LangAlt).",
+    "",
+    "To add custom fields:",
+    "  1. Add a new entry here: \"fieldname\": \"XMP-namespace:TagName\"",
+    "  2. Add the field to your languages in config.json",
+    "  3. The field will automatically be written to images with language variants",
+    "",
+    "If this file is missing, the following defaults are used:",
+    "  - description: XMP-dc:Description",
+    "  - credit: XMP-photoshop:Credit",
+    "  - rights: XMP-dc:Rights",
+    "  - terms: XMP-xmpRights:UsageTerms",
+    "  - source: XMP-dc:Source"
+  ],
+
+  "description": "XMP-dc:Description",
+  "credit": "XMP-photoshop:Credit",
+  "rights": "XMP-dc:Rights",
+  "terms": "XMP-xmpRights:UsageTerms",
+  "source": "XMP-dc:Source"
+}

@@ -74,9 +74,16 @@ class FileOrganizer:
 
         config = self._load_config(config_path)
         metadata: dict[str, Any] = config.get_metadata()
+        metadata_tags: dict[str, str] = config.get_metadata_tags()
+        suffix_routing: dict[str, str] = config.get_suffix_routing()
 
         # Create a new processor with root_path set for recursive mode
-        processor = FileProcessor(self._logger, root_path=input_path if recursive else None)
+        processor = FileProcessor(
+            self._logger,
+            root_path=input_path if recursive else None,
+            metadata_tags=metadata_tags,
+            suffix_routing=suffix_routing
+        )
 
         mode_str = "RECURSIVE" if recursive else "BATCH"
         self._logger.info(f"Starting File Organizer in {mode_str} mode on {input_path}")

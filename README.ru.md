@@ -207,6 +207,50 @@ file-organizer "D:\Scans\Inbox" --daemon
 file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 ```
 
+### Расширенная конфигурация
+
+**Настройка полей метаданных (`tags.json`):**
+
+По умолчанию File Organizer использует стандартный набор XMP-тегов для метаданных (`description`, `credit`, `rights`, `terms`, `source`). Вы можете переопределить эти соответствия, создав файл `tags.json` в конфигурационной папке:
+
+```json
+{
+  "description": "XMP-dc:Description",
+  "credit": "XMP-photoshop:Credit",
+  "rights": "XMP-dc:Rights",
+  "terms": "XMP-xmpRights:UsageTerms",
+  "source": "XMP-dc:Source"
+}
+```
+
+Вы можете добавить собственные поля, указав новую пару `"имя_поля": "XMP-namespace:TagName"`. Затем добавьте это поле в языковые блоки конфигурации, и оно автоматически будет записываться в файлы с языковыми вариантами.
+
+**Настройка раскладки файлов (`routes.json`):**
+
+По умолчанию файлы раскладываются так:
+- `RAW`, `MSR` → `SOURCES/`
+- `PRV`, `VIEW` → корень папки даты (`.`)
+- все остальные → `DERIVATIVES/`
+
+Вы можете переопределить эту логику, создав файл `routes.json`:
+
+```json
+{
+  "RAW": "SOURCES",
+  "MSR": "SOURCES",
+  "PRV": ".",
+  "VIEW": ".",
+  "TIFF": "MASTERS",
+  "JPEG": "EXPORTS"
+}
+```
+
+Значения:
+- `"SOURCES"`, `"DERIVATIVES"` или любое имя папки — создать подпапку в `YYYY/YYYY.MM.DD/`
+- `"."` — положить файл прямо в корень папки даты
+
+Оба файла (`tags.json` и `routes.json`) опциональны. При их отсутствии используются встроенные значения по умолчанию.
+
 ## Preview Maker (генератор PRV)
 
 > **⚠️ Статус**: В разработке. Пока не полностью протестирована или документирована.

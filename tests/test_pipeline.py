@@ -1,4 +1,3 @@
-import logging
 from pathlib import Path
 
 import pytest
@@ -12,10 +11,6 @@ from archive_keeper.models import File, FileStatus
 from preview_maker import PreviewMaker
 from common.exifer import Exifer
 from common.logger import Logger
-
-
-# Configure logging to capture output during tests
-logging.basicConfig(level=logging.DEBUG)
 
 
 class TestPipeline:

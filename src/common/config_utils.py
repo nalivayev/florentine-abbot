@@ -129,6 +129,46 @@ def load_config(logger: Any, config_path: Path) -> dict[str, Any]:
         return {}
 
 
+def load_optional_config(
+    logger: Any,
+    config_path: Path,
+    default_dict: dict[str, Any]
+) -> dict[str, Any]:
+    """
+    Load optional configuration from JSON file with fallback to defaults.
+    
+    If file doesn't exist or fails to load, returns default_dict.
+    Useful for optional configuration files like tags.json, routes.json.
+    
+    Args:
+        logger: Logger instance for logging operations.
+        config_path: Path to config file (may not exist).
+        default_dict: Default configuration to use if file not found.
+        
+    Returns:
+        Configuration dictionary from file, or default_dict if unavailable.
+    """
+    if not config_path.exists():
+        if logger:
+            logger.debug(f"Optional config not found at {config_path}, using defaults")
+        return default_dict
+    
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        if logger:
+            logger.debug(f"Loaded optional config from {config_path}")
+        return config
+    except json.JSONDecodeError as e:
+        if logger:
+            logger.warning(f"Invalid JSON in {config_path}: {e}, using defaults")
+        return default_dict
+    except Exception as e:
+        if logger:
+            logger.warning(f"Error loading {config_path}: {e}, using defaults")
+        return default_dict
+
+
 def get_template_path(module_name: str, filename: str = "config.template.json") -> Path | None:
     """
     Get path to template file from installed package.

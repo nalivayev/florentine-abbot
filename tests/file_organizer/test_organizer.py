@@ -8,7 +8,9 @@ from pathlib import Path
 
 from PIL import Image
 from file_organizer.organizer import FileOrganizer
+from file_organizer.processor import FileProcessor
 from common.naming import FilenameParser
+from common.logger import Logger
 
 
 class TestFileOrganizer:
@@ -470,3 +472,4 @@ class TestExiftoolCompliance:
         # Note: Since EXIF:DateTimeDigitized can't be written to TIFF, processor writes to XMP-exif instead
         dt_digitized = meta_after.get("XMP-exif:DateTimeDigitized") or meta_after.get("XMP:DateTimeDigitized")
         assert dt_digitized == "2025:11:29 13:00:00"
+

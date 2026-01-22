@@ -6,10 +6,13 @@ from typing import Any
 from common.logger import Logger
 from common.config_utils import (
     get_config_path,
+    get_config_dir,
     ensure_config_exists,
     load_config,
+    load_optional_config,
     get_template_path
 )
+from common.constants import DEFAULT_METADATA_TAGS, DEFAULT_SUFFIX_ROUTING
 
 
 class Config:
@@ -87,6 +90,32 @@ class Config:
             raise ValueError("File Organizer config must contain a 'metadata' object")
 
         return metadata
+    
+    def get_metadata_tags(self) -> dict[str, str]:
+        """Get metadata field to XMP tag mapping.
+        
+        Loads from tags.json if present, otherwise uses DEFAULT_METADATA_TAGS.
+        
+        Returns:
+            Dictionary mapping field names to XMP tag names.
+        """
+        config_dir = get_config_dir()
+        tags_path = config_dir / "tags.json"
+        
+        return load_optional_config(self.logger, tags_path, DEFAULT_METADATA_TAGS)
+    
+    def get_suffix_routing(self) -> dict[str, str]:
+        """Get suffix routing rules.
+        
+        Loads from routes.json if present, otherwise uses DEFAULT_SUFFIX_ROUTING.
+        
+        Returns:
+            Dictionary mapping file suffixes to subfolder names ('SOURCES', 'DERIVATIVES', '.', etc.).
+        """
+        config_dir = get_config_dir()
+        routes_path = config_dir / "routes.json"
+        
+        return load_optional_config(self.logger, routes_path, DEFAULT_SUFFIX_ROUTING)
     
     def get(self, key: str, default: Any = None) -> Any:
         """

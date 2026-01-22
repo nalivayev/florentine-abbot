@@ -19,12 +19,27 @@ from common.archive_metadata import ArchiveMetadata
 class FileProcessor:
     """Processor that extracts metadata and organizes individual files."""
 
-    def __init__(self, logger: Logger, root_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        logger: Logger,
+        root_path: Path | None = None,
+        metadata_tags: dict[str, str] | None = None,
+        suffix_routing: dict[str, str] | None = None
+    ) -> None:
+        """Initialize FileProcessor.
+        
+        Args:
+            logger: Logger instance.
+            root_path: Optional root path for validation.
+            metadata_tags: Optional metadata field to XMP tag mapping.
+            suffix_routing: Optional suffix routing rules (suffix -> 'sources'/'derivatives'/'preview').
+        """
         self.logger = logger
         self.parser = FilenameParser()
         self.validator = FilenameValidator()
-        self._metadata = ArchiveMetadata()
+        self._metadata = ArchiveMetadata(metadata_tags=metadata_tags)
         self._root_path = root_path
+        self._suffix_routing = suffix_routing
 
     def should_process(self, file_path: Path) -> bool:
         """Check if the file should be processed.
@@ -179,14 +194,15 @@ class FileProcessor:
 
                 date_root_dir = processed_root / year_dir / date_dir
 
-                if suffix_upper in {"PRV", "VIEW"}:
-                    # Preview files (PRV/VIEW) live directly in the date folder
-                    processed_dir = date_root_dir
-                else:
-                    # RAW/MSR and related sources go to SOURCES/, other roles go to DERIVATIVES/
-                    source_suffixes = {"RAW", "MSR"}
-                    role_dir_name = SOURCES_DIR_NAME if suffix_upper in source_suffixes else DERIVATIVES_DIR_NAME
-                    processed_dir = date_root_dir / role_dir_name
+                # Determine routing based on suffix
+                from common.constants import DEFAULT_SUFFIX_ROUTING
+                routing = self._suffix_routing if self._suffix_routing is not None else DEFAULT_SUFFIX_ROUTING
+                
+                # Get subfolder name: "." = date root, "SOURCES", "DERIVATIVES", or custom
+                subfolder = routing.get(suffix_upper, DERIVATIVES_DIR_NAME)
+                
+                # "." means store directly in date folder root (e.g., preview files)
+                processed_dir = date_root_dir if subfolder == "." else date_root_dir / subfolder
 
             else:
                 # Fallback for unparsed files (should not happen if should_process is checked)

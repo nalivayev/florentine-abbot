@@ -207,6 +207,50 @@ file-organizer "D:\Scans\Inbox" --daemon
 file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 ```
 
+### Advanced Configuration
+
+**Customizing Metadata Fields (`tags.json`):**
+
+By default, File Organizer uses a standard set of XMP tags for metadata fields (`description`, `credit`, `rights`, `terms`, `source`). You can override these mappings by creating a `tags.json` file in the configuration folder:
+
+```json
+{
+  "description": "XMP-dc:Description",
+  "credit": "XMP-photoshop:Credit",
+  "rights": "XMP-dc:Rights",
+  "terms": "XMP-xmpRights:UsageTerms",
+  "source": "XMP-dc:Source"
+}
+```
+
+You can add custom fields by specifying new `"field_name": "XMP-namespace:TagName"` pairs. Then add that field to your language blocks in the config, and it will automatically be written to images with language variants.
+
+**Customizing File Routing (`routes.json`):**
+
+By default, files are organized as follows:
+- `RAW`, `MSR` → `SOURCES/`
+- `PRV`, `VIEW` → date folder root (`.`)
+- all others → `DERIVATIVES/`
+
+You can override this logic by creating a `routes.json` file:
+
+```json
+{
+  "RAW": "SOURCES",
+  "MSR": "SOURCES",
+  "PRV": ".",
+  "VIEW": ".",
+  "TIFF": "MASTERS",
+  "JPEG": "EXPORTS"
+}
+```
+
+Values:
+- `"SOURCES"`, `"DERIVATIVES"`, or any folder name — create a subfolder under `YYYY/YYYY.MM.DD/`
+- `"."` — place file directly in the date folder root
+
+Both files (`tags.json` and `routes.json`) are optional. If absent, built-in defaults are used.
+
 ## Preview Maker (PRV Generator)
 
 > **⚠️ Status**: In development. Not yet fully tested or documented.

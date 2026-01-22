@@ -59,8 +59,16 @@ class ArchiveMetadata:
         TAG_XMP_EXIF_DATETIME_DIGITIZED,
     )
 
-    def __init__(self, exifer: Exifer | None = None) -> None:
+    def __init__(self, exifer: Exifer | None = None, metadata_tags: dict[str, str] | None = None) -> None:
+        """Initialize ArchiveMetadata.
+        
+        Args:
+            exifer: Optional Exifer instance for EXIF operations.
+            metadata_tags: Optional mapping of field names to XMP tag names.
+                          If None, will use DEFAULT_METADATA_TAGS from constants.
+        """
         self._exifer = exifer or Exifer()
+        self._metadata_tags = metadata_tags
 
     @classmethod
     def _get_master_tags(cls) -> list[str]:
@@ -218,21 +226,15 @@ class ArchiveMetadata:
         if isinstance(default_block, dict):
             creator_value = default_block.get("creator")
             if creator_value:
-                if isinstance(creator_value, list):
-                    tags[self.TAG_XMP_DC_CREATOR] = creator_value
-                else:
-                    tags[self.TAG_XMP_DC_CREATOR] = [creator_value]
+                tags[self.TAG_XMP_DC_CREATOR] = creator_value if isinstance(creator_value, list) else [creator_value]
 
         # Language-aware text fields. For each language we write TAG-langCode,
         # and for the default language we also write the plain TAG (which
         # exiftool maps to x-default for LangAlt tags).
-        text_field_map = {
-            "description": self.TAG_XMP_DC_DESCRIPTION,
-            "credit": self.TAG_XMP_PHOTOSHOP_CREDIT,
-            "rights": self.TAG_XMP_DC_RIGHTS,
-            "terms": self.TAG_XMP_XMPRIGHTS_USAGE_TERMS,
-            "source": self.TAG_XMP_DC_SOURCE,
-        }
+        
+        # Use provided metadata tags mapping, or fall back to defaults
+        from common.constants import DEFAULT_METADATA_TAGS
+        text_field_map = self._metadata_tags if self._metadata_tags is not None else DEFAULT_METADATA_TAGS
 
         for lang_code, block in languages.items():
             if not isinstance(block, dict):

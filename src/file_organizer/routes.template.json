@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "Suffix routing rules for file organization.",
+    "This file defines where files with different suffixes are stored in the archive structure.",
+    "",
+    "Archive structure:",
+    "  archive_root/YYYY/YYYY.MM.DD/",
+    "    ├── SOURCES/      - Raw scans and master files",
+    "    ├── DERIVATIVES/  - Processed derivatives (TIFF, JPEG, etc.)",
+    "    └── (date folder)  - Preview files stored directly here",
+    "",
+    "Routing values (case-sensitive):",
+    "  - 'SOURCES': Files go to SOURCES/ subfolder (raw scans, unprocessed masters)",
+    "  - 'DERIVATIVES': Files go to DERIVATIVES/ subfolder (processed outputs)",
+    "  - '.': Files go directly to date folder root (small preview images)",
+    "",
+    "Suffix matching is case-insensitive (RAW = raw = Raw).",
+    "",
+    "If a suffix is not listed here, it defaults to 'DERIVATIVES'.",
+    "",
+    "If this file is missing, the following defaults are used:",
+    "  - RAW, MSR: SOURCES",
+    "  - PRV, VIEW: .",
+    "  - All others: DERIVATIVES"
+  ],
+
+  "RAW": "SOURCES",
+  "MSR": "SOURCES",
+  "PRV": ".",
+  "VIEW": "."
+}
