@@ -13,10 +13,14 @@ OAIS is published as:
 - **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — current version, freely available
 - **[ISO 14721:2025](https://www.iso.org/standard/87471.html)** — formal international standard (identical to CCSDS 650.0-M-3 in content)
 
+The project implements the **Ingest** functional block of OAIS: scanning automation, structured filename parsing, and metadata writing (XMP/EXIF).
+
 For image digitization, the project also relies on recommendations from the **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
 - **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (May 2023)
 
-The project implements the **Ingest** functional block of OAIS: scanning automation, structured filename parsing, and metadata writing (XMP/EXIF).
+For metadata encoding and preservation, the project uses **[XMP (Extensible Metadata Platform)](https://www.adobe.com/devnet/xmp.html)**:
+- **[ISO 16684-1:2019](https://www.iso.org/standard/75163.html)** — Extensible metadata platform (XMP) — Part 1: Data model, serialization and core properties
+- **[XMP Specification Part 2: Additional Properties](https://github.com/adobe/xmp-docs/tree/master/XMPSpecifications)** (Adobe) — extended namespaces including XMP Media Management (xmpMM) for file history tracking
 
 ## Scanning
 
