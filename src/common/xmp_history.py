@@ -5,9 +5,6 @@ from pathlib import Path
 from typing import Optional
 
 from .exifer import Exifer
-from .logger import get_logger
-
-logger = get_logger(__name__)
 
 
 class XmpHistory:
@@ -39,7 +36,8 @@ class XmpHistory:
         software_agent: str,
         when: datetime,
         changed: Optional[str] = None,
-        parameters: Optional[str] = None
+        parameters: Optional[str] = None,
+        logger = None
     ) -> bool:
         """Append new entry to XMP-xmpMM:History.
         
@@ -50,12 +48,14 @@ class XmpHistory:
             when: Timestamp of operation (should match file modification time)
             changed: Optional description of what changed, e.g. '/metadata'
             parameters: Optional parameters, e.g. 'from source.tif'
+            logger: Optional logger instance for debug/error messages
         
         Returns:
             True if successful, False otherwise
         """
         if not file_path.exists():
-            logger.error(f"File not found: {file_path}")
+            if logger:
+                logger.error(f"File not found: {file_path}")
             return False
         
         # Convert datetime to ISO 8601 format with timezone
@@ -82,24 +82,27 @@ class XmpHistory:
         
         success = self.exifer.write_tags(str(file_path), args)
         
-        if success:
-            logger.debug(f"Added XMP History entry: {action} for {file_path.name}")
-        else:
-            logger.error(f"Failed to add XMP History entry for {file_path}")
+        if logger:
+            if success:
+                logger.debug(f"Added XMP History entry: {action} for {file_path.name}")
+            else:
+                logger.error(f"Failed to add XMP History entry for {file_path}")
         
         return success
     
-    def read_history(self, file_path: Path) -> list[dict]:
+    def read_history(self, file_path: Path, logger = None) -> list[dict]:
         """Read XMP-xmpMM:History from file.
         
         Args:
             file_path: Path to file
+            logger: Optional logger instance for error messages
         
         Returns:
             List of history entries as dictionaries
         """
         if not file_path.exists():
-            logger.error(f"File not found: {file_path}")
+            if logger:
+                logger.error(f"File not found: {file_path}")
             return []
         
         # Read History field

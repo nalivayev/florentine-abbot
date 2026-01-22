@@ -6,11 +6,9 @@ high-level helpers for writing metadata to master files and
 preview (PRV) derivatives.
 """
 
-from __future__ import annotations
-
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
 from common.exifer import Exifer
@@ -59,7 +57,7 @@ class ArchiveMetadata:
         TAG_XMP_EXIF_DATETIME_DIGITIZED,
     )
 
-    def __init__(self, exifer: Exifer | None = None, metadata_tags: dict[str, str] | None = None) -> None:
+    def __init__(self, exifer: Optional[Exifer] = None, metadata_tags: Optional[dict[str, str]] = None) -> None:
         """Initialize ArchiveMetadata.
         
         Args:
@@ -121,7 +119,7 @@ class ArchiveMetadata:
         tags[self.TAG_XMP_DC_IDENTIFIER] = file_uuid
         tags[self.TAG_XMP_XMP_IDENTIFIER] = file_uuid
 
-        def _normalize_text(value: Any) -> str | None:
+        def _normalize_text(value: Any) -> Optional[str]:
             """Normalize config text field to a single string.
 
             Supports both scalar strings and lists of strings. Lists are
@@ -208,8 +206,8 @@ class ArchiveMetadata:
 
         # Choose default language block (first with default=True, else fall
         # back to the first language in the mapping for stability).
-        default_lang_code: str | None = None
-        default_block: dict[str, Any] | None = None
+        default_lang_code: Optional[str] = None
+        default_block: Optional[dict[str, Any]] = None
         for lang_code, block in languages.items():
             if isinstance(block, dict) and block.get("default"):
                 default_lang_code = lang_code
@@ -275,7 +273,7 @@ class ArchiveMetadata:
         *,
         master_path: Path,
         prv_path: Path,
-        logger: Logger | None = None,
+        logger: Optional[Logger] = None,
     ) -> None:
         """Write EXIF/XMP metadata for a PRV derivative based on master.
 
