@@ -1,5 +1,5 @@
 import logging
-from sys import stderr, exit
+from sys import exit
 from typing import Sequence
 
 from common.logger import Logger

@@ -1,9 +1,9 @@
-import unittest
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import patch
 from pathlib import Path
 from common.exifer import Exifer
 
-class TestExifer(unittest.TestCase):
+
+class TestExifer:
 
     @patch.object(Exifer, '_read_json')
     def test_read_success(self, mock_read_json):
@@ -20,12 +20,12 @@ class TestExifer(unittest.TestCase):
         tags_to_read = ["IFD0:Make", "ExifIFD:DateTimeOriginal", "XMP-exif:DateTimeDigitized"]
         result = tool.read(Path("dummy.jpg"), tags_to_read)
         
-        self.assertEqual(result["IFD0:Make"], "Canon")
-        self.assertEqual(result["ExifIFD:DateTimeOriginal"], "2022:01:01 12:00:00")
-        self.assertEqual(result["XMP-exif:DateTimeDigitized"], "2022:01:01 12:00:00")
+        assert result["IFD0:Make"] == "Canon"
+        assert result["ExifIFD:DateTimeOriginal"] == "2022:01:01 12:00:00"
+        assert result["XMP-exif:DateTimeDigitized"] == "2022:01:01 12:00:00"
         # SourceFile and ExifTool should be filtered out
-        self.assertNotIn("SourceFile", result)
-        self.assertNotIn("ExifTool", result)
+        assert "SourceFile" not in result
+        assert "ExifTool" not in result
 
     @patch.object(Exifer, '_read_json')
     def test_read_scanned_file(self, mock_read_json):
@@ -41,11 +41,11 @@ class TestExifer(unittest.TestCase):
         tags_to_read = ["IFD0:Make", "IFD0:Model", "ExifIFD:CreateDate", "XMP-exif:DateTimeDigitized"]
         result = tool.read(Path("scanned.tif"), tags_to_read)
         
-        self.assertEqual(result["IFD0:Make"], "Epson")
-        self.assertEqual(result["IFD0:Model"], "Perfection V600")
-        self.assertEqual(result["ExifIFD:CreateDate"], "2023:10:27 14:30:00")
+        assert result["IFD0:Make"] == "Epson"
+        assert result["IFD0:Model"] == "Perfection V600"
+        assert result["ExifIFD:CreateDate"] == "2023:10:27 14:30:00"
         # DateTimeDigitized might not exist in VueScan output
-        self.assertNotIn("XMP-exif:DateTimeDigitized", result)
+        assert "XMP-exif:DateTimeDigitized" not in result
 
     @patch.object(Exifer, '_run')
     def test_write(self, mock_run):
@@ -61,8 +61,8 @@ class TestExifer(unittest.TestCase):
         # Verify exiftool was called with correct arguments
         mock_run.assert_called_once()
         args = mock_run.call_args[0][0]
-        self.assertIn("-overwrite_original", args)
-        self.assertIn("-XMP-exif:DateTimeDigitized=2023:10:27 14:30:00", args)
-        self.assertIn("-XMP-dc:Title=Test Title", args)
-        self.assertIn("dummy.tif", args)
+        assert "-overwrite_original" in args
+        assert "-XMP-exif:DateTimeDigitized=2023:10:27 14:30:00" in args
+        assert "-XMP-dc:Title=Test Title" in args
+        assert "dummy.tif" in args
 
