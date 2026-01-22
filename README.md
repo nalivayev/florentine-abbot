@@ -13,14 +13,18 @@ OAIS is published as:
 - **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — current version, freely available
 - **[ISO 14721:2025](https://www.iso.org/standard/87471.html)** — formal international standard (identical to CCSDS 650.0-M-3 in content)
 
-For image digitization, the project also relies on recommendations from the **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
-- **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (May 2023)
-
 The project implements three functional blocks of OAIS:
 
 - **Ingest** is implemented in `scan-batcher` and `file-organizer` — scanning automation, structured filename parsing, and metadata validation
 - **Archival Storage** is implemented in `file-organizer` and `archive-keeper` — file organization, UUID assignment, XMP/EXIF metadata writing, and SHA-256 integrity control
 - **Access** is implemented in `preview-maker` — generation of lightweight JPEG images from master files
+
+For image digitization, the project also relies on recommendations from the **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
+- **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (May 2023)
+
+For metadata encoding and preservation, the project uses **[XMP (Extensible Metadata Platform)](https://www.adobe.com/devnet/xmp.html)**:
+- **[ISO 16684-1:2019](https://www.iso.org/standard/75163.html)** — Extensible metadata platform (XMP) — Part 1: Data model, serialization and core properties
+- **[XMP Specification Part 2: Additional Properties](https://github.com/adobe/xmp-docs/tree/master/XMPSpecifications)** (Adobe) — extended namespaces including XMP Media Management (xmpMM) for file history tracking
 
 ## Scanning (Scan Batcher)
 

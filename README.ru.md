@@ -13,14 +13,18 @@ OAIS опубликован как:
 - **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — актуальная версия, свободно доступна
 - **[ISO 14721:2025](https://www.iso.org/standard/87471.html)** — формальный международный стандарт (идентичен CCSDS 650.0-M-3 по содержанию)
 
-Для оцифровки изображений проект опирается на рекомендации **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
-- **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (Май 2023)
-
 Проект реализует три функциональных блока OAIS:
 
 - **Ingest (Прием данных)** реализован в `scan-batcher` и `file-organizer` — автоматизация сканирования, разбор структурированных имен файлов и валидация метаданных
 - **Archival Storage (Архивное хранение)** реализовано в `file-organizer` и `archive-keeper` — раскладка файлов, присвоение UUID-идентификаторов, запись метаданных в XMP/EXIF, контроль целостности через SHA-256
 - **Access (Доступ)** реализован в `preview-maker` — генерация облегченных JPEG-изображений из мастер-файлов
+
+Для оцифровки изображений проект также опирается на рекомендации **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
+- **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (май 2023)
+
+Для кодирования и сохранения метаданных используется **[XMP (Extensible Metadata Platform)](https://www.adobe.com/devnet/xmp.html)**:
+- **[ISO 16684-1:2019](https://www.iso.org/standard/75163.html)** — Extensible metadata platform (XMP) — Часть 1: Модель данных, сериализация и основные свойства
+- **[XMP Specification Part 2: Additional Properties](https://github.com/adobe/xmp-docs/tree/master/XMPSpecifications)** (Adobe) — расширенные пространства имён, включая XMP Media Management (xmpMM) для отслеживания истории файлов
 
 ## Сканирование (Scan Batcher)
 
