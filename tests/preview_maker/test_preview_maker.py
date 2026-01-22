@@ -13,11 +13,20 @@ from common.logger import Logger
 
 
 class TestPreviewMakerBatch:
-    @pytest.fixture
-    def temp_dir(self):
+    def setup_method(self):
+        """Setup for each test method."""
+        self.temp_dir = None
+
+    def teardown_method(self):
+        """Cleanup after each test method."""
+        if self.temp_dir and self.temp_dir.exists():
+            shutil.rmtree(self.temp_dir)
+
+    def create_temp_dir(self) -> Path:
+        """Create a temporary directory."""
         temp_dir = tempfile.mkdtemp()
-        yield Path(temp_dir)
-        shutil.rmtree(temp_dir)
+        self.temp_dir = Path(temp_dir)
+        return self.temp_dir
 
     def _create_tiff(self, path: Path, size=(4000, 3000)) -> None:
         img = Image.new("RGB", size, color="white")
@@ -28,7 +37,9 @@ class TestPreviewMakerBatch:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         return json.loads(result.stdout)[0]
 
-    def test_generate_prv_from_msr_prefers_msr_over_raw(self, temp_dir):
+    def test_generate_prv_from_msr_prefers_msr_over_raw(self):
+        temp_dir = self.create_temp_dir()
+        
         # Simulate small archive fragment
         date_dir = temp_dir / "PHOTO_ARCHIVES" / "0001.Family" / "1950" / "1950.06.15"
         sources_dir = date_dir / "SOURCES"
@@ -55,7 +66,9 @@ class TestPreviewMakerBatch:
             w, h = img.size
             assert max(w, h) <= 1000
 
-    def test_overwrite_flag_regenerates_prv(self, temp_dir):
+    def test_overwrite_flag_regenerates_prv(self):
+        temp_dir = self.create_temp_dir()
+        
         date_dir = temp_dir / "PHOTO_ARCHIVES" / "0001.Family" / "1950" / "1950.06.15"
         sources_dir = date_dir / "SOURCES"
         sources_dir.mkdir(parents=True, exist_ok=True)
@@ -82,8 +95,9 @@ class TestPreviewMakerBatch:
         with Image.open(prv_path) as img:
             assert max(img.size) <= 800
 
-    def test_generate_prv_from_raw_when_no_msr(self, temp_dir):
+    def test_generate_prv_from_raw_when_no_msr(self):
         """If only RAW exists, it should still generate a PRV."""
+        temp_dir = self.create_temp_dir()
 
         date_dir = temp_dir / "PHOTO_ARCHIVES" / "0001.Family" / "1951" / "1951.07.20"
         sources_dir = date_dir / "SOURCES"
@@ -104,7 +118,7 @@ class TestPreviewMakerBatch:
             w, h = img.size
             assert max(w, h) <= 900
 
-    def test_prv_inherits_metadata_with_new_identifier(self, temp_dir):
+    def test_prv_inherits_metadata_with_new_identifier(self):
         """PRV should inherit context metadata but have its own identifier.
 
         We create an MSR file, let FileOrganizer write full metadata to it,
@@ -112,6 +126,7 @@ class TestPreviewMakerBatch:
         preserved while identifiers differ and a relation back to the master
         is recorded.
         """
+        temp_dir = self.create_temp_dir()
 
         # Skip if exiftool is not available
         if shutil.which("exiftool") is None:
@@ -197,3 +212,4 @@ class TestPreviewMakerBatch:
         assert prv_credit == master_credit
         assert prv_usage == master_usage
         assert prv_source == master_source
+

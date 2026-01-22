@@ -1,7 +1,7 @@
 """Database models for Archive Keeper."""
 
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, DateTime, ForeignKey, Enum, BigInteger
+from sqlalchemy import String, DateTime, ForeignKey, Enum, BigInteger
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 import enum
 

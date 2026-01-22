@@ -1,11 +1,7 @@
-import json
 import logging
-import shutil
-import subprocess
-import tempfile
-import unittest
 from pathlib import Path
 
+import pytest
 from PIL import Image
 from sqlalchemy import select
 
@@ -22,7 +18,7 @@ from common.logger import Logger
 logging.basicConfig(level=logging.DEBUG)
 
 
-class TestPipeline(unittest.TestCase):
+class TestPipeline:
     """End-to-end filesystem/DB pipeline tests.
 
     These tests are intentionally higher-level and slower. Detailed
@@ -34,10 +30,10 @@ class TestPipeline(unittest.TestCase):
     - ArchiveScanner/DatabaseManager seeing processed files in the DB
     """
 
-    def setUp(self) -> None:
+    @pytest.fixture(autouse=True)
+    def setup(self, tmp_path):
         # Temporary root and input directory
-        self.test_dir = tempfile.mkdtemp()
-        self.root_path = Path(self.test_dir)
+        self.root_path = tmp_path
 
         self.logger = Logger("test")
 
@@ -48,14 +44,10 @@ class TestPipeline(unittest.TestCase):
         self.db_path = self.root_path / "archive.db"
         self.db_manager = DatabaseManager(str(self.db_path))
         self.db_manager.init_db()
-
-    def tearDown(self) -> None:
+        
+        yield
+        
         self.db_manager.engine.dispose()
-        shutil.rmtree(self.test_dir)
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
     def _create_dummy_jpeg(self, filename: str) -> Path:
         """Create a small valid JPEG image in the input directory."""
@@ -97,17 +89,17 @@ class TestPipeline(unittest.TestCase):
         }
 
         success = organizer.process(file_path, config)
-        self.assertTrue(success, f"File Organizer failed to process file in scenario: {scenario['name']}")
+        assert success, f"File Organizer failed to process file in scenario: {scenario['name']}"
 
         # Verify file moved into processed/YYYY/... tree
         processed_root = self.input_dir / "processed"
         found_files = list(processed_root.rglob(filename))
-        self.assertEqual(len(found_files), 1, f"File {filename} not found in processed folder")
+        assert len(found_files) == 1, f"File {filename} not found in processed folder"
         processed_path = found_files[0]
 
         # Level 1 folder should match provided expectation
         l1_folder = processed_path.parent.parent.parent.name
-        self.assertEqual(l1_folder, scenario["folder_l1"], f"Incorrect Level 1 folder for {scenario['name']}")
+        assert l1_folder == scenario["folder_l1"], f"Incorrect Level 1 folder for {scenario['name']}"
 
         # --- Step 2: Archive Keeper ---
 
@@ -123,17 +115,13 @@ class TestPipeline(unittest.TestCase):
             for db_file in files:
                 if Path(db_file.path) == expected_rel_path:
                     found_in_db = True
-                    self.assertTrue(db_file.hash, "File hash should be calculated")
-                    self.assertEqual(db_file.status, FileStatus.OK)
+                    assert db_file.hash, "File hash should be calculated"
+                    assert db_file.status == FileStatus.OK
                     break
 
-            self.assertTrue(found_in_db, f"File {expected_rel_path} not found in DB")
+            assert found_in_db, f"File {expected_rel_path} not found in DB"
         finally:
             session.close()
-
-    # ------------------------------------------------------------------
-    # Tests
-    # ------------------------------------------------------------------
 
     def test_pipeline_with_preview_maker(self) -> None:
         """Filesystem E2E: FileOrganizer + PreviewMaker on an MSR source."""
@@ -142,7 +130,7 @@ class TestPipeline(unittest.TestCase):
         try:
             Exifer()._run(["-ver"])
         except (FileNotFoundError, RuntimeError):
-            self.skipTest("ExifTool not found, skipping E2E test with PreviewMaker")
+            pytest.skip("ExifTool not found, skipping E2E test with PreviewMaker")
 
         filename = "2023.10.27.12.00.00.E.Group.Sub.0001.A.MSR.tiff"
         file_path = self._create_dummy_tiff(filename)
@@ -162,27 +150,27 @@ class TestPipeline(unittest.TestCase):
         }
 
         success = organizer.process(file_path, config)
-        self.assertTrue(success, "File Organizer failed to process MSR file in PreviewMaker pipeline test")
+        assert success, "File Organizer failed to process MSR file in PreviewMaker pipeline test"
 
         processed_root = self.input_dir / "processed"
         found_files = list(processed_root.rglob(filename))
-        self.assertEqual(len(found_files), 1, f"MSR file {filename} not found in processed folder")
+        assert len(found_files) == 1, f"MSR file {filename} not found in processed folder"
         processed_msr_path = found_files[0]
 
-        self.assertEqual(processed_msr_path.parent.name, "SOURCES")
-        self.assertEqual(processed_msr_path.parent.parent.name, "2023.10.27")
-        self.assertEqual(processed_msr_path.parent.parent.parent.name, "2023")
+        assert processed_msr_path.parent.name == "SOURCES"
+        assert processed_msr_path.parent.parent.name == "2023.10.27"
+        assert processed_msr_path.parent.parent.parent.name == "2023"
 
         # Step 2: generate PRV via PreviewMaker
         maker = PreviewMaker(self.logger)
         count = maker(path=self.input_dir, overwrite=False, max_size=1000, quality=70)
-        self.assertEqual(count, 1, "PreviewMaker should generate exactly one PRV file")
+        assert count == 1, "PreviewMaker should generate exactly one PRV file"
 
         date_dir = processed_msr_path.parent.parent
         prv_name = "2023.10.27.12.00.00.E.Group.Sub.0001.A.PRV.jpg"
         prv_path = date_dir / prv_name
 
-        self.assertTrue(prv_path.exists(), f"PRV file not found at expected path: {prv_path}")
+        assert prv_path.exists(), f"PRV file not found at expected path: {prv_path}"
 
     def test_scenarios(self) -> None:
         """Run multiple pipeline scenarios for different date modifiers.
@@ -196,7 +184,7 @@ class TestPipeline(unittest.TestCase):
         try:
             Exifer()._run(["-ver"])
         except (FileNotFoundError, RuntimeError):
-            self.skipTest("ExifTool not found, skipping E2E test")
+            pytest.skip("ExifTool not found, skipping E2E test")
 
         scenarios = [
             {
@@ -227,13 +215,4 @@ class TestPipeline(unittest.TestCase):
         ]
 
         for case in scenarios:
-            with self.subTest(case=case["name"]):
-                self._run_scenario(case)
-
-
-if __name__ == "__main__":
-    unittest.main()
-import json
-
-import shutil
-
+            self._run_scenario(case)

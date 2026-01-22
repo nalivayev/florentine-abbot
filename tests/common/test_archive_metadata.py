@@ -1,8 +1,5 @@
 import uuid
 from pathlib import Path
-
-import pytest
-
 from typing import Any
 
 from common.archive_metadata import ArchiveMetadata

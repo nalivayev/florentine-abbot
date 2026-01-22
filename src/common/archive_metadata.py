@@ -62,10 +62,6 @@ class ArchiveMetadata:
     def __init__(self, exifer: Exifer | None = None) -> None:
         self._exifer = exifer or Exifer()
 
-    # ------------------------------------------------------------------
-    # Tag lists for read operations
-    # ------------------------------------------------------------------
-
     @classmethod
     def _get_master_tags(cls) -> list[str]:
         """Tags that may be read from the source before writing master.

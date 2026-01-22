@@ -183,7 +183,7 @@ class FileProcessor:
                     # Preview files (PRV/VIEW) live directly in the date folder
                     processed_dir = date_root_dir
                 else:
-                    # RAW/MSR and related sources go to SOURCES/, остальные роли — в DERIVATIVES/
+                    # RAW/MSR and related sources go to SOURCES/, other roles go to DERIVATIVES/
                     source_suffixes = {"RAW", "MSR"}
                     role_dir_name = SOURCES_DIR_NAME if suffix_upper in source_suffixes else DERIVATIVES_DIR_NAME
                     processed_dir = date_root_dir / role_dir_name

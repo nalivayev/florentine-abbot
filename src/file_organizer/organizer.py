@@ -36,10 +36,6 @@ class FileOrganizer:
         self._logger = logger
         self._processor = FileProcessor(logger)
 
-    # ------------------------------------------------------------------
-    # High-level batch workflow
-    # ------------------------------------------------------------------
-
     def __call__(
         self,
         *,
@@ -106,10 +102,6 @@ class FileOrganizer:
         self._logger.info(f"Batch processing complete. Processed {count} files, skipped {skipped} files.")
 
         return count
-
-    # ------------------------------------------------------------------
-    # Per-file processing facade
-    # ------------------------------------------------------------------
 
     def should_process(self, file_path: Path) -> bool:
         """Delegate to the internal :class:`FileProcessor` instance."""
