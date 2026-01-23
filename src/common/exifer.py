@@ -43,8 +43,10 @@ class Exifer:
     @classmethod
     def _start_process(cls, executable: str) -> None:
         """Start a new exiftool process in stay_open mode."""
-        # Add -charset filename=utf8 to properly handle UTF-8 encoded arguments
-        cmd = [executable, "-stay_open", "True", "-@", "-", "-charset", "filename=utf8"]
+        # Add -charset utf8 to properly handle UTF-8 encoded arguments
+        # IMPORTANT: -charset utf8 must appear BEFORE -@ - so that exiftool knows
+        # the input stream (stdin) is UTF-8 encoded.
+        cmd = [executable, "-stay_open", "True", "-charset", "utf8", "-@", "-"]
         try:
             process = subprocess.Popen(
                 cmd,
@@ -123,11 +125,19 @@ class Exifer:
             return self._run_one_off(args)
 
     def _run_one_off(self, args: Sequence[str], timeout: int | None = None) -> str:
-        cmd = [self.executable] + list(args)
+        # Always use -@ - to pass arguments via stdin. This avoids Windows command line
+        # encoding issues (cp1251 vs utf-8) and length limits.
+        # We explicitly set -charset utf8 on the CLI so exiftool expects UTF-8 in stdin.
+        cmd = [self.executable, "-charset", "utf8", "-@", "-"]
+        
+        # Prepare input for stdin: one arg per line
+        input_str = "\n".join(str(arg) for arg in args)
+
         try:
-            # Use utf-8 encoding and ignore errors to be safe with weird metadata
+            # Use utf-8 encoding for stdin/stdout to ensure correct metadata handling
             result = subprocess.run(
                 cmd,
+                input=input_str,
                 capture_output=True,
                 text=True,
                 check=True,
@@ -198,9 +208,9 @@ class Exifer:
             overwrite_original: Whether to overwrite the original file.
             timeout: Timeout in seconds for large files (uses one-off mode if set).
         """
-        # Tell exiftool that command-line arguments are UTF-8 encoded
+        # Tell exiftool that command-line arguments (including tag values) are UTF-8 encoded
         # This is critical for proper handling of Cyrillic and other non-ASCII characters
-        args = ["-charset", "filename=utf8"]
+        args = ["-charset", "utf8"]
         
         if overwrite_original:
             args.append("-overwrite_original")
