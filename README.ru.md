@@ -147,12 +147,14 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 
 > **⚠️ Статус**: В разработке. Пока не полностью протестирована или документирована.
 
-Инструмент для автоматической организации отсканированных файлов на основе их имён. Он извлекает метаданные из имени файла (дата, модификаторы, роль по суффиксу) и перемещает каждый файл во вспомогательное дерево `processed/` со следующей структурой:
+Инструмент для автоматической организации отсканированных файлов на основе их имён. Он извлекает метаданные из имени файла (дата, модификаторы, роль по суффиксу) и перемещает каждый файл во вспомогательное дерево `processed/` со следующей структурой по умолчанию:
 
-- `processed/YYYY/YYYY.MM.DD/` — папка конкретной даты (корень дерева для этой даты)
-- `processed/YYYY/YYYY.MM.DD/SOURCES/` — RAW, мастер‑копии (`MSR`) и связанные с ними служебные файлы
-- `processed/YYYY/YYYY.MM.DD/DERIVATIVES/` — производные файлы (WEB, PRT и другие выходные форматы)
-- `processed/YYYY/YYYY.MM.DD/` — файлы `*.PRV.jpg` для быстрого просмотра (просмотровые копии), лежащие прямо в папке даты
+- `processed/{year}/{year}.{month}.{day}/` — папка конкретной даты (настраивается через `formats.json`)
+- `processed/{year}/{year}.{month}.{day}/SOURCES/` — RAW, мастер‑копии (`MSR`) и связанные с ними служебные файлы
+- `processed/{year}/{year}.{month}.{day}/DERIVATIVES/` — производные файлы (WEB, PRT и другие выходные форматы)
+- `processed/{year}/{year}.{month}.{day}/` — файлы `*.PRV.jpg` для быстрого просмотра (просмотровые копии), лежащие прямо в папке даты
+
+Структура архива полностью настраивается через `formats.json` (см. [Настройка форматов путей и имён файлов](#настройка-форматов-путей-и-имён-файлов-formatsjson) ниже).
 
 Та же информация о дате записывается в теги EXIF/XMP файла. Подробные правила и примеры смотрите в `docs/ru/naming.md` (Части 2 и 3).
 
@@ -232,8 +234,8 @@ file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 **Настройка раскладки файлов (`routes.json`):**
 
 Правила маршрутизации файлов используются совместно инструментами `file-organizer` и `preview-maker`. Файлы конфигурации расположены в:
-- Windows: `%APPDATA%\florentine-abbot\routes.json` и `tags.json`
-- Linux/macOS: `~/.config/florentine-abbot/routes.json` и `tags.json`
+- Windows: `%APPDATA%\florentine-abbot\routes.json`, `tags.json` и `formats.json`
+- Linux/macOS: `~/.config/florentine-abbot/routes.json`, `tags.json` и `formats.json`
 
 По умолчанию файлы раскладываются так:
 - `RAW`, `MSR` → `SOURCES/`
@@ -253,10 +255,37 @@ file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 ```
 
 Значения:
-- `"SOURCES"`, `"DERIVATIVES"` или любое имя папки — создать подпапку в `YYYY/YYYY.MM.DD/`
+- `"SOURCES"`, `"DERIVATIVES"` или любое имя папки — создать подпапку в папке даты (например, `{year}/{year}.{month}.{day}/SOURCES/`)
 - `"."` — положить файл прямо в корень папки даты
 
-Оба файла конфигурации опциональны. При их отсутствии используются встроенные значения по умолчанию. Эти настройки влияют как на организацию файлов (`file-organizer`), так и на генерацию превью (`preview-maker`).
+**Настройка форматов путей и имен файлов (`formats.json`):**
+
+Вы можете настроить форматирование путей папок архива и имен файлов с помощью шаблонов форматирования Python. Создайте файл `formats.json` в папке конфигурации:
+
+```json
+{
+  "path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+  "filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+}
+```
+
+Доступные поля из разобранного имени файла:
+- Дата/время: `{year}`, `{month}`, `{day}`, `{hour}`, `{minute}`, `{second}`
+- Компоненты: `{modifier}`, `{group}`, `{subgroup}`, `{sequence}`, `{side}`, `{suffix}`, `{extension}`
+
+Спецификаторы формата (стандартное форматирование Python):
+- `{year:04d}` — 4 цифры с ведущими нулями (0000, 2024)
+- `{month:02d}` — 2 цифры с ведущим нулем (01, 12)
+- `{sequence:04d}` — 4 цифры с ведущими нулями (0001, 0042)
+
+Примеры шаблонов:
+- Плоская структура: `"path_template": "{year:04d}.{month:02d}.{day:02d}"`
+- По месяцам: `"path_template": "{year:04d}/{year:04d}.{month:02d}"`
+- По группам: `"path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}"`
+- Компактное имя: `"filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"`
+- ISO-стиль: `"filename_template": "{year:04d}-{month:02d}-{day:02d}_{hour:02d}-{minute:02d}-{second:02d}_{modifier}_{group}_{subgroup}_{sequence:04d}_{side}_{suffix}"`
+
+Все файлы конфигурации опциональны. При их отсутствии используются встроенные значения по умолчанию. Эти настройки влияют как на организацию файлов (`file-organizer`), так и на генерацию превью (`preview-maker`).
 
 ## Preview Maker (генератор PRV)
 

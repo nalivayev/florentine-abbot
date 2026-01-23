@@ -472,3 +472,154 @@ class TestExiftoolCompliance:
         # Note: Since EXIF:DateTimeDigitized can't be written to TIFF, processor writes to XMP-exif instead
         dt_digitized = meta_after.get("XMP-exif:DateTimeDigitized") or meta_after.get("XMP:DateTimeDigitized")
         assert dt_digitized == "2025:11:29 13:00:00"
+
+
+class TestFileOrganizerCustomFormats:
+    """Test FileOrganizer with custom path and filename formats."""
+    
+    def setup_method(self):
+        """Setup for each test method."""
+        self.temp_dir = None
+    
+    def teardown_method(self):
+        """Cleanup after each test method."""
+        if self.temp_dir and self.temp_dir.exists():
+            shutil.rmtree(self.temp_dir)
+    
+    def create_temp_dir(self) -> Path:
+        """Create a temporary directory."""
+        temp_dir = tempfile.mkdtemp()
+        self.temp_dir = Path(temp_dir)
+        return self.temp_dir
+    
+    def create_dummy_image(self, path: Path):
+        """Create a simple 100x100 RGB image."""
+        img = Image.new('RGB', (100, 100), color='blue')
+        img.save(path)
+    
+    def _minimal_config(self) -> dict:
+        """Minimal configuration for testing."""
+        return {
+            "metadata": {
+                "languages": {
+                    "en-US": {
+                        "default": True,
+                        "creator": "Test User",
+                        "credit": "Test Archive",
+                        "rights": "Test Rights",
+                        "terms": "Test Terms",
+                        "source": "Test Source",
+                        "description": "Test description",
+                    }
+                }
+            }
+        }
+    
+    def _create_custom_formatter(self, temp_dir: Path, path_template: str, filename_template: str):
+        """Create a custom Formatter with specified templates."""
+        from common.formatter import Formatter
+        return Formatter(path_template=path_template, filename_template=filename_template)
+    
+    def test_process_with_flat_path_structure(self, logger):
+        """Test file organization with flat path structure (no year folder)."""
+        temp_dir = self.create_temp_dir()
+        
+        filename = "2024.03.15.14.30.00.E.TEST.GRP.0001.A.RAW.tif"
+        file_path = temp_dir / filename
+        self.create_dummy_image(file_path)
+        
+        # Create custom formatter with flat structure
+        from common.formatter import Formatter
+        from common.router import Router
+        
+        formatter = Formatter(
+            path_template="{year:04d}.{month:02d}.{day:02d}",
+            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+        )
+        
+        # Create FileOrganizer and inject custom formatter into its processor's router
+        organizer = FileOrganizer(logger)
+        organizer._processor._router._formatter = formatter
+        
+        result = organizer.process(file_path, self._minimal_config())
+        assert result is True
+        
+        # File should be in flat structure: processed/2024.03.15/SOURCES/
+        expected_path = temp_dir / "processed" / "2024.03.15" / "SOURCES" / filename
+        assert expected_path.exists(), f"File not found at {expected_path}"
+    
+    def test_process_with_month_grouping(self, logger):
+        """Test file organization grouped by year and month."""
+        temp_dir = self.create_temp_dir()
+        
+        filename = "2024.03.15.14.30.00.E.TEST.GRP.0001.A.MSR.tif"
+        file_path = temp_dir / filename
+        self.create_dummy_image(file_path)
+        
+        from common.formatter import Formatter
+        
+        formatter = Formatter(
+            path_template="{year:04d}/{year:04d}.{month:02d}",
+            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+        )
+        
+        organizer = FileOrganizer(logger)
+        organizer._processor._router._formatter = formatter
+        
+        result = organizer.process(file_path, self._minimal_config())
+        assert result is True
+        
+        # File should be in: processed/2024/2024.03/SOURCES/
+        expected_path = temp_dir / "processed" / "2024" / "2024.03" / "SOURCES" / filename
+        assert expected_path.exists(), f"File not found at {expected_path}"
+    
+    def test_process_with_group_in_path(self, logger):
+        """Test file organization with group component in path."""
+        temp_dir = self.create_temp_dir()
+        
+        filename = "2024.03.15.14.30.00.E.FAM.POR.0001.A.RAW.tif"
+        file_path = temp_dir / filename
+        self.create_dummy_image(file_path)
+        
+        from common.formatter import Formatter
+        
+        formatter = Formatter(
+            path_template="{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+        )
+        
+        organizer = FileOrganizer(logger)
+        organizer._processor._router._formatter = formatter
+        
+        result = organizer.process(file_path, self._minimal_config())
+        assert result is True
+        
+        # File should be in: processed/FAM/2024/2024.03.15/SOURCES/
+        expected_path = temp_dir / "processed" / "FAM" / "2024" / "2024.03.15" / "SOURCES" / filename
+        assert expected_path.exists(), f"File not found at {expected_path}"
+    
+    def test_process_with_compact_filename(self, logger):
+        """Test file organization with compact filename format."""
+        temp_dir = self.create_temp_dir()
+        
+        original_filename = "2024.03.15.14.30.00.E.TEST.GRP.0042.A.RAW.tif"
+        file_path = temp_dir / original_filename
+        self.create_dummy_image(file_path)
+        
+        from common.formatter import Formatter
+        
+        formatter = Formatter(
+            path_template="{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+            filename_template="{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"
+        )
+        
+        organizer = FileOrganizer(logger)
+        organizer._processor._router._formatter = formatter
+        
+        result = organizer.process(file_path, self._minimal_config())
+        assert result is True
+        
+        # File should have compact name: 20240315_143000_TEST_RAW.tif
+        expected_filename = "20240315_143000_TEST_RAW.tif"
+        expected_path = temp_dir / "processed" / "2024" / "2024.03.15" / "SOURCES" / expected_filename
+        assert expected_path.exists(), f"File not found at {expected_path}"

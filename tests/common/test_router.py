@@ -196,3 +196,20 @@ class TestRouter:
         # PRV is in date root, should be excluded
         folders = router.get_folders_for_suffixes(["PRV"])
         assert folders == set()
+    
+    def test_custom_default_folder_for_unknown_suffixes(self):
+        """Router should use '*' key from routing config as default for unknown suffixes."""
+        custom_routing = {
+            "RAW": "SOURCES",
+            "MSR": "SOURCES",
+            "PRV": ".",
+            "*": "CUSTOM_DEFAULT"
+        }
+        router = Router(suffix_routing=custom_routing)
+        parsed = self._create_parsed("UNKNOWN")
+        base_path = Path("/archive")
+        
+        target = router.get_target_folder(parsed, base_path)
+        
+        assert target == Path("/archive/2020/2020.01.15/CUSTOM_DEFAULT")
+

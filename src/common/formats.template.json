@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "Archive file path and filename formatting templates.",
+    "These templates define how files are organized in the archive structure.",
+    "",
+    "Available fields from parsed filename:",
+    "  {year}, {month}, {day}, {hour}, {minute}, {second}",
+    "  {modifier}, {group}, {subgroup}, {sequence}, {side}, {suffix}, {extension}",
+    "",
+    "Format specifiers (Python string formatting):",
+    "  {month:02d} - two digits with leading zero (01, 02, ...)",
+    "  {sequence:04d} - four digits with leading zeros (0001, 0002, ...)",
+    "  {group} - no formatting, use as-is",
+    "",
+    "Path template examples:",
+    "  Default (year/date): '{year}/{year}.{month:02d}.{day:02d}'",
+    "  Flat (date only): '{year}.{month:02d}.{day:02d}'",
+    "  By month: '{year}/{year}.{month:02d}'",
+    "  By group: '{group}/{year}/{year}.{month:02d}.{day:02d}'",
+    "",
+    "Filename template examples:",
+    "  Default: '{year}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}'",
+    "  Compact: '{year}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}'",
+    "  ISO-style: '{year}-{month:02d}-{day:02d}_{hour:02d}-{minute:02d}-{second:02d}_{modifier}_{group}_{subgroup}_{sequence:04d}_{side}_{suffix}'",
+    "",
+    "Note: Extension is added automatically and should NOT be included in filename_template."
+  ],
+
+  "path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+  "filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+}

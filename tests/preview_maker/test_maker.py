@@ -55,7 +55,9 @@ class TestPreviewMakerBatch:
         self._create_tiff(msr_path)
 
         maker = PreviewMaker(Logger("test_preview_maker"))
-        count = maker(path=temp_dir, overwrite=False, max_size=1000, quality=70)
+        # Pass the archive base (where the year folders start)
+        archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
+        count = maker(path=archive_base, overwrite=False, max_size=1000, quality=70)
         assert count == 1
 
         prv_path = date_dir / "1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
@@ -82,15 +84,16 @@ class TestPreviewMakerBatch:
         self._create_tiff(prv_path, size=(500, 500))
 
         maker = PreviewMaker(Logger("test_preview_maker"))
+        archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
 
         # Without overwrite, nothing should change
-        count_no_overwrite = maker(path=temp_dir, overwrite=False, max_size=800, quality=70)
+        count_no_overwrite = maker(path=archive_base, overwrite=False, max_size=800, quality=70)
         assert count_no_overwrite == 0
         with Image.open(prv_path) as img:
             assert max(img.size) == 500
 
         # With overwrite, PRV should be regenerated and respect new max_size
-        count_overwrite = maker(path=temp_dir, overwrite=True, max_size=800, quality=70)
+        count_overwrite = maker(path=archive_base, overwrite=True, max_size=800, quality=70)
         assert count_overwrite == 1
         with Image.open(prv_path) as img:
             assert max(img.size) <= 800
@@ -108,7 +111,8 @@ class TestPreviewMakerBatch:
         self._create_tiff(raw_path, size=(3000, 2000))
 
         maker = PreviewMaker(Logger("test_preview_maker"))
-        count = maker(path=temp_dir, overwrite=False, max_size=900, quality=70)
+        archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
+        count = maker(path=archive_base, overwrite=False, max_size=900, quality=70)
         assert count == 1
 
         prv_path = date_dir / "1951.07.20.13.30.00.E.FAM.POR.0002.A.PRV.jpg"
@@ -178,7 +182,9 @@ class TestPreviewMakerBatch:
 
         # Step 2: generate PRV via PreviewMaker
         maker = PreviewMaker(logger)
-        count = maker(path=input_dir, overwrite=False, max_size=1000, quality=70)
+        # Pass the archive base where year folders begin
+        archive_base = input_dir / "processed"
+        count = maker(path=archive_base, overwrite=False, max_size=1000, quality=70)
         assert count == 1
 
         prv_path = (
@@ -213,3 +219,162 @@ class TestPreviewMakerBatch:
         assert prv_usage == master_usage
         assert prv_source == master_source
 
+
+class TestPreviewMakerCustomFormats:
+    """Test PreviewMaker with custom path formats."""
+    
+    def setup_method(self):
+        """Setup for each test method."""
+        self.temp_dir = None
+    
+    def teardown_method(self):
+        """Cleanup after each test method."""
+        if self.temp_dir and self.temp_dir.exists():
+            shutil.rmtree(self.temp_dir)
+    
+    def create_temp_dir(self) -> Path:
+        """Create a temporary directory."""
+        temp_dir = tempfile.mkdtemp()
+        self.temp_dir = Path(temp_dir)
+        return self.temp_dir
+    
+    def _create_tiff(self, path: Path, size=(4000, 3000)) -> None:
+        img = Image.new("RGB", size, color="green")
+        img.save(path, format="TIFF")
+    
+    def test_generate_prv_with_flat_path_structure(self):
+        """Test preview generation with flat path structure (no year folder)."""
+        temp_dir = self.create_temp_dir()
+        logger = Logger("test", console=False)
+        
+        # Create archive with flat structure: 2024.03.15/SOURCES/
+        date_dir = temp_dir / "archive" / "2024.03.15"
+        sources_dir = date_dir / "SOURCES"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+        
+        msr_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.MSR.tiff"
+        msr_path = sources_dir / msr_name
+        self._create_tiff(msr_path)
+        
+        # Create custom formatter with flat structure
+        from common.formatter import Formatter
+        from common.router import Router
+        
+        formatter = Formatter(
+            path_template="{year:04d}.{month:02d}.{day:02d}",
+            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+        )
+        
+        # Create PreviewMaker with custom router
+        maker = PreviewMaker(logger=logger)
+        maker._router._formatter = formatter
+        
+        # Generate preview
+        count = maker(path=temp_dir / "archive", overwrite=False, max_size=800)
+        assert count == 1
+        
+        # Preview should be in: 2024.03.15/2024.03.15.10.30.00.E.TEST.GRP.0001.A.PRV.jpg
+        prv_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.PRV.jpg"
+        prv_path = date_dir / prv_name
+        
+        assert prv_path.exists(), f"PRV not found at {prv_path}"
+    
+    def test_generate_prv_with_month_grouping(self):
+        """Test preview generation with year/month grouping."""
+        temp_dir = self.create_temp_dir()
+        logger = Logger("test", console=False)
+        
+        # Create archive with month structure: 2024/2024.03/SOURCES/
+        date_dir = temp_dir / "archive" / "2024" / "2024.03"
+        sources_dir = date_dir / "SOURCES"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+        
+        msr_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.MSR.tiff"
+        msr_path = sources_dir / msr_name
+        self._create_tiff(msr_path)
+        
+        from common.formatter import Formatter
+        
+        formatter = Formatter(
+            path_template="{year:04d}/{year:04d}.{month:02d}",
+            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+        )
+        
+        maker = PreviewMaker(logger=logger)
+        maker._router._formatter = formatter
+        
+        count = maker(path=temp_dir / "archive", overwrite=False, max_size=800)
+        assert count == 1
+        
+        # Preview should be in: 2024/2024.03/2024.03.15.10.30.00.E.TEST.GRP.0001.A.PRV.jpg
+        prv_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.PRV.jpg"
+        prv_path = date_dir / prv_name
+        
+        assert prv_path.exists(), f"PRV not found at {prv_path}"
+    
+    def test_generate_prv_with_group_in_path(self):
+        """Test preview generation with group in path structure."""
+        temp_dir = self.create_temp_dir()
+        logger = Logger("test", console=False)
+        
+        # Create archive: FAM/2024/2024.03.15/SOURCES/
+        date_dir = temp_dir / "archive" / "FAM" / "2024" / "2024.03.15"
+        sources_dir = date_dir / "SOURCES"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+        
+        msr_name = "2024.03.15.10.30.00.E.FAM.POR.0001.A.MSR.tiff"
+        msr_path = sources_dir / msr_name
+        self._create_tiff(msr_path)
+        
+        from common.formatter import Formatter
+        
+        formatter = Formatter(
+            path_template="{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+        )
+        
+        maker = PreviewMaker(logger=logger)
+        maker._router._formatter = formatter
+        
+        count = maker(path=temp_dir / "archive", overwrite=False, max_size=800)
+        assert count == 1
+        
+        # Preview should be in: FAM/2024/2024.03.15/2024.03.15.10.30.00.E.FAM.POR.0001.A.PRV.jpg
+        prv_name = "2024.03.15.10.30.00.E.FAM.POR.0001.A.PRV.jpg"
+        prv_path = date_dir / prv_name
+        
+        assert prv_path.exists(), f"PRV not found at {prv_path}"
+    
+    def test_generate_prv_with_compact_filename(self):
+        """Test preview generation with compact filename format."""
+        temp_dir = self.create_temp_dir()
+        logger = Logger("test", console=False)
+        
+        # Create archive: 2024/2024.03.15/SOURCES/
+        date_dir = temp_dir / "archive" / "2024" / "2024.03.15"
+        sources_dir = date_dir / "SOURCES"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Master has standard name
+        msr_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.MSR.tiff"
+        msr_path = sources_dir / msr_name
+        self._create_tiff(msr_path)
+        
+        from common.formatter import Formatter
+        
+        formatter = Formatter(
+            path_template="{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+            filename_template="{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"
+        )
+        
+        maker = PreviewMaker(logger=logger)
+        maker._router._formatter = formatter
+        
+        count = maker(path=temp_dir / "archive", overwrite=False, max_size=800)
+        assert count == 1
+        
+        # Preview should have compact name: 20240315_103000_TEST_PRV.jpg
+        prv_name = "20240315_103000_TEST_PRV.jpg"
+        prv_path = date_dir / prv_name
+        
+        assert prv_path.exists(), f"PRV not found at {prv_path}"

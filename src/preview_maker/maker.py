@@ -159,19 +159,9 @@ class PreviewMaker:
                         extension="jpg"
                     )
 
-                    # Determine base path for router: it's the parent of the year folder
-                    # For file at /archive/2020/2020.01.15/SOURCES/file.tif, base is /archive/
-                    # We need to find the year folder in the path and get its parent
-                    year_str = f"{parsed.year:04d}"
-                    try:
-                        # Find year folder in path
-                        parts = src_path.parts
-                        year_index = parts.index(year_str)
-                        base_path = Path(*parts[:year_index])
-                    except (ValueError, IndexError):
-                        # Fallback: use the input path parameter
-                        self._logger.warning(f"Could not determine archive base for {src_path}, using input path")
-                        base_path = path
+                    # Use the input path as archive base - it's passed by the caller
+                    # and represents the root of the archive structure
+                    base_path = path
 
                     # Use router to determine PRV output folder
                     prv_dir = self._router.get_target_folder(prv_parsed, base_path)

@@ -3,8 +3,8 @@
     "Suffix routing rules for file organization.",
     "This file defines where files with different suffixes are stored in the archive structure.",
     "",
-    "Archive structure:",
-    "  archive_root/YYYY/YYYY.MM.DD/",
+    "Archive structure (configurable via formats.json):",
+    "  archive_root/{year}/{year}.{month}.{day}/",
     "    ├── SOURCES/      - Raw scans and master files",
     "    ├── DERIVATIVES/  - Processed derivatives (TIFF, JPEG, etc.)",
     "    └── (date folder)  - Preview files stored directly here",
@@ -13,18 +13,18 @@
     "  - 'SOURCES': Files go to SOURCES/ subfolder (raw scans, unprocessed masters)",
     "  - 'DERIVATIVES': Files go to DERIVATIVES/ subfolder (processed outputs)",
     "  - '.': Files go directly to date folder root (small preview images)",
+    "  - '*': Default folder for unknown suffixes (if not specified, defaults to 'DERIVATIVES')",
     "",
     "Suffix matching is case-insensitive (RAW = raw = Raw).",
     "",
-    "If a suffix is not listed here, it defaults to 'DERIVATIVES'.",
-    "",
-  "If this file is missing, the following defaults are used:",
-  "  - RAW, MSR: SOURCES",
-  "  - PRV: .",
-  "  - All others: DERIVATIVES"
+    "If this file is missing, the following defaults are used:",
+    "  - RAW, MSR: SOURCES",
+    "  - PRV: .",
+    "  - *: DERIVATIVES"
   ],
 
   "RAW": "SOURCES",
   "MSR": "SOURCES",
-  "PRV": "."
+  "PRV": ".",
+  "*": "DERIVATIVES"
 }

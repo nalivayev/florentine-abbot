@@ -147,12 +147,14 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 
 > **⚠️ Status**: In development. Not yet fully tested or documented.
 
-A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers, role suffix) and moves each file into a working `processed/` tree with the layout:
+A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers, role suffix) and moves each file into a working `processed/` tree with the default layout:
 
-- `processed/YYYY/YYYY.MM.DD/` — per-date folder (root of the date tree)
-- `processed/YYYY/YYYY.MM.DD/SOURCES/` — RAW, master (`MSR`) and related technical files
-- `processed/YYYY/YYYY.MM.DD/DERIVATIVES/` — derivatives such as WEB, PRT and other outputs
-- `processed/YYYY/YYYY.MM.DD/` — `*.PRV.jpg` files for quick browsing (preview/access copies) stored directly in the date folder
+- `processed/{year}/{year}.{month}.{day}/` — per-date folder (configurable via `formats.json`)
+- `processed/{year}/{year}.{month}.{day}/SOURCES/` — RAW, master (`MSR`) and related technical files
+- `processed/{year}/{year}.{month}.{day}/DERIVATIVES/` — derivatives such as WEB, PRT and other outputs
+- `processed/{year}/{year}.{month}.{day}/` — `*.PRV.jpg` files for quick browsing (preview/access copies) stored directly in the date folder
+
+The archive structure is fully customizable through `formats.json` (see [Customizing Path and Filename Formats](#customizing-path-and-filename-formats-formatsjson) below).
 
 The same date information is also written into the file's EXIF/XMP tags. For detailed rules and examples, see `docs/en/naming.md` (Parts 2 and 3).
 
@@ -232,8 +234,8 @@ You can add custom fields by specifying new `"field_name": "XMP-namespace:TagNam
 **Customizing File Routing (`routes.json`):**
 
 File routing rules are shared between `file-organizer` and `preview-maker`. Configuration files are located in:
-- Windows: `%APPDATA%\florentine-abbot\routes.json` and `tags.json`
-- Linux/macOS: `~/.config/florentine-abbot/routes.json` and `tags.json`
+- Windows: `%APPDATA%\florentine-abbot\routes.json`, `tags.json`, and `formats.json`
+- Linux/macOS: `~/.config/florentine-abbot/routes.json`, `tags.json`, and `formats.json`
 
 By default, files are organized as follows:
 - `RAW`, `MSR` → `SOURCES/`
@@ -253,10 +255,37 @@ You can override this logic by creating a `routes.json` file:
 ```
 
 Values:
-- `"SOURCES"`, `"DERIVATIVES"`, or any folder name — create a subfolder under `YYYY/YYYY.MM.DD/`
+- `"SOURCES"`, `"DERIVATIVES"`, or any folder name — create a subfolder under the date folder (e.g., `{year}/{year}.{month}.{day}/SOURCES/`)
 - `"."` — place file directly in the date folder root
 
-Both configuration files are optional. If absent, built-in defaults are used. These settings affect both file organization (`file-organizer`) and preview generation (`preview-maker`).
+**Customizing Path and Filename Formats (`formats.json`):**
+
+You can customize how archive folder paths and filenames are formatted using Python string formatting templates. Create a `formats.json` file in your config directory:
+
+```json
+{
+  "path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+  "filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+}
+```
+
+Available fields from parsed filename:
+- Date/time: `{year}`, `{month}`, `{day}`, `{hour}`, `{minute}`, `{second}`
+- Components: `{modifier}`, `{group}`, `{subgroup}`, `{sequence}`, `{side}`, `{suffix}`, `{extension}`
+
+Format specifiers (standard Python formatting):
+- `{year:04d}` — 4 digits with leading zeros (0000, 2024)
+- `{month:02d}` — 2 digits with leading zero (01, 12)
+- `{sequence:04d}` — 4 digits with leading zeros (0001, 0042)
+
+Example templates:
+- Flat structure: `"path_template": "{year:04d}.{month:02d}.{day:02d}"`
+- By month: `"path_template": "{year:04d}/{year:04d}.{month:02d}"`
+- By group: `"path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}"`
+- Compact filename: `"filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"`
+- ISO-style: `"filename_template": "{year:04d}-{month:02d}-{day:02d}_{hour:02d}-{minute:02d}-{second:02d}_{modifier}_{group}_{subgroup}_{sequence:04d}_{side}_{suffix}"`
+
+All configuration files are optional. If absent, built-in defaults are used. These settings affect both file organization (`file-organizer`) and preview generation (`preview-maker`).
 
 ## Preview Maker (PRV Generator)
 

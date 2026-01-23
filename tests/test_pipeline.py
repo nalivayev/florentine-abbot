@@ -158,7 +158,8 @@ class TestPipeline:
 
         # Step 2: generate PRV via PreviewMaker
         maker = PreviewMaker(self.logger)
-        count = maker(path=self.input_dir, overwrite=False, max_size=1000, quality=70)
+        # Pass the archive base (processed/) where year folders begin
+        count = maker(path=processed_root, overwrite=False, max_size=1000, quality=70)
         assert count == 1, "PreviewMaker should generate exactly one PRV file"
 
         date_dir = processed_msr_path.parent.parent

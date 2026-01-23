@@ -9,20 +9,26 @@ from pathlib import Path
 from typing import Optional
 
 from common.naming import ParsedFilename
-from common.constants import DERIVATIVES_DIR_NAME, DEFAULT_SUFFIX_ROUTING
+from common.constants import DEFAULT_SUFFIX_ROUTING
+from common.formatter import Formatter
 
 
 class Router:
     """Determines target folders for files based on routing rules.
     
-    The Router uses suffix-based routing rules to determine where files
-    should be placed in the archive structure:
+    The Router uses suffix-based routing rules and configurable path templates
+    to determine where files should be placed in the archive structure.
     
-    Archive structure:
-        archive_root/YYYY/YYYY.MM.DD/
+    Archive structure (configurable via Formatter):
+        Default: archive_root/{year:04d}/{year:04d}.{month:02d}.{day:02d}/
             ├── SOURCES/      - Raw scans and master files
             ├── DERIVATIVES/  - Processed derivatives
             └── (date folder)  - Preview files stored directly here
+    
+    Path structure can be customized via formats.json:
+        - Flat: {year:04d}.{month:02d}.{day:02d}/
+        - By month: {year:04d}/{year:04d}.{month:02d}/
+        - By group: {group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}/
     
     Routing is configured via a suffix mapping (suffix -> subfolder):
         - "SOURCES": File goes to SOURCES/ subfolder
@@ -38,6 +44,9 @@ class Router:
                            If None, loads from routes.json or uses DEFAULT_SUFFIX_ROUTING.
             logger: Optional logger for diagnostic messages.
         """
+        self._logger = logger
+        self._formatter = Formatter(logger=logger)
+        
         if suffix_routing is not None:
             self._suffix_routing = suffix_routing
         else:
@@ -62,23 +71,27 @@ class Router:
     def get_target_folder(self, parsed: ParsedFilename, base_path: Path) -> Path:
         """Determine target folder for a file based on parsed filename.
         
+        Uses Formatter to build path from template, then applies suffix routing
+        to determine subfolder (SOURCES/DERIVATIVES/date root).
+        
         Args:
             parsed: Parsed filename data
             base_path: Base path (e.g., archive root or processed root)
         
         Returns:
             Full path to target folder where file should be placed
+            (e.g., base_path/2024/2024.03.15/SOURCES or custom structure)
         """
-        # Build folder structure: YYYY/YYYY.MM.DD/[SOURCES|DERIVATIVES]/
-        year_dir = f"{parsed.year:04d}"
-        date_dir = f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}"
+        # Use formatter to build path from template
+        formatted_path = self._formatter.format_path(parsed)
         
         suffix_upper = parsed.suffix.upper()
         
-        date_root_dir = base_path / year_dir / date_dir
+        date_root_dir = base_path / formatted_path
         
         # Get subfolder name from routing rules
-        subfolder = self._suffix_routing.get(suffix_upper, DERIVATIVES_DIR_NAME)
+        # Use "*" as default if suffix not found
+        subfolder = self._suffix_routing.get(suffix_upper, self._suffix_routing.get("*", "DERIVATIVES"))
         
         # "." means store directly in date folder root (e.g., preview files)
         if subfolder == ".":
@@ -87,20 +100,18 @@ class Router:
             return date_root_dir / subfolder
     
     def get_normalized_filename(self, parsed: ParsedFilename) -> str:
-        """Get normalized filename with leading zeros.
+        """Format filename according to configured template.
+        
+        Uses Formatter to apply filename template with format specifiers
+        (e.g., {year:04d}.{month:02d}.{day:02d}... or custom format).
         
         Args:
             parsed: Parsed filename data
         
         Returns:
-            Normalized filename (without extension)
+            Formatted filename (without extension)
         """
-        return (
-            f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}."
-            f"{parsed.hour:02d}.{parsed.minute:02d}.{parsed.second:02d}."
-            f"{parsed.modifier}.{parsed.group}.{parsed.subgroup}.{int(parsed.sequence):04d}."
-            f"{parsed.side}.{parsed.suffix}"
-        )
+        return self._formatter.format_filename(parsed)
     
     def get_folders_for_suffixes(self, suffixes: list[str]) -> set[str]:
         """Get unique folder names where files with given suffixes are stored.
@@ -115,7 +126,7 @@ class Router:
         folders = set()
         for suffix in suffixes:
             suffix_upper = suffix.upper()
-            folder = self._suffix_routing.get(suffix_upper, DERIVATIVES_DIR_NAME)
+            folder = self._suffix_routing.get(suffix_upper, self._suffix_routing.get("*", "DERIVATIVES"))
             if folder != ".":  # Exclude date root
                 folders.add(folder)
         return folders

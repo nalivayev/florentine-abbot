@@ -12,7 +12,7 @@ from typing import Any
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename, FilenameValidator
-from common.constants import DERIVATIVES_DIR_NAME, SUPPORTED_IMAGE_EXTENSIONS
+from common.constants import SUPPORTED_IMAGE_EXTENSIONS
 from common.archive_metadata import ArchiveMetadata
 from common.router import Router
 
