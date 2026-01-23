@@ -49,7 +49,11 @@ class Parser(ArgumentParser):
         """
         Initialize the Parser with all image calculation arguments.
         """
-        ArgumentParser.__init__(self)
+        ArgumentParser.__init__(
+            self,
+            description="Scan Batcher - Automated scanning workflow and DPI calculation tool",
+            epilog="Use -w/--workflow to specify an INI configuration file for batch processing."
+        )
         
         # Add version argument
         try:
