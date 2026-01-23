@@ -109,7 +109,7 @@ class PreviewMaker:
                 if not dirpath.is_dir():
                     continue
 
-                self._logger.debug(f"Scanning {folder_name} directory: {dirpath}")
+                self._logger.info(f"Scanning for master files in: {dirpath}")
 
                 for src_path in dirpath.iterdir():
                     if not src_path.is_file():
@@ -171,7 +171,7 @@ class PreviewMaker:
                         self._logger.debug("Skipping existing PRV (overwrite disabled): %s", prv_path)
                         continue
 
-                    self._logger.debug("Creating PRV from %s to %s", src_path, prv_path)
+                    self._logger.info("Creating PRV: %s -> %s", src_path.name, prv_path)
 
                     self._convert_to_prv(
                         input_path=src_path,
@@ -181,7 +181,7 @@ class PreviewMaker:
                     )
                     written += 1
 
-        self._logger.debug("Finished batch preview generation under %s: %d file(s) written", path, written)
+        self._logger.info("Finished batch preview generation: %d file(s) written", written)
 
         return written
 
@@ -231,4 +231,4 @@ class PreviewMaker:
             # Treat metadata issues as errors in logs but keep the image.
             self._logger.error("Failed to copy metadata to PRV %s: %s", output_path, exc)
 
-        self._logger.debug("PRV written to %s", output_path)
+        self._logger.info("Saved PRV: %s", output_path)

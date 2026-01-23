@@ -238,6 +238,10 @@ class ArchiveMetadata:
                 # Language-aware text fields. For each language we write TAG-langCode,
                 # and for the default language we also write the plain TAG (which
                 # exiftool maps to x-default for LangAlt tags).
+                #
+                # Note: Only some XMP tags support LangAlt (language alternatives):
+                # - Description, Rights, UsageTerms, Title: support language variants
+                # - Credit, Source, Creator: do NOT support language variants (write only plain tag)
                 
                 # Use provided metadata tags mapping, or fall back to defaults
                 text_field_map = self._metadata_tags if self._metadata_tags is not None else DEFAULT_METADATA_TAGS
@@ -252,7 +256,9 @@ class ArchiveMetadata:
                         if not normalized:
                             continue
 
-                        # Language-specific variant
+                        # Try to write language-specific variant
+                        # Exiftool will warn if tag doesn't support it, but that's OK
+                        # We write it for LangAlt tags, exiftool ignores for non-LangAlt
                         lang_tag = f"{tag_base}-{lang_code}"
                         tags[lang_tag] = normalized
 
