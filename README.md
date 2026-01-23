@@ -1,5 +1,6 @@
 [![en](https://img.shields.io/badge/lang-en-red.svg)](https://github.com/nalivayev/florentine_abbot/blob/master/README.md)
 [![ru](https://img.shields.io/badge/lang-ru-yellow.svg)](https://github.com/nalivayev/florentine_abbot/blob/master/README.ru.md)
+[![be](https://img.shields.io/badge/lang-be-green.svg)](https://github.com/nalivayev/florentine_abbot/blob/master/README.be.md)
 
 # Florentine Abbot
 

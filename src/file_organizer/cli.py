@@ -33,6 +33,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--config", help="Path to JSON configuration file (see config.template.json)")
     parser.add_argument("--log-path", help="Custom directory for log files (default: ~/.florentine-abbot/logs/)")
+    parser.add_argument("--copy", action="store_true", help="Copy files instead of moving them (useful for testing)")
     return parser
 
 
@@ -58,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.daemon:
             # Daemon mode: run filesystem monitor around per-file processor.
             config = Config(logger, args.config)
-            monitor = FileMonitor(logger, str(input_path), config)
+            monitor = FileMonitor(logger, str(input_path), config, copy_mode=args.copy)
             monitor.start()
         else:
             # Batch mode: one-shot processing of existing files.
@@ -67,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
                 input_path=input_path,
                 config_path=args.config,
                 recursive=args.recursive,
+                copy_mode=args.copy,
             )
     except Exception as exc:  # pragma: no cover - generic CLI error reporting
         print(f"[file_organizer] Error: {exc}", file=sys.stderr)

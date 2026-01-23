@@ -1,5 +1,6 @@
 """Configuration utilities for florentine-abbot tools."""
 
+import importlib.resources as resources
 import json
 import os
 import shutil
@@ -181,7 +182,6 @@ def get_template_path(module_name: str, filename: str = "config.template.json") 
         Path to template file, or None if not found.
     """
     try:
-        import importlib.resources as resources
         # Python 3.9+ approach
         try:
             package = resources.files(module_name)
@@ -196,7 +196,6 @@ def get_template_path(module_name: str, filename: str = "config.template.json") 
     
     # Fallback: try to find in source tree
     try:
-        import sys
         for path in sys.path:
             candidate = Path(path) / module_name / filename
             if candidate.exists():

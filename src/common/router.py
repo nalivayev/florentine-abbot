@@ -49,6 +49,7 @@ class Router:
         self._formatter = Formatter(logger=logger)
         
         if suffix_routing is not None:
+
             self._suffix_routing = suffix_routing
         else:
             # Load from routes.json if available

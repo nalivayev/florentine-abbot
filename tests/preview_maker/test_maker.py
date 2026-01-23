@@ -146,7 +146,7 @@ class TestPreviewMakerBatch:
 
         logger = Logger("test_preview_maker_metadata")
 
-        # Step 1: run FileOrganizer to write canonical metadata to MSR
+        # Step 1: run FileOrganizer in batch mode to write canonical metadata to MSR
         organizer = FileOrganizer(logger)
         config = {
             "metadata": {
@@ -163,7 +163,17 @@ class TestPreviewMakerBatch:
             }
         }
 
-        assert organizer.process(msr_path, config)
+        # Write config to disk and use batch API so move/copy is handled by organizer
+        config_path = input_dir / "config.json"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+
+        processed_count = organizer(
+            input_path=input_dir,
+            config_path=config_path,
+            recursive=False,
+            copy_mode=False,
+        )
+        assert processed_count == 1
 
         processed_msr = input_dir / "processed" / "1950" / "1950.06.15" / "SOURCES" / filename
         assert processed_msr.exists()

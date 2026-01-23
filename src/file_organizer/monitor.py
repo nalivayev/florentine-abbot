@@ -1,5 +1,6 @@
 """File system monitor using watchdog."""
 
+import shutil
 import signal
 import time
 from pathlib import Path
@@ -20,18 +21,20 @@ class FileMonitor(FileSystemEventHandler):
     using :class:`FileProcessor`. Supports config reloading via SIGHUP.
     """
 
-    def __init__(self, logger: Logger, path: str, config: Config) -> None:
+    def __init__(self, logger: Logger, path: str, config: Config, copy_mode: bool = False) -> None:
         """Initialize the monitor.
         
         Args:
             logger: Logger instance for this monitor.
             path: Directory path to monitor.
             config: Config instance for file processing.
+            copy_mode: If True, copy files instead of moving them.
         """
         super().__init__()
         self.path = Path(path).resolve()
         self.config = config
         self.logger = logger
+        self.copy_mode = copy_mode
         self.processor = FileProcessor(logger)
         self.observer = Observer()
         self._setup_signal_handlers()
@@ -97,7 +100,45 @@ class FileMonitor(FileSystemEventHandler):
             try:
                 # Get fresh metadata from config (in case it was reloaded)
                 metadata = self._get_metadata()
-                self.processor.process(file_path, metadata)
+                
+                # Process metadata
+                if self.processor.process(file_path, metadata):
+                    # Get parsed filename for destination calculation
+                    parsed = self.processor._parse_and_validate(file_path.name)
+                    
+                    # Get destination paths
+                    dest_path, dest_log_path, log_file_path = self.processor.get_destination_paths(file_path, parsed)
+                    
+                    # Check if destination already exists
+                    if dest_path.exists():
+                        self.logger.error(
+                            f"Destination file already exists: {dest_path}. "
+                            f"Leaving source file in place."
+                        )
+                        return
+                    
+                    if dest_log_path and dest_log_path.exists():
+                        self.logger.error(
+                            f"Destination log file already exists: {dest_log_path}. "
+                            f"Leaving source files in place."
+                        )
+                        return
+                    
+                    # Move or copy files
+                    if self.copy_mode:
+                        shutil.copy2(str(file_path), str(dest_path))
+                        self.logger.info(f"  Copied to: {dest_path}")
+                        
+                        if log_file_path and dest_log_path:
+                            shutil.copy2(str(log_file_path), str(dest_log_path))
+                            self.logger.info(f"  Copied log to: {dest_log_path}")
+                    else:
+                        shutil.move(str(file_path), str(dest_path))
+                        self.logger.info(f"  Moved to: {dest_path}")
+                        
+                        if log_file_path and dest_log_path:
+                            shutil.move(str(log_file_path), str(dest_log_path))
+                            self.logger.info(f"  Moved log to: {dest_log_path}")
             except Exception as e:
                 self.logger.error(f"Error processing {file_path}: {e}")
 

@@ -10,6 +10,7 @@ Responsibilities are split as follows:
     processor instance and configuration.
 """
 
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,7 @@ class FileOrganizer:
         input_path: Path,
         config_path: str | Path | None = None,
         recursive: bool = False,
+        copy_mode: bool = False,
     ) -> int:
         """Run the organizer in batch mode.
 
@@ -49,24 +51,26 @@ class FileOrganizer:
             input_path: Root folder to process.
             config_path: Optional path to the JSON configuration file.
             recursive: If True, process files in subdirectories recursively.
+            copy_mode: If True, copy files instead of moving them.
 
         Returns:
             The number of successfully processed files.
         """
-        return self._run_batch(input_path=input_path, config_path=config_path, recursive=recursive)
+        return self._run_batch(input_path=input_path, config_path=config_path, recursive=recursive, copy_mode=copy_mode)
 
     def _load_config(self, config_path: str | Path | None) -> Config:
         """Create a :class:`Config` instance bound to this organizer's logger."""
 
         return Config(self._logger, config_path)
 
-    def _run_batch(self, *, input_path: Path, config_path: str | Path | None, recursive: bool = False) -> int:
+    def _run_batch(self, *, input_path: Path, config_path: str | Path | None, recursive: bool = False, copy_mode: bool = False) -> int:
         """Process existing files under ``input_path`` once and exit.
         
         Args:
             input_path: Root folder to process.
             config_path: Optional path to the JSON configuration file.
             recursive: If True, process files in subdirectories recursively.
+            copy_mode: If True, copy files instead of moving them.
             
         Returns:
             The number of successfully processed files.
@@ -74,16 +78,14 @@ class FileOrganizer:
 
         config = self._load_config(config_path)
         metadata: dict[str, Any] | None = config.get_metadata()
-        metadata_tags: dict[str, str] = config.get_metadata_tags()
-        suffix_routing: dict[str, str] = config.get_suffix_routing()
 
         # Create a new processor with root_path set for recursive mode
+        # metadata_tags and suffix_routing are self-loaded by components if needed
         processor = FileProcessor(
             self._logger,
             root_path=input_path if recursive else None,
-            metadata_tags=metadata_tags,
-            suffix_routing=suffix_routing
         )
+
 
         mode_str = "RECURSIVE" if recursive else "BATCH"
         self._logger.info(f"Starting File Organizer in {mode_str} mode on {input_path}")
@@ -103,8 +105,52 @@ class FileOrganizer:
                 skipped += 1
                 continue
 
+            # Process metadata
             if processor.process(file_path, metadata):
-                count += 1
+                # Get parsed filename for destination calculation
+                parsed = processor._parse_and_validate(file_path.name)
+                
+                # Get destination paths
+                dest_path, dest_log_path, log_file_path = processor.get_destination_paths(file_path, parsed)
+                
+                # Check if destination already exists
+                if dest_path.exists():
+                    self._logger.error(
+                        f"Destination file already exists: {dest_path}. "
+                        f"Leaving source file in place."
+                    )
+                    skipped += 1
+                    continue
+                
+                if dest_log_path and dest_log_path.exists():
+                    self._logger.error(
+                        f"Destination log file already exists: {dest_log_path}. "
+                        f"Leaving source files in place."
+                    )
+                    skipped += 1
+                    continue
+                
+                # Move or copy files
+                try:
+                    if copy_mode:
+                        shutil.copy2(str(file_path), str(dest_path))
+                        self._logger.info(f"  Copied to: {dest_path}")
+                        
+                        if log_file_path and dest_log_path:
+                            shutil.copy2(str(log_file_path), str(dest_log_path))
+                            self._logger.info(f"  Copied log to: {dest_log_path}")
+                    else:
+                        shutil.move(str(file_path), str(dest_path))
+                        self._logger.info(f"  Moved to: {dest_path}")
+                        
+                        if log_file_path and dest_log_path:
+                            shutil.move(str(log_file_path), str(dest_log_path))
+                            self._logger.info(f"  Moved log to: {dest_log_path}")
+                    
+                    count += 1
+                except Exception as e:
+                    self._logger.error(f"Failed to {'copy' if copy_mode else 'move'} file: {e}")
+                    skipped += 1
 
         self._logger.info(f"Batch processing complete. Processed {count} files, skipped {skipped} files.")
 

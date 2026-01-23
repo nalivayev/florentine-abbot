@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pytest
 from PIL import Image
@@ -69,7 +70,7 @@ class TestPipeline:
         print(f"\n[Pipeline] Running scenario: {scenario['name']}")
         print(f"[Pipeline] Processing file: {file_path}")
 
-        # --- Step 1: File Organizer ---
+        # --- Step 1: File Organizer (batch mode handles moves) ---
         organizer = FileOrganizer(self.logger)
         config = {
             "metadata": {
@@ -83,8 +84,17 @@ class TestPipeline:
             }
         }
 
-        success = organizer.process(file_path, config)
-        assert success, f"File Organizer failed to process file in scenario: {scenario['name']}"
+        # Persist config and call organizer in batch mode on input_dir
+        config_path = self.input_dir / "config.json"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+
+        processed_count = organizer(
+            input_path=self.input_dir,
+            config_path=config_path,
+            recursive=False,
+            copy_mode=False,
+        )
+        assert processed_count == 1, f"File Organizer failed to process file in scenario: {scenario['name']}"
 
         # Verify file moved into processed/YYYY/... tree
         processed_root = self.input_dir / "processed"
@@ -130,7 +140,7 @@ class TestPipeline:
         filename = "2023.10.27.12.00.00.E.Group.Sub.0001.A.MSR.tiff"
         file_path = self._create_dummy_tiff(filename)
 
-        # Step 1: organize MSR into processed/YYYY/YYYY.MM.DD/SOURCES
+        # Step 1: organize MSR into processed/YYYY/YYYY.MM.DD/SOURCES via batch API
         organizer = FileOrganizer(self.logger)
         config = {
             "metadata": {
@@ -144,8 +154,16 @@ class TestPipeline:
             }
         }
 
-        success = organizer.process(file_path, config)
-        assert success, "File Organizer failed to process MSR file in PreviewMaker pipeline test"
+        config_path = self.input_dir / "config.json"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+
+        processed_count = organizer(
+            input_path=self.input_dir,
+            config_path=config_path,
+            recursive=False,
+            copy_mode=False,
+        )
+        assert processed_count == 1, "File Organizer failed to process MSR file in PreviewMaker pipeline test"
 
         processed_root = self.input_dir / "processed"
         found_files = list(processed_root.rglob(filename))

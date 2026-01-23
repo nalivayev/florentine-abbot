@@ -13,6 +13,7 @@ from typing import Any, Optional
 from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, DEFAULT_METADATA_TAGS
 from common.exifer import Exifer
 from common.logger import Logger
+from common.config_utils import get_config_dir, load_optional_config
 
 
 class ArchiveMetadata:
@@ -57,16 +58,28 @@ class ArchiveMetadata:
         TAG_XMP_EXIF_DATETIME_DIGITIZED,
     )
 
-    def __init__(self, exifer: Optional[Exifer] = None, metadata_tags: Optional[dict[str, str]] = None) -> None:
+    def __init__(
+        self,
+        exifer: Optional[Exifer] = None,
+        metadata_tags: Optional[dict[str, str]] = None,
+        logger: Optional[Logger] = None
+    ) -> None:
         """Initialize ArchiveMetadata.
         
         Args:
             exifer: Optional Exifer instance for EXIF operations.
             metadata_tags: Optional mapping of field names to XMP tag names.
-                          If None, will use DEFAULT_METADATA_TAGS from constants.
+                          If None, will load from tags.json or use DEFAULT_METADATA_TAGS.
+            logger: Optional logger for config loading.
         """
         self._exifer = exifer or Exifer()
-        self._metadata_tags = metadata_tags
+        self.logger = logger
+        
+        if metadata_tags is not None:
+            self._metadata_tags = metadata_tags
+        else:
+            tags_path = get_config_dir() / "tags.json"
+            self._metadata_tags = load_optional_config(logger, tags_path, DEFAULT_METADATA_TAGS)
 
     @classmethod
     def _get_master_tags(cls) -> list[str]:
