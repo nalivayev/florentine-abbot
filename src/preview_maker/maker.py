@@ -158,9 +158,11 @@ class PreviewMaker:
                         extension="jpg"
                     )
 
-                    # Use the input path as archive base - it's passed by the caller
-                    # and represents the root of the archive structure
-                    base_path = path
+                    # Determine archive base path:
+                    # If path/processed exists, use it as the base (organizer puts files there)
+                    # Otherwise use path itself (already organized archive)
+                    processed_path = path / "processed"
+                    base_path = processed_path if processed_path.exists() else path
 
                     # Use router to determine PRV output folder
                     prv_dir = self._router.get_target_folder(prv_parsed, base_path)
