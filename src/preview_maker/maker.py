@@ -11,7 +11,7 @@ from pathlib import Path
 from PIL import Image
 
 from common.logger import Logger
-from common.naming import FilenameParser
+from common.naming import FilenameParser, ParsedFilename
 from common.constants import SUPPORTED_IMAGE_EXTENSIONS
 from common.archive_metadata import ArchiveMetadata
 from common.router import Router
@@ -142,7 +142,6 @@ class PreviewMaker:
                             continue
 
                     # Create PRV parsed filename by replacing suffix with PRV
-                    from common.naming import ParsedFilename
                     prv_parsed = ParsedFilename(
                         year=parsed.year,
                         month=parsed.month,

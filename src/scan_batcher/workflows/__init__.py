@@ -3,6 +3,7 @@ import pkgutil
 import sys
 from pathlib import Path
 from typing import Callable
+from importlib.metadata import entry_points
 
 from scan_batcher.workflow import Workflow  # base class
 
@@ -59,7 +60,6 @@ def load_workflows() -> None:
 
     # Load external plugins via entry points
     try:
-        from importlib.metadata import entry_points
         plugin_group = "scan_batcher.workflows"
         
         if sys.version_info >= (3, 10):

@@ -473,6 +473,43 @@ class TestExiftoolCompliance:
         dt_digitized = meta_after.get("XMP-exif:DateTimeDigitized") or meta_after.get("XMP:DateTimeDigitized")
         assert dt_digitized == "2025:11:29 13:00:00"
 
+    def test_process_without_metadata_config(self, logger):
+        """Verify that file processing works without metadata config (no creator, rights, etc)."""
+        temp_dir = self.create_temp_dir()
+        
+        filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
+        file_path = temp_dir / filename
+        self.create_dummy_image(file_path)
+        
+        # Process with None (no metadata config)
+        processor = FileOrganizer(logger)
+        result = processor.process(file_path, None)
+        
+        assert result is True
+        
+        # Check file was moved to processed folder
+        processed_path = temp_dir / "processed" / "1950" / "1950.06.15" / "SOURCES" / filename
+        assert processed_path.exists(), f"File not found at {processed_path}"
+        
+        # Verify essential metadata was written (UUID, dates, title)
+        meta = self.get_exiftool_json(processed_path)
+        
+        # Should have UUID identifiers
+        assert "XMP:Identifier" in meta or "XMP-xmp:Identifier" in meta
+        assert "XMP:Identifier" in meta or "XMP-dc:Identifier" in meta
+        
+        # Should have DateTimeOriginal from parsed filename
+        dt_original = meta.get("EXIF:DateTimeOriginal") or meta.get("ExifIFD:DateTimeOriginal")
+        assert dt_original == "1950:06:15 12:30:45"
+        
+        # Should have Title
+        title = meta.get("XMP:Title") or meta.get("XMP-dc:Title")
+        assert title is not None
+        
+        # Should NOT have creator/rights/description (these require metadata config)
+        assert "XMP:Creator" not in meta and "XMP-dc:Creator" not in meta
+        assert "XMP:Rights" not in meta and "XMP-dc:Rights" not in meta
+
 
 class TestFileOrganizerCustomFormats:
     """Test FileOrganizer with custom path and filename formats."""

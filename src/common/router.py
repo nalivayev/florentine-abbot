@@ -11,6 +11,7 @@ from typing import Optional
 from common.naming import ParsedFilename
 from common.constants import DEFAULT_SUFFIX_ROUTING
 from common.formatter import Formatter
+from common.config_utils import get_config_dir, load_optional_config
 
 
 class Router:
@@ -51,21 +52,8 @@ class Router:
             self._suffix_routing = suffix_routing
         else:
             # Load from routes.json if available
-            from common.config_utils import get_config_dir, load_optional_config
             config_dir = get_config_dir()
             routes_path = config_dir / "routes.json"
-            
-            # Try to copy template if routes.json doesn't exist
-            if not routes_path.exists():
-                from common.config_utils import get_template_path
-                template_path = get_template_path('common', 'routes.template.json')
-                if template_path and template_path.exists():
-                    if logger:
-                        logger.info(f"Creating {routes_path} from template")
-                    routes_path.parent.mkdir(parents=True, exist_ok=True)
-                    import shutil
-                    shutil.copy2(template_path, routes_path)
-            
             self._suffix_routing = load_optional_config(logger, routes_path, DEFAULT_SUFFIX_ROUTING)
     
     def get_target_folder(self, parsed: ParsedFilename, base_path: Path) -> Path:

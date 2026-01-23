@@ -10,7 +10,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Optional
 
-from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
+from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, DEFAULT_METADATA_TAGS
 from common.exifer import Exifer
 from common.logger import Logger
 
@@ -240,7 +240,6 @@ class ArchiveMetadata:
                 # exiftool maps to x-default for LangAlt tags).
                 
                 # Use provided metadata tags mapping, or fall back to defaults
-                from common.constants import DEFAULT_METADATA_TAGS
                 text_field_map = self._metadata_tags if self._metadata_tags is not None else DEFAULT_METADATA_TAGS
 
                 for lang_code, block in languages.items():

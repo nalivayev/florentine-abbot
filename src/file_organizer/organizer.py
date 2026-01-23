@@ -115,13 +115,23 @@ class FileOrganizer:
 
         return self._processor.should_process(file_path)
 
-    def process(self, file_path: Path, config: dict[str, Any]) -> bool:
-        """Delegate per-file processing to :class:`FileProcessor`."""
+    def process(self, file_path: Path, config: dict[str, Any] | None) -> bool:
+        """Delegate per-file processing to :class:`FileProcessor`.
+        
+        Args:
+            file_path: Path to the file to process.
+            config: Configuration dict (full organizer config with 'metadata' key,
+                   or raw metadata dict), or None to skip metadata fields.
+        
+        Returns:
+            True if processing successful, False otherwise.
+        """
         # Accept either a full organizer config (with top-level "metadata"
         # block) or a raw metadata dict. For the former, extract the
         # "metadata" section so that FileProcessor receives only the
         # metadata configuration, mirroring the batch/Config path.
-        metadata = config.get("metadata", config)
+        # If config is None, pass None to processor to skip configurable metadata.
+        metadata = config.get("metadata", config) if config is not None else None
         return self._processor.process(file_path, metadata)
 
     def _parse_and_validate(self, filename: str):

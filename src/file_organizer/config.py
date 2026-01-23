@@ -24,11 +24,16 @@ class Config:
         
         Args:
             logger: Logger instance for this config.
-            config_path: Path to JSON config file. If None, uses standard location.
+            config_path: Path to JSON config file. If None, uses file-organizer/config.json in standard location.
         """
         self.logger = logger
-        # Get config path (custom or standard location)
-        self.config_path = get_config_path('file-organizer', config_path)
+        
+        # Get config path (custom or standard file-organizer/config.json)
+        if config_path:
+            self.config_path = Path(config_path)
+        else:
+            config_dir = get_config_dir()
+            self.config_path = config_dir / 'file-organizer' / 'config.json'
         
         # Ensure config exists, create from template if needed
         template_path = get_template_path('file_organizer', 'config.template.json')
@@ -109,15 +114,6 @@ class Config:
         """
         config_dir = get_config_dir()
         tags_path = config_dir / "tags.json"
-        
-        # If tags.json doesn't exist, try to copy template from common/
-        if not tags_path.exists():
-            template_path = get_template_path('common', 'tags.template.json')
-            if template_path and template_path.exists():
-                self.logger.info(f"Creating {tags_path} from template")
-                tags_path.parent.mkdir(parents=True, exist_ok=True)
-                import shutil
-                shutil.copy2(template_path, tags_path)
         
         return load_optional_config(self.logger, tags_path, DEFAULT_METADATA_TAGS)
     
