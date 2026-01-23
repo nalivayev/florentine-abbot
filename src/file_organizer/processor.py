@@ -69,12 +69,12 @@ class FileProcessor:
         parsed = self._parse_and_validate(file_path.name)
         return parsed is not None
 
-    def process(self, file_path: Path, config: dict[str, Any]) -> bool:
+    def process(self, file_path: Path, config: dict[str, Any] | None) -> bool:
         """Process a file: parse filename, validate, write EXIF/XMP metadata, and move to processed folder.
 
         Args:
             file_path: Path to the file to process.
-            config: Configuration parameters.
+            config: Configuration parameters (metadata dict), or None to skip metadata writing.
 
         Returns:
             True if processing successful, False otherwise.
@@ -122,13 +122,13 @@ class FileProcessor:
 
         return parsed
 
-    def _write_metadata(self, file_path: Path, parsed: ParsedFilename, config: dict[str, Any]) -> bool:
+    def _write_metadata(self, file_path: Path, parsed: ParsedFilename, config: dict[str, Any] | None) -> bool:
         """Write metadata to EXIF/XMP fields using exiftool.
 
         Args:
             file_path: Path to the file.
             parsed: Parsed filename data.
-            config: Plugin configuration.
+            config: Plugin configuration (metadata dict), or None to skip metadata writing.
 
         Returns:
             True if all metadata written successfully, False otherwise.

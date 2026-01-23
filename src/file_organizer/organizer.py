@@ -73,7 +73,7 @@ class FileOrganizer:
         """
 
         config = self._load_config(config_path)
-        metadata: dict[str, Any] = config.get_metadata()
+        metadata: dict[str, Any] | None = config.get_metadata()
         metadata_tags: dict[str, str] = config.get_metadata_tags()
         suffix_routing: dict[str, str] = config.get_suffix_routing()
 

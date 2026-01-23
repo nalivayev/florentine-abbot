@@ -97,7 +97,7 @@ class ArchiveMetadata:
         *,
         file_path: Path,
         parsed: Any,
-        config: dict[str, Any],
+        config: dict[str, Any] | None,
         logger: Logger,
     ) -> None:
         """Write EXIF/XMP metadata for a master/derivative file.
@@ -109,7 +109,13 @@ class ArchiveMetadata:
         - write human-readable description and title
         - derive DateTimeDigitized from existing CreateDate if needed
         - encode DateTimeOriginal / DateCreated from parsed filename
-        - apply configurable fields (creator, rights, etc.)
+        - apply configurable fields (creator, rights, etc.) if config provided
+        
+        Args:
+            file_path: Path to the file to tag.
+            parsed: Parsed filename data.
+            config: Metadata configuration dict (with 'languages' key), or None to skip configurable fields.
+            logger: Logger instance.
         """
 
         tags: dict[str, Any] = {}
@@ -196,61 +202,64 @@ class ArchiveMetadata:
         # rights, terms, source. One language may be marked with
         # "default": true to indicate which value should become x-default /
         # plain XMP tag.
+        #
+        # If config is None or does not contain 'languages', skip writing
+        # configurable metadata fields entirely.
 
-        if not isinstance(config, dict) or "languages" not in config:
-            raise ValueError("ArchiveMetadata.write_master_tags expects config with 'languages' mapping")
+        if config is None or not isinstance(config, dict) or "languages" not in config:
+            logger.debug("No 'languages' in config; skipping configurable metadata fields (creator, rights, etc.)")
+        else:
+            languages = config["languages"]
+            if not isinstance(languages, dict) or not languages:
+                logger.warning("Config 'languages' is empty or invalid; skipping configurable metadata fields")
+            else:
+                # Choose default language block (first with default=True, else fall
+                # back to the first language in the mapping for stability).
+                default_lang_code: Optional[str] = None
+                default_block: Optional[dict[str, Any]] = None
+                for lang_code, block in languages.items():
+                    if isinstance(block, dict) and block.get("default"):
+                        default_lang_code = lang_code
+                        default_block = block
+                        break
 
-        languages = config["languages"]
-        if not isinstance(languages, dict) or not languages:
-            raise ValueError("ArchiveMetadata.write_master_tags requires non-empty 'languages' mapping")
+                if default_block is None:
+                    # Fallback: pick the first language deterministically
+                    default_lang_code, default_block = next(iter(languages.items()))
 
-        # Choose default language block (first with default=True, else fall
-        # back to the first language in the mapping for stability).
-        default_lang_code: Optional[str] = None
-        default_block: Optional[dict[str, Any]] = None
-        for lang_code, block in languages.items():
-            if isinstance(block, dict) and block.get("default"):
-                default_lang_code = lang_code
-                default_block = block
-                break
+                # Creator is not LangAlt in XMP – it is a bag of names. We take it
+                # from the default language block (if present) and encode it once, as
+                # a list of authors.
+                if isinstance(default_block, dict):
+                    creator_value = default_block.get("creator")
+                    if creator_value:
+                        tags[self.TAG_XMP_DC_CREATOR] = creator_value if isinstance(creator_value, list) else [creator_value]
 
-        if default_block is None:
-            # Fallback: pick the first language deterministically
-            default_lang_code, default_block = next(iter(languages.items()))
+                # Language-aware text fields. For each language we write TAG-langCode,
+                # and for the default language we also write the plain TAG (which
+                # exiftool maps to x-default for LangAlt tags).
+                
+                # Use provided metadata tags mapping, or fall back to defaults
+                from common.constants import DEFAULT_METADATA_TAGS
+                text_field_map = self._metadata_tags if self._metadata_tags is not None else DEFAULT_METADATA_TAGS
 
-        # Creator is not LangAlt in XMP – it is a bag of names. We take it
-        # from the default language block (if present) and encode it once, as
-        # a list of authors.
-        if isinstance(default_block, dict):
-            creator_value = default_block.get("creator")
-            if creator_value:
-                tags[self.TAG_XMP_DC_CREATOR] = creator_value if isinstance(creator_value, list) else [creator_value]
+                for lang_code, block in languages.items():
+                    if not isinstance(block, dict):
+                        continue
 
-        # Language-aware text fields. For each language we write TAG-langCode,
-        # and for the default language we also write the plain TAG (which
-        # exiftool maps to x-default for LangAlt tags).
-        
-        # Use provided metadata tags mapping, or fall back to defaults
-        from common.constants import DEFAULT_METADATA_TAGS
-        text_field_map = self._metadata_tags if self._metadata_tags is not None else DEFAULT_METADATA_TAGS
+                    for field_name, tag_base in text_field_map.items():
+                        raw_value = block.get(field_name)
+                        normalized = _normalize_text(raw_value)
+                        if not normalized:
+                            continue
 
-        for lang_code, block in languages.items():
-            if not isinstance(block, dict):
-                continue
+                        # Language-specific variant
+                        lang_tag = f"{tag_base}-{lang_code}"
+                        tags[lang_tag] = normalized
 
-            for field_name, tag_base in text_field_map.items():
-                raw_value = block.get(field_name)
-                normalized = _normalize_text(raw_value)
-                if not normalized:
-                    continue
-
-                # Language-specific variant
-                lang_tag = f"{tag_base}-{lang_code}"
-                tags[lang_tag] = normalized
-
-                # Default/plain variant for the chosen default language
-                if block is default_block:
-                    tags[tag_base] = normalized
+                        # Default/plain variant for the chosen default language
+                        if block is default_block:
+                            tags[tag_base] = normalized
 
         # Log file size for large files (useful for performance tracking)
         file_size = file_path.stat().st_size

@@ -76,18 +76,26 @@ class Config:
             self.logger.debug("Configuration unchanged")
             return False
     
-    def get_metadata(self) -> dict[str, Any]:
+    def get_metadata(self) -> dict[str, Any] | None:
         """Get metadata configuration block used for XMP fields.
 
         Returns the raw ``metadata`` section from the config, which is
         expected to contain a ``languages`` mapping. ``ArchiveMetadata`` is
         responsible for interpreting this structure and writing appropriate
         XMP/LangAlt tags.
+        
+        Returns:
+            Metadata dictionary, or None if not configured.
         """
 
         metadata = self.data.get("metadata")
         if not isinstance(metadata, dict):
-            raise ValueError("File Organizer config must contain a 'metadata' object")
+            self.logger.warning(
+                "Config does not contain a 'metadata' object. "
+                "Archive metadata (creator, rights, description, etc.) will not be written. "
+                f"To enable metadata, edit {self.config_path} and add a 'metadata' section."
+            )
+            return None
 
         return metadata
     
