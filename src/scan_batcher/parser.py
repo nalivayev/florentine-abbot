@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, Action
 from typing import Any, Sequence
+import importlib.metadata
 
 from scan_batcher.constants import RoundingStrategy, DEFAULT_ENGINE
 
@@ -49,6 +50,18 @@ class Parser(ArgumentParser):
         Initialize the Parser with all image calculation arguments.
         """
         ArgumentParser.__init__(self)
+        
+        # Add version argument
+        try:
+            version = importlib.metadata.version('florentine-abbot')
+        except importlib.metadata.PackageNotFoundError:
+            version = 'unknown'
+        self.add_argument(
+            '--version',
+            action='version',
+            version=f'scan-batcher (florentine-abbot {version})'
+        )
+        
         # Group required arguments for better help output
         required_group = self.add_argument_group("required arguments")
         # Add all arguments to the parser (same semantics as before)

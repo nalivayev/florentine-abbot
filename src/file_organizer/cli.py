@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+import importlib.metadata
 
 from common.logger import Logger
 from file_organizer.organizer import FileOrganizer
@@ -12,9 +13,19 @@ from file_organizer.monitor import FileMonitor
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    try:
+        version = importlib.metadata.version('florentine-abbot')
+    except importlib.metadata.PackageNotFoundError:
+        version = 'unknown'
+    
     parser = argparse.ArgumentParser(
         description="File Organizer - Metadata Extraction and Organization Tool",
         epilog="Use --config to specify a JSON configuration file with metadata settings.",
+    )
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'file-organizer (florentine-abbot {version})'
     )
     parser.add_argument("input_path", help="Path to the folder to process or monitor")
     parser.add_argument("--daemon", action="store_true", help="Run in daemon mode (monitor for new files)")
