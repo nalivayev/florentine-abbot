@@ -12,8 +12,9 @@ from typing import Any
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename, FilenameValidator
-from common.constants import SOURCES_DIR_NAME, DERIVATIVES_DIR_NAME, SUPPORTED_IMAGE_EXTENSIONS
+from common.constants import DERIVATIVES_DIR_NAME, SUPPORTED_IMAGE_EXTENSIONS
 from common.archive_metadata import ArchiveMetadata
+from common.router import Router
 
 
 class FileProcessor:
@@ -39,7 +40,7 @@ class FileProcessor:
         self.validator = FilenameValidator()
         self._metadata = ArchiveMetadata(metadata_tags=metadata_tags)
         self._root_path = root_path
-        self._suffix_routing = suffix_routing
+        self._router = Router(suffix_routing=suffix_routing, logger=logger)
 
     def should_process(self, file_path: Path) -> bool:
         """Check if the file should be processed.
@@ -172,37 +173,15 @@ class FileProcessor:
             dest_log_filename = None
 
             if parsed:
-                # Reconstruct filename with normalized components (leading zeros)
-                base_name = (
-                    f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}."
-                    f"{parsed.hour:02d}.{parsed.minute:02d}.{parsed.second:02d}."
-                    f"{parsed.modifier}.{parsed.group}.{parsed.subgroup}.{int(parsed.sequence):04d}."
-                    f"{parsed.side}.{parsed.suffix}"
-                )
+                # Get normalized filename from router
+                base_name = self._router.get_normalized_filename(parsed)
                 dest_filename = f"{base_name}.{parsed.extension}"
 
                 if log_file_path:
                     dest_log_filename = f"{base_name}.log"
 
-                # Build folder structure to mirror archive layout inside "processed":
-                #   processed/YYYY/YYYY.MM.DD/[SOURCES|DERIVATIVES]/
-                #   with preview files (PRV/legacy VIEW) stored directly in the date folder.
-                year_dir = f"{parsed.year:04d}"
-                date_dir = f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}"
-
-                suffix_upper = parsed.suffix.upper()
-
-                date_root_dir = processed_root / year_dir / date_dir
-
-                # Determine routing based on suffix
-                from common.constants import DEFAULT_SUFFIX_ROUTING
-                routing = self._suffix_routing if self._suffix_routing is not None else DEFAULT_SUFFIX_ROUTING
-                
-                # Get subfolder name: "." = date root, "SOURCES", "DERIVATIVES", or custom
-                subfolder = routing.get(suffix_upper, DERIVATIVES_DIR_NAME)
-                
-                # "." means store directly in date folder root (e.g., preview files)
-                processed_dir = date_root_dir if subfolder == "." else date_root_dir / subfolder
+                # Get target folder from router
+                processed_dir = self._router.get_target_folder(parsed, processed_root)
 
             else:
                 # Fallback for unparsed files (should not happen if should_process is checked)

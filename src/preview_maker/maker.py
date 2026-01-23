@@ -12,8 +12,9 @@ from PIL import Image
 
 from common.logger import Logger
 from common.naming import FilenameParser
-from common.constants import SOURCES_DIR_NAME, SUPPORTED_IMAGE_EXTENSIONS
+from common.constants import SUPPORTED_IMAGE_EXTENSIONS
 from common.archive_metadata import ArchiveMetadata
+from common.router import Router
 
 
 class PreviewMaker:
@@ -27,6 +28,7 @@ class PreviewMaker:
     def __init__(self, logger: Logger) -> None:
         self._logger = logger
         self._metadata = ArchiveMetadata()
+        self._router = Router(logger=logger)
 
     def __call__(
         self,
@@ -57,7 +59,7 @@ class PreviewMaker:
         max_size: int,
         quality: int,
     ) -> int:
-        """Walk under ``path`` and generate PRV JPEGs for ``SOURCES/`` files."""
+        """Walk under ``path`` and generate PRV JPEGs for master files (RAW/MSR)."""
 
         parser = FilenameParser()
         written = 0
@@ -70,66 +72,125 @@ class PreviewMaker:
             quality,
         )
 
-        for dirpath in path.rglob(SOURCES_DIR_NAME):
-            if not dirpath.is_dir():
-                continue
+    def _generate_previews_for_sources(
+        self,
+        *,
+        path: Path,
+        overwrite: bool,
+        max_size: int,
+        quality: int,
+    ) -> int:
+        """Walk under ``path`` and generate PRV JPEGs for master files (RAW/MSR)."""
 
-            self._logger.debug("Scanning %s directory: %s", SOURCES_DIR_NAME, dirpath)
+        parser = FilenameParser()
+        written = 0
 
-            date_dir = dirpath.parent
+        self._logger.debug(
+            "Starting batch preview generation under %s (overwrite=%s, max_size=%d, quality=%d)",
+            path,
+            overwrite,
+            max_size,
+            quality,
+        )
 
-            for src_path in dirpath.iterdir():
-                if not src_path.is_file():
+        # Get folders where RAW/MSR files are stored according to routing rules
+        master_suffixes = ["RAW", "MSR"]
+        target_folders = self._router.get_folders_for_suffixes(master_suffixes)
+        
+        if not target_folders:
+            self._logger.warning("No target folders found for RAW/MSR files in routing configuration")
+            return 0
+        
+        self._logger.debug(f"Scanning for master files in folders: {target_folders}")
+
+        # Scan only target folders (e.g., SOURCES/)
+        for folder_name in target_folders:
+            for dirpath in path.rglob(folder_name):
+                if not dirpath.is_dir():
                     continue
 
-                # Only consider real image files as PRV sources; skip logs and
-                # other sidecar/auxiliary files that may share the same base
-                # name (e.g. *.RAW.log, *.icc).
-                if src_path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
-                    continue
+                self._logger.debug(f"Scanning {folder_name} directory: {dirpath}")
 
-                parsed = parser.parse(src_path.name)
-                if not parsed:
-                    continue
-
-                suffix = parsed.suffix.upper()
-                if suffix not in {"RAW", "MSR"}:
-                    continue
-
-                if suffix == "RAW":
-                    msr_name = src_path.name.replace(".RAW.", ".MSR.")
-                    msr_candidate = src_path.with_name(msr_name)
-                    if msr_candidate.exists():
-                        # Prefer MSR when both RAW and MSR exist for the same base.
-                        self._logger.debug(
-                            "Skipping RAW in favour of MSR: %s (found %s)",
-                            src_path,
-                            msr_candidate,
-                        )
+                for src_path in dirpath.iterdir():
+                    if not src_path.is_file():
                         continue
 
-                base = (
-                    f"{parsed.year:04d}.{parsed.month:02d}.{parsed.day:02d}."
-                    f"{parsed.hour:02d}.{parsed.minute:02d}.{parsed.second:02d}."
-                    f"{parsed.modifier}.{parsed.group}.{parsed.subgroup}."
-                    f"{int(parsed.sequence):04d}.{parsed.side}.PRV.jpg"
-                )
+                    # Only consider real image files as PRV sources; skip logs and
+                    # other sidecar/auxiliary files that may share the same base
+                    # name (e.g. *.RAW.log, *.icc).
+                    if src_path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+                        continue
 
-                prv_path = date_dir / base
+                    parsed = parser.parse(src_path.name)
+                    if not parsed:
+                        continue
 
-                if prv_path.exists() and not overwrite:
-                    self._logger.debug("Skipping existing PRV (overwrite disabled): %s", prv_path)
-                    continue
+                    suffix = parsed.suffix.upper()
+                    if suffix not in {"RAW", "MSR"}:
+                        continue
 
-                self._logger.debug("Creating PRV from %s to %s", src_path, prv_path)
+                    if suffix == "RAW":
+                        msr_name = src_path.name.replace(".RAW.", ".MSR.")
+                        msr_candidate = src_path.with_name(msr_name)
+                        if msr_candidate.exists():
+                            # Prefer MSR when both RAW and MSR exist for the same base.
+                            self._logger.debug(
+                                "Skipping RAW in favour of MSR: %s (found %s)",
+                                src_path,
+                                msr_candidate,
+                            )
+                            continue
 
-                self._convert_to_prv(
-                    input_path=src_path,
-                    output_path=prv_path,
-                    max_size=max_size,
-                    quality=quality,
-                )
-                written += 1
+                    # Create PRV parsed filename by replacing suffix with PRV
+                    from common.naming import ParsedFilename
+                    prv_parsed = ParsedFilename(
+                        year=parsed.year,
+                        month=parsed.month,
+                        day=parsed.day,
+                        hour=parsed.hour,
+                        minute=parsed.minute,
+                        second=parsed.second,
+                        modifier=parsed.modifier,
+                        group=parsed.group,
+                        subgroup=parsed.subgroup,
+                        sequence=parsed.sequence,
+                        side=parsed.side,
+                        suffix="PRV",
+                        extension="jpg"
+                    )
+
+                    # Determine base path for router: it's the parent of the year folder
+                    # For file at /archive/2020/2020.01.15/SOURCES/file.tif, base is /archive/
+                    # We need to find the year folder in the path and get its parent
+                    year_str = f"{parsed.year:04d}"
+                    try:
+                        # Find year folder in path
+                        parts = src_path.parts
+                        year_index = parts.index(year_str)
+                        base_path = Path(*parts[:year_index])
+                    except (ValueError, IndexError):
+                        # Fallback: use the input path parameter
+                        self._logger.warning(f"Could not determine archive base for {src_path}, using input path")
+                        base_path = path
+
+                    # Use router to determine PRV output folder
+                    prv_dir = self._router.get_target_folder(prv_parsed, base_path)
+                    prv_filename = self._router.get_normalized_filename(prv_parsed) + ".jpg"
+                    prv_path = prv_dir / prv_filename
+
+                    if prv_path.exists() and not overwrite:
+                        self._logger.debug("Skipping existing PRV (overwrite disabled): %s", prv_path)
+                        continue
+
+                    self._logger.debug("Creating PRV from %s to %s", src_path, prv_path)
+
+                    self._convert_to_prv(
+                        input_path=src_path,
+                        output_path=prv_path,
+                        max_size=max_size,
+                        quality=quality,
+                    )
+                    written += 1
 
         self._logger.debug("Finished batch preview generation under %s: %d file(s) written", path, written)
 

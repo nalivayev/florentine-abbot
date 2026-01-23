@@ -231,9 +231,13 @@ file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 
 **Настройка раскладки файлов (`routes.json`):**
 
+Правила маршрутизации файлов используются совместно инструментами `file-organizer` и `preview-maker`. Файлы конфигурации расположены в:
+- Windows: `%APPDATA%\florentine-abbot\routes.json` и `tags.json`
+- Linux/macOS: `~/.config/florentine-abbot/routes.json` и `tags.json`
+
 По умолчанию файлы раскладываются так:
 - `RAW`, `MSR` → `SOURCES/`
-- `PRV`, `VIEW` → корень папки даты (`.`)
+- `PRV` → корень папки даты (`.`)
 - все остальные → `DERIVATIVES/`
 
 Вы можете переопределить эту логику, создав файл `routes.json`:
@@ -243,9 +247,8 @@ file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
   "RAW": "SOURCES",
   "MSR": "SOURCES",
   "PRV": ".",
-  "VIEW": ".",
-  "TIFF": "MASTERS",
-  "JPEG": "EXPORTS"
+  "COR": "MASTERS",
+  "EDT": "EXPORTS"
 }
 ```
 
@@ -253,11 +256,13 @@ file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 - `"SOURCES"`, `"DERIVATIVES"` или любое имя папки — создать подпапку в `YYYY/YYYY.MM.DD/`
 - `"."` — положить файл прямо в корень папки даты
 
-Оба файла (`tags.json` и `routes.json`) опциональны. При их отсутствии используются встроенные значения по умолчанию.
+Оба файла конфигурации опциональны. При их отсутствии используются встроенные значения по умолчанию. Эти настройки влияют как на организацию файлов (`file-organizer`), так и на генерацию превью (`preview-maker`).
 
 ## Preview Maker (генератор PRV)
 
 > **⚠️ Статус**: В разработке. Пока не полностью протестирована или документирована.
+
+Preview Maker использует те же правила маршрутизации (`routes.json`), что и File Organizer, для поиска мастер-файлов и определения места размещения превью-изображений.
 
 Для уже структурированного архива есть вспомогательный инструмент, который может генерировать просмотровые JPEG‑копии `PRV` из источников `RAW`/`MSR`.
 

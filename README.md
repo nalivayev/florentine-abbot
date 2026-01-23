@@ -231,9 +231,13 @@ You can add custom fields by specifying new `"field_name": "XMP-namespace:TagNam
 
 **Customizing File Routing (`routes.json`):**
 
+File routing rules are shared between `file-organizer` and `preview-maker`. Configuration files are located in:
+- Windows: `%APPDATA%\florentine-abbot\routes.json` and `tags.json`
+- Linux/macOS: `~/.config/florentine-abbot/routes.json` and `tags.json`
+
 By default, files are organized as follows:
 - `RAW`, `MSR` → `SOURCES/`
-- `PRV`, `VIEW` → date folder root (`.`)
+- `PRV` → date folder root (`.`)
 - all others → `DERIVATIVES/`
 
 You can override this logic by creating a `routes.json` file:
@@ -243,9 +247,8 @@ You can override this logic by creating a `routes.json` file:
   "RAW": "SOURCES",
   "MSR": "SOURCES",
   "PRV": ".",
-  "VIEW": ".",
-  "TIFF": "MASTERS",
-  "JPEG": "EXPORTS"
+  "COR": "MASTERS",
+  "EDT": "EXPORTS"
 }
 ```
 
@@ -253,11 +256,13 @@ Values:
 - `"SOURCES"`, `"DERIVATIVES"`, or any folder name — create a subfolder under `YYYY/YYYY.MM.DD/`
 - `"."` — place file directly in the date folder root
 
-Both files (`tags.json` and `routes.json`) are optional. If absent, built-in defaults are used.
+Both configuration files are optional. If absent, built-in defaults are used. These settings affect both file organization (`file-organizer`) and preview generation (`preview-maker`).
 
 ## Preview Maker (PRV Generator)
 
 > **⚠️ Status**: In development. Not yet fully tested or documented.
+
+The Preview Maker uses the same routing configuration (`routes.json`) as the File Organizer to locate master files and determine where to place preview images.
 
 For existing structured archives, a helper tool can generate `PRV` preview JPEGs from `RAW`/`MSR` sources.
 

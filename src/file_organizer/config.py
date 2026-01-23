@@ -102,6 +102,15 @@ class Config:
         config_dir = get_config_dir()
         tags_path = config_dir / "tags.json"
         
+        # If tags.json doesn't exist, try to copy template from common/
+        if not tags_path.exists():
+            template_path = get_template_path('common', 'tags.template.json')
+            if template_path and template_path.exists():
+                self.logger.info(f"Creating {tags_path} from template")
+                tags_path.parent.mkdir(parents=True, exist_ok=True)
+                import shutil
+                shutil.copy2(template_path, tags_path)
+        
         return load_optional_config(self.logger, tags_path, DEFAULT_METADATA_TAGS)
     
     def get_suffix_routing(self) -> dict[str, str]:

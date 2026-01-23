@@ -472,4 +472,3 @@ class TestExiftoolCompliance:
         # Note: Since EXIF:DateTimeDigitized can't be written to TIFF, processor writes to XMP-exif instead
         dt_digitized = meta_after.get("XMP-exif:DateTimeDigitized") or meta_after.get("XMP:DateTimeDigitized")
         assert dt_digitized == "2025:11:29 13:00:00"
-
