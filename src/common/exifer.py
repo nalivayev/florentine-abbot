@@ -43,7 +43,8 @@ class Exifer:
     @classmethod
     def _start_process(cls, executable: str) -> None:
         """Start a new exiftool process in stay_open mode."""
-        cmd = [executable, "-stay_open", "True", "-@", "-"]
+        # Add -charset filename=utf8 to properly handle UTF-8 encoded arguments
+        cmd = [executable, "-stay_open", "True", "-@", "-", "-charset", "filename=utf8"]
         try:
             process = subprocess.Popen(
                 cmd,
@@ -197,7 +198,13 @@ class Exifer:
             overwrite_original: Whether to overwrite the original file.
             timeout: Timeout in seconds for large files (uses one-off mode if set).
         """
-        args = ["-overwrite_original"] if overwrite_original else []
+        # Tell exiftool that command-line arguments are UTF-8 encoded
+        # This is critical for proper handling of Cyrillic and other non-ASCII characters
+        args = ["-charset", "filename=utf8"]
+        
+        if overwrite_original:
+            args.append("-overwrite_original")
+            
         for tag, value in tags.items():
             if value is None:
                 continue
