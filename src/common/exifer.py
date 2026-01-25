@@ -125,13 +125,77 @@ class Exifer:
             return self._run_one_off(args)
 
     def _run_one_off(self, args: Sequence[str], timeout: int | None = None) -> str:
-        # Always use -@ - to pass arguments via stdin. This avoids Windows command line
-        # encoding issues (cp1251 vs utf-8) and length limits.
-        # We explicitly set -charset utf8 on the CLI so exiftool expects UTF-8 in stdin.
-        cmd = [self.executable, "-charset", "utf8", "-@", "-"]
+        import tempfile
         
-        # Prepare input for stdin: one arg per line
-        input_str = "\n".join(str(arg) for arg in args)
+        # Check if any args contain newlines (multiline values)
+        has_multiline = any("\n" in str(arg) for arg in args if str(arg).startswith("-") and "=" in str(arg))
+        
+        if not has_multiline:
+            # Simple case: no multiline values, use standard argfile approach
+            cmd = [self.executable, "-charset", "utf8", "-@", "-"]
+            input_str = "\n".join(str(arg) for arg in args)
+            
+            try:
+                result = subprocess.run(
+                    cmd,
+                    input=input_str,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=timeout,
+                )
+                return result.stdout
+            except subprocess.CalledProcessError as exc:
+                raise RuntimeError(f"Exiftool failed: {exc.stderr}") from exc
+        
+        # Complex case: has multiline values
+        # Use temporary files for multiline tag values with -TAG<=file syntax
+        temp_files = []
+        processed_args = []
+        
+        try:
+            for arg in args:
+                arg_str = str(arg)
+                if arg_str.startswith("-") and "=" in arg_str and "\n" in arg_str:
+                    # Extract tag and value
+                    tag_part, value_part = arg_str.split("=", 1)
+                    # Create temp file with the value
+                    temp_file = tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False, suffix=".txt")
+                    temp_file.write(value_part)
+                    temp_file.close()
+                    temp_files.append(temp_file.name)
+                    # Use -TAG<=file syntax
+                    processed_args.append(f"{tag_part}<={temp_file.name}")
+                else:
+                    processed_args.append(arg_str)
+            
+            # Now use argfile with the processed args
+            cmd = [self.executable, "-charset", "utf8", "-@", "-"]
+            input_str = "\n".join(processed_args)
+            
+            try:
+                result = subprocess.run(
+                    cmd,
+                    input=input_str,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=timeout,
+                )
+                return result.stdout
+            except subprocess.CalledProcessError as exc:
+                raise RuntimeError(f"Exiftool failed: {exc.stderr}") from exc
+        finally:
+            # Clean up temp files
+            for temp_file_path in temp_files:
+                try:
+                    Path(temp_file_path).unlink()
+                except Exception:
+                    pass
 
         try:
             # Use utf-8 encoding for stdin/stdout to ensure correct metadata handling
@@ -208,9 +272,7 @@ class Exifer:
             overwrite_original: Whether to overwrite the original file.
             timeout: Timeout in seconds for large files (uses one-off mode if set).
         """
-        # Tell exiftool that command-line arguments (including tag values) are UTF-8 encoded
-        # This is critical for proper handling of Cyrillic and other non-ASCII characters
-        args = ["-charset", "utf8"]
+        args = []
         
         if overwrite_original:
             args.append("-overwrite_original")
@@ -218,7 +280,14 @@ class Exifer:
         for tag, value in tags.items():
             if value is None:
                 continue
-            args.append(f"-{tag}={value}")
+            # Handle list values (e.g., Creator as multiple authors)
+            # exiftool expects: -TAG=value1 -TAG=value2 ...
+            if isinstance(value, list):
+                for item in value:
+                    if item is not None:
+                        args.append(f"-{tag}={item}")
+            else:
+                args.append(f"-{tag}={value}")
         
         args.append(str(file_path))
         

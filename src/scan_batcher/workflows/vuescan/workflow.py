@@ -10,9 +10,10 @@ import datetime
 
 from common.exifer import Exifer
 from common.logger import Logger
+from common.constants import EXIF_SUPPORTED_EXTENSIONS
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import Workflow
-from scan_batcher.constants import EXIF_SUPPORTED_EXTENSIONS, EXIF_DATETIME_FORMAT
+from scan_batcher.constants import EXIF_DATETIME_FORMAT
 
 
 @register_workflow("vuescan")
