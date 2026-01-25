@@ -292,10 +292,169 @@ file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 
 > **⚠️ Статус**: У распрацоўцы. Пакуль не цалкам пратэсціравана або дакументавана.
 
-Preview Maker выкарыстоўвае тыя ж правілы маршрутызацыі (`routes.json`), што і File Organizer, для пошуку майстар-файлаў і вызначэння месца размяшчэння прэв'ю-выяў.
+Preview Maker выкарыстоўвае тыя ж правілы маршрутызацыі (`routes.json`), што і File Organizer, для пошуку майстар-файлаў і вызначэння месца размяшчэння прэв'ю-выяв.
 
 Для ўжо структураванага архіва ёсць дапаможны інструмент, які можа генераваць праглядавыя JPEG‑копіі `PRV` з крыніц `RAW`/`MSR`.
 
 - пры наяўнасці пары RAW+MSR робіць PRV **толькі з MSR**;
 - запісвае прэв'ю `*.PRV.jpg` у папку даты (бацька `SOURCES/`).
 - па змаўчанні існуючыя PRV захоўваюцца, калі не паказаны `--overwrite`.
+
+Метаданыя для прэв'ю наследуюцца ад адпаведных майстар‑файлаў:
+- кантэкстныя EXIF/XMP‑палі (апісанне, аўтар, правы, крыніца і г.д.) капіруюцца з `RAW`/`MSR`‑майстра;
+- кожны `PRV` атрымлівае ўласны ідэнтыфікатар;
+- у метаданых фіксуецца яўная сувязь (relation) паміж `PRV` і яго майстрам.
+
+**Пакетны рэжым (генерацыя прэв'ю для архіва):**
+```sh
+preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
+```
+
+**З перазапісам існуючых PRV:**
+```sh
+preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --overwrite
+```
+
+Логі пішуцца па тых жа правілах, што і ў іншых утыліт:
+- па змаўчанні: `~/.florentine-abbot/logs/preview_maker.log`;
+- каталог можна перавызначыць праз `--log-path` або пераменную асяроддзя `FLORENTINE_LOG_DIR`.
+
+## Цэласнасць архіва (Archive Keeper)
+
+> **⚠️ Статус**: У распрацоўцы. Пакуль не цалкам пратэсціраваны або дакументаваны. Не ўваходзіць ва ўсталяваны пакет; запускаць з зыходнікаў.
+
+Інструмент для забеспячэння доўгатэрміновай цэласнасці вашага лічбавага архіва. Ён сканіруе папку архіва, вылічае хэшы SHA-256 усіх файлаў і захоўвае іх у базе даных SQLite. Пры наступных запусках ён выяўляе:
+- **Новыя файлы** (Added)
+- **Зменены файлы** (Content changed)
+- **Перамешчаныя файлы** (Same content, different path)
+- **Адсутныя файлы** (Deleted or moved outside)
+- **Пашкоджаныя файлы** (Bit rot detection)
+
+### Выкарыстанне
+
+Запускайце ўтыліту наўпрост з зыходнікаў праз модульную кропку ўваходу:
+
+```sh
+python -m archive_keeper.cli "D:\Archive\Photos"
+```
+
+Гэта створыць файл `archive.db` і запоўніць яго бягучым станам архіва. Наступныя запускі будуць параўноўваць файлавую сістэму з гэтай базай даных.
+
+## Тэхнічныя дэталі
+
+### Асноўныя модулі
+
+- `scan_batcher/cli.py` — асноўны CLI-модуль (выкарыстоўваецца для каманды `scan-batcher`).
+- `archive_keeper/cli.py` — CLI для ўтыліты `archive-keeper`.
+- `file_organizer/cli.py` — CLI для ўтыліты `file-organizer`.
+- `preview_maker/cli.py` — CLI для ўтыліты `preview-maker`.
+- `preview_maker/maker.py` — ядро Preview Maker (логіка генерацыі PRV-прэв'ю).
+- `scan_batcher/batch.py` — логіка пакетных і інтэрактыўных разлікаў DPI.
+- `scan_batcher/calculator.py` — алгарытмы разліку DPI.
+- `scan_batcher/parser.py` — парсінг і валідацыя аргументаў камандной радка.
+- `common/logger.py` — адзіная падсістэма лагіравання для ўсіх утыліт.
+- `scan_batcher/constants.py` — цэнтралізаваныя канстанты і пералічэнні (напрыклад, `RoundingStrategy`).
+- `scan_batcher/workflow.py` — базавы клас для ўсіх workflow-плагінаў.
+- `scan_batcher/workflows/__init__.py` — рэгістрацыя і выяўленне плагінаў.
+- `scan_batcher/workflows/vuescan/workflow.py` — аўтаматызацыя працоўнага працэсу VueScan.
+- `common/exifer.py` — выманне і апрацоўка EXIF-метаданых, агульная для ўсіх утыліт.
+- `common/archive_metadata.py` — цэнтралізаваная палітыка архіўных метаданых для майстар‑ і вытворных файлаў.
+
+### Усталяванне
+
+#### Патрабаванні
+- Python 3.10 ці вышэй
+- Праграма VueScan (для аперацый сканавання)
+
+#### Усталяванне з зыходнага кода
+
+Для лакальнай усталёўкі пакета з зыходнага каталога выкарыстоўвайце:
+
+```sh
+pip install .
+```
+
+Гэта ўсталюе ўсе неабходныя залежнасці і зробіць асноўныя CLI-каманды даступнымі ў вашай сістэме:
+
+- `scan-batcher`
+- `file-organizer`
+- `preview-maker`
+
+> **Заўвага:**  
+> Рэкамендуецца выкарыстоўваць [віртуальнае асяроддзе](https://docs.python.org/3/library/venv.html) для ўсталёўкі і распрацоўкі.
+
+#### Усталяванне для распрацоўкі
+
+Для распрацоўкі з рэдагаванай усталёўкай:
+
+```sh
+pip install -e .
+```
+
+Для абнаўлення ўжо ўсталяванага пакета выкарыстоўвайце:
+
+```sh
+pip install --upgrade .
+```
+
+### Лагіраванне
+
+Усе ўтыліты запісваюць логі ў цэнтралізаванае месца:
+
+**Размяшчэнне па змаўчанні:**
+- Linux/macOS: `~/.florentine-abbot/logs/`
+- Windows: `C:\Users\<імя_карыстальніка>\.florentine-abbot\logs\`
+
+**Файлы логаў:**
+- `scan_batcher.log` — актыўнасць Scan Batcher
+- `file_organizer.log` — актыўнасць File Organizer (`file-organizer`)
+- `archive_keeper.log` — актыўнасць Archive Keeper
+- `preview_maker.log` — актыўнасць Preview Maker (`preview-maker`)
+
+**Карыстальніцкае размяшчэнне логаў:**
+
+Можна перавызначыць размяшчэнне двума спосабамі:
+
+**1. Параметр камандной радка (найвышэйшы прыярытэт):**
+```sh
+scan-batcher --log-path /custom/logs --workflow examples/workflow.ini
+file-organizer --log-path /custom/logs /path/to/scans
+archive-keeper --log-path /custom/logs /path/to/archive
+```
+
+**2. Пераменная асяроддзя:**
+```sh
+# Linux/macOS
+export FLORENTINE_LOG_DIR=/var/log/florentine-abbot
+scan-batcher --workflow examples/workflow.ini
+
+# Windows PowerShell
+$env:FLORENTINE_LOG_DIR = "D:\Logs\florentine-abbot"
+scan-batcher --workflow examples\workflow.ini
+```
+
+**Парадак прыярытэту:**
+1. Параметр `--log-path` (перавызначэнне для адной каманды)
+2. Пераменная асяроддзя `FLORENTINE_LOG_DIR` (для сесіі/сістэмы)
+3. Па змаўчанні: `~/.florentine-abbot/logs/`
+
+Гэта карысна для:
+- **Распрацоўкі**: хуткае перавызначэнне праз `--log-path /tmp/debug`
+- **Daemon-рэжыму**: усталёўка праз ENV у systemd unit файлах
+- **Docker**: налада праз `ENV` у Dockerfile
+- **Цэнтралізаванага лагіравання**: накіраванне ўсіх утыліт у адно месца
+
+**Магчымасці лагіравання:**
+- Адзіны фармат часавых адбіткаў: `YYYY.MM.DD HH:MM:SS.mmm`
+- Аўтаматычная ратацыя (10 МБ на файл, 5 рэзервовых копій)
+- Вывад у кансоль + запіс у файл
+- Імя модуля і ўзровень лагіравання ў кожным запісе
+
+## Дакументацыя
+
+- Індэкс дакументацыі: [docs/README.ru.md](docs/README.ru.md)
+- Кіраўніцтва па імянаванні (BY): [docs/by/naming.md](docs/by/naming.md)
+
+---
+
+Для падрабязнасцяў гл. [README.ru.md](README.ru.md) (па-руску).
