@@ -139,3 +139,108 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 ```
 {digitization_year:8:>:0}
 ```
+
+## Тэхнічныя дэталі
+
+### Асноўныя модулі
+
+- `scan_batcher/cli.py` — асноўны CLI-модуль (выкарыстоўваецца для каманды `scan-batcher`).
+- `scan_batcher/batch.py` — логіка пакетных і інтэрактыўных разлікаў DPI.
+- `scan_batcher/calculator.py` — алгарытмы разліку DPI.
+- `scan_batcher/parser.py` — парсінг і валідацыя аргументаў камандной радка.
+- `common/logger.py` — адзіная падсістэма лагіравання.
+- `scan_batcher/constants.py` — цэнтралізаваныя канстанты і пералічэнні (напрыклад, `RoundingStrategy`).
+- `scan_batcher/workflow.py` — базавы клас для ўсіх workflow-плагінаў.
+- `scan_batcher/workflows/__init__.py` — рэгістрацыя і выяўленне плагінаў.
+- `scan_batcher/workflows/vuescan/workflow.py` — аўтаматызацыя працоўнага працэсу VueScan.
+- `common/exifer.py` — выманне і апрацоўка EXIF-метаданых.
+
+### Усталяванне
+
+#### Патрабаванні
+- Python 3.10 ці вышэй
+- Праграма VueScan (для аперацый сканавання)
+
+#### Усталяванне з зыходнага кода
+
+Для лакальнай усталёўкі пакета з зыходнага каталога выкарыстоўвайце:
+
+```sh
+pip install .
+```
+
+Гэта ўсталюе ўсе неабходныя залежнасці і зробіць асноўныя CLI-каманды даступнымі ў вашай сістэме:
+
+- `scan-batcher`
+
+> **Заўвага:**  
+> Рэкамендуецца выкарыстоўваць [віртуальнае асяроддзе](https://docs.python.org/3/library/venv.html) для ўсталёўкі і распрацоўкі.
+
+#### Усталяванне для распрацоўкі
+
+Для распрацоўкі з рэдагаванай усталёўкай:
+
+```sh
+pip install -e .
+```
+
+Для абнаўлення ўжо ўсталяванага пакета выкарыстоўвайце:
+
+```sh
+pip install --upgrade .
+```
+
+### Лагіраванне
+
+Логі запісваюцца ў цэнтралізаванае месца:
+
+**Размяшчэнне па змаўчанні:**
+- Linux/macOS: `~/.scan-batcher/logs/`
+- Windows: `C:\Users\<імя_карыстальніка>\.scan-batcher\logs\`
+
+**Файл лога:**
+- `scan_batcher.log` — актыўнасць Scan Batcher
+
+**Карыстальніцкае размяшчэнне логаў:**
+
+Можна перавызначыць размяшчэнне двума спосабамі:
+
+**1. Параметр камандной радка (найвышэйшы прыярытэт):**
+```sh
+scan-batcher --log-path /custom/logs --workflow examples/workflow.ini
+```
+
+**2. Пераменная асяроддзя:**
+```sh
+# Linux/macOS
+export SCAN_BATCHER_LOG_DIR=/var/log/scan-batcher
+scan-batcher --workflow examples/workflow.ini
+
+# Windows PowerShell
+$env:SCAN_BATCHER_LOG_DIR = "D:\Logs\scan-batcher"
+scan-batcher --workflow examples\workflow.ini
+```
+
+**Парадак прыярытэту:**
+1. Параметр `--log-path` (перавызначэнне для адной каманды)
+2. Пераменная асяроддзя `SCAN_BATCHER_LOG_DIR` (для сесіі/сістэмы)
+3. Па змаўчанні: `~/.scan-batcher/logs/`
+
+Гэта карысна для:
+- **Распрацоўкі**: хуткае перавызначэнне праз `--log-path /tmp/debug`
+- **Docker**: налада праз `ENV` у Dockerfile
+
+**Магчымасці лагіравання:**
+- Адзіны фармат часавых адбіткаў: `YYYY.MM.DD HH:MM:SS.mmm`
+- Аўтаматычная ратацыя (10 МБ на файл, 5 рэзервовых копій)
+- Вывад у кансоль + запіс у файл
+- Імя модуля і ўзровень лагіравання ў кожным запісе
+
+## Дакументацыя
+
+- Індэкс дакументацыі: [docs/README.ru.md](docs/README.ru.md)
+- Кіраўніцтва па імянаванні (BY): [docs/by/naming.md](docs/by/naming.md)
+
+---
+
+Для падрабязнасцяў гл. [README.ru.md](README.ru.md) (па-руску).
