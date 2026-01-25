@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, Action
 from typing import Any, Sequence
-import importlib.metadata
 
+from common.version import get_version
 from scan_batcher.constants import RoundingStrategy, DEFAULT_ENGINE
 
 
@@ -56,14 +56,10 @@ class Parser(ArgumentParser):
         )
         
         # Add version argument
-        try:
-            version = importlib.metadata.version('florentine-abbot')
-        except importlib.metadata.PackageNotFoundError:
-            version = 'unknown'
         self.add_argument(
             '--version',
             action='version',
-            version=f'scan-batcher (florentine-abbot {version})'
+            version=f'scan-batcher (florentine-abbot {get_version()})'
         )
         
         # Group required arguments for better help output

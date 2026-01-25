@@ -8,18 +8,13 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-import importlib.metadata
 
 from common.logger import Logger
+from common.version import get_version
 from preview_maker.maker import PreviewMaker
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    try:
-        version = importlib.metadata.version('florentine-abbot')
-    except importlib.metadata.PackageNotFoundError:
-        version = 'unknown'
-    
     parser = argparse.ArgumentParser(
         description=(
             "Generate PRV (preview) JPEGs from source images using Pillow "
@@ -29,7 +24,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--version',
         action='version',
-        version=f'preview-maker (florentine-abbot {version})'
+        version=f'preview-maker (florentine-abbot {get_version()})'
     )
     parser.add_argument(
         "--max-size",

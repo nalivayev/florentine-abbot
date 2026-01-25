@@ -63,7 +63,10 @@ class Logger:
         """
         self.module_name = module_name
         self.custom_dir = custom_dir
-        self._log_file = self._resolve_log_file()
+        
+        # Resolve log directory once during initialization
+        self._log_directory = self._resolve_log_directory()
+        self._log_file = self._log_directory / f"{self.module_name}.log"
         
         # Setup logging immediately
         handlers = []
@@ -99,8 +102,8 @@ class Logger:
         # Store logger instance
         self._logger = logging.getLogger(self.module_name)
     
-    def _get_log_directory(self) -> Path:
-        """Get the log directory path with priority resolution.
+    def _resolve_log_directory(self) -> Path:
+        """Resolve the log directory path with priority resolution.
         
         Priority (highest to lowest):
         1. custom_dir parameter (CLI --log-path argument)
@@ -124,14 +127,6 @@ class Logger:
         log_dir.mkdir(parents=True, exist_ok=True)
         
         return log_dir
-    
-    def _resolve_log_file(self) -> Path:
-        """Resolve the full path to the log file.
-        
-        Returns:
-            Path: Absolute path to the log file.
-        """
-        return self._get_log_directory() / f"{self.module_name}.log"
     
     # Delegate logging methods to internal logger
     def debug(self, msg: str, *args, **kwargs) -> None:
@@ -174,4 +169,4 @@ class Logger:
         Returns:
             Path: Absolute path to the log directory.
         """
-        return self._get_log_directory()
+        return self._log_directory

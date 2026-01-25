@@ -58,6 +58,3 @@ EXIF_DATETIME_FORMAT = "%Y:%m:%d %H:%M:%S"
 
 # Default workflow engine
 DEFAULT_ENGINE = "vuescan"
-
-# Supported image extensions for EXIF extraction
-EXIF_SUPPORTED_EXTENSIONS = [".tiff", ".tif", ".jpeg", ".jpg"]

@@ -6,7 +6,6 @@ and moving files into the ``processed/`` tree. Higher-level orchestration
 (batch/daemon) is handled by :class:`file_organizer.organizer.FileOrganizer`.
 """
 
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -14,62 +13,35 @@ from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename, FilenameValidator
 from common.constants import SUPPORTED_IMAGE_EXTENSIONS
 from common.archive_metadata import ArchiveMetadata
-from common.router import Router
 
 
 class FileProcessor:
-    """Processor that extracts metadata and organizes individual files."""
+    """Processor that extracts metadata and writes it to files.
+    
+    This class is responsible ONLY for:
+    - Parsing and validating filenames
+    - Writing EXIF/XMP metadata to image files
+    
+    It does NOT handle:
+    - File path filtering (handled by FileOrganizer)
+    - File organization/movement (handled by FileOrganizer)
+    """
 
     def __init__(
         self,
         logger: Logger,
-        root_path: Path | None = None,
         metadata_tags: dict[str, str] | None = None,
-        suffix_routing: dict[str, str] | None = None
     ) -> None:
         """Initialize FileProcessor.
         
         Args:
             logger: Logger instance.
-            root_path: Optional root path for validation.
             metadata_tags: Optional metadata field to XMP tag mapping.
-            suffix_routing: Optional suffix routing rules (suffix -> 'sources'/'derivatives'/'preview').
         """
         self.logger = logger
         self.parser = FilenameParser()
         self.validator = FilenameValidator()
         self._metadata = ArchiveMetadata(metadata_tags=metadata_tags, logger=logger)
-        self._root_path = root_path
-        self._router = Router(suffix_routing=suffix_routing, logger=logger)
-
-
-
-    def should_process(self, file_path: Path) -> bool:
-        """Check if the file should be processed.
-
-        Args:
-            file_path: Path to the file to check.
-
-        Returns:
-            True if the file should be processed, False otherwise.
-        """
-        # Skip files in 'processed' subfolder to avoid re-processing
-        # This check is a bit tricky if we are just given a path.
-        # We assume the caller handles directory traversal or we check parent names.
-        if 'processed' in file_path.parts:
-            return False
-
-        # Skip symlinks
-        if file_path.is_symlink():
-            return False
-
-        # Check extension
-        if file_path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
-            return False
-
-        # Try to parse and validate filename
-        parsed = self._parse_and_validate(file_path.name)
-        return parsed is not None
 
     def process(self, file_path: Path, config: dict[str, Any] | None) -> bool:
         """Process a file: parse filename, validate, write EXIF/XMP metadata.
@@ -141,137 +113,3 @@ class FileProcessor:
             self.logger.error(f"Failed to write metadata to {file_path}: {e}")
             return False
 
-    def get_destination_paths(self, file_path: Path, parsed: ParsedFilename | None = None) -> tuple[Path, Path | None, Path | None]:
-        """Get destination paths for file and optional log file.
-        
-        Args:
-            file_path: Path to the source file.
-            parsed: Parsed filename data (optional).
-            
-        Returns:
-            Tuple of (dest_file_path, dest_log_path, log_file_path).
-            dest_log_path and log_file_path are None if no log file exists.
-        """
-        # Determine the base directory for processed folder
-        # If root_path is set (recursive mode), use it; otherwise use file's parent
-        if self._root_path:
-            processed_root = self._root_path / "processed"
-        else:
-            file_dir = file_path.parent
-            processed_root = file_dir / "processed"
-
-        # Check for associated log file
-        log_file_path = file_path.with_suffix('.log')
-        if not log_file_path.exists():
-            log_file_path = None
-
-        # Determine destination filename
-        dest_filename = file_path.name
-        dest_log_filename = None
-
-        if parsed:
-            # Get normalized filename from router
-            base_name = self._router.get_normalized_filename(parsed)
-            dest_filename = f"{base_name}.{parsed.extension}"
-
-            if log_file_path:
-                dest_log_filename = f"{base_name}.log"
-
-            # Get target folder from router
-            processed_dir = self._router.get_target_folder(parsed, processed_root)
-
-        else:
-            # Fallback for unparsed files (should not happen if should_process is checked)
-            processed_dir = processed_root / "unparsed"
-            if log_file_path:
-                dest_log_filename = log_file_path.name
-
-        # Create processed directory if it doesn't exist
-        processed_dir.mkdir(parents=True, exist_ok=True)
-
-        # Destination paths
-        dest_path = processed_dir / dest_filename
-        dest_log_path = processed_dir / dest_log_filename if dest_log_filename else None
-
-        return dest_path, dest_log_path, log_file_path
-
-    def _move_to_processed(self, file_path: Path, parsed: ParsedFilename | None = None, log_file_path: Path | None = None) -> bool:
-        """Move file to processed subfolder, preserving directory structure.
-        
-        Args:
-            file_path: Path to the file.
-            parsed: Parsed filename data (optional).
-            log_file_path: Path to the associated log file (optional).
-
-        Returns:
-            True if move successful, False otherwise.
-        """
-        try:
-            # Determine the base directory for processed folder
-            # If root_path is set (recursive mode), use it; otherwise use file's parent
-            if self._root_path:
-                processed_root = self._root_path / "processed"
-            else:
-                file_dir = file_path.parent
-                processed_root = file_dir / "processed"
-
-            # Determine destination filename
-            dest_filename = file_path.name
-            dest_log_filename = None
-
-            if parsed:
-                # Get normalized filename from router
-                base_name = self._router.get_normalized_filename(parsed)
-                dest_filename = f"{base_name}.{parsed.extension}"
-
-                if log_file_path:
-                    dest_log_filename = f"{base_name}.log"
-
-                # Get target folder from router
-                processed_dir = self._router.get_target_folder(parsed, processed_root)
-
-            else:
-                # Fallback for unparsed files (should not happen if should_process is checked)
-                processed_dir = processed_root / "unparsed"
-                if log_file_path:
-                    dest_log_filename = log_file_path.name
-
-            # Create processed directory if it doesn't exist
-            processed_dir.mkdir(parents=True, exist_ok=True)
-
-            # Destination path
-            dest_path = processed_dir / dest_filename
-
-            # Check if destination already exists
-            if dest_path.exists():
-                self.logger.error(
-                    f"Destination file already exists: {dest_path}. "
-                    f"Leaving source file in place."
-                )
-                return False
-            
-            # Check if log destination exists
-            dest_log_path = None
-            if log_file_path and dest_log_filename:
-                dest_log_path = processed_dir / dest_log_filename
-                if dest_log_path.exists():
-                    self.logger.error(
-                        f"Destination log file already exists: {dest_log_path}. "
-                        f"Leaving source files in place."
-                    )
-                    return False
-
-            # Move file
-            shutil.move(str(file_path), str(dest_path))
-            self.logger.info(f"  Moved to: {dest_path}")
-            
-            # Move log file
-            if log_file_path and dest_log_path:
-                shutil.move(str(log_file_path), str(dest_log_path))
-                self.logger.info(f"  Moved log to: {dest_log_path}")
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Failed to move file {file_path} to processed/: {e}")
-            return False

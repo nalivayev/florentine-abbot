@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from common.logger import Logger
+from common.router import Router
+from common.constants import SUPPORTED_IMAGE_EXTENSIONS
 from file_organizer.config import Config
 from file_organizer.processor import FileProcessor
 
@@ -36,6 +38,7 @@ class FileOrganizer:
         """
         self._logger = logger
         self._processor = FileProcessor(logger)
+        self._router = Router(logger=logger)
 
     def __call__(
         self,
@@ -79,19 +82,19 @@ class FileOrganizer:
         config = self._load_config(config_path)
         metadata: dict[str, Any] | None = config.get_metadata()
 
-        # Create a new processor with root_path set for recursive mode
-        # metadata_tags and suffix_routing are self-loaded by components if needed
-        processor = FileProcessor(
-            self._logger,
-            root_path=input_path if recursive else None,
-        )
-
-
+        # Create a new processor (stateless regarding path structure)
+        # metadata_tags is self-loaded by components if needed
+        # We can reuse self._processor usually but creating new one is fine too if config changes
+        # Actually _processor is lightweight.
+        
         mode_str = "RECURSIVE" if recursive else "BATCH"
         self._logger.info(f"Starting File Organizer in {mode_str} mode on {input_path}")
 
         count = 0
         skipped = 0
+        
+        # Base directory for processed output
+        processed_root = input_path / "processed"
 
         # Choose iterator based on recursive flag
         iterator = input_path.rglob('*') if recursive else input_path.iterdir()
@@ -100,18 +103,25 @@ class FileOrganizer:
             if not file_path.is_file():
                 continue
 
-            if not processor.should_process(file_path):
+            if not self.should_process(file_path):
                 self._logger.warning(f"Skipped file (invalid filename format or unsupported): {file_path.name}")
                 skipped += 1
                 continue
 
             # Process metadata
-            if processor.process(file_path, metadata):
+            if self._processor.process(file_path, metadata):
                 # Get parsed filename for destination calculation
-                parsed = processor._parse_and_validate(file_path.name)
+                parsed = self._processor._parse_and_validate(file_path.name)
                 
-                # Get destination paths
-                dest_path, dest_log_path, log_file_path = processor.get_destination_paths(file_path, parsed)
+                # Get destination paths using Router directly
+                try:
+                    dest_path, dest_log_path, log_file_path = self._calculate_destination_paths(
+                        file_path, parsed, processed_root
+                    )
+                except Exception as e:
+                     self._logger.error(f"Failed to calculate destination path: {e}")
+                     skipped += 1
+                     continue
                 
                 # Check if destination already exists
                 if dest_path.exists():
@@ -157,9 +167,40 @@ class FileOrganizer:
         return count
 
     def should_process(self, file_path: Path) -> bool:
-        """Delegate to the internal :class:`FileProcessor` instance."""
+        """Check if a file should be processed.
+        
+        Checks:
+        - Not in 'processed' subfolder
+        - Not a symlink
+        - Has supported image extension
+        - Has valid parseable filename
+        
+        Args:
+            file_path: Path to the file to check.
 
-        return self._processor.should_process(file_path)
+        Returns:
+            True if the file should be processed, False otherwise.
+        """
+        # Skip files in 'processed' subfolder to avoid re-processing
+        if 'processed' in file_path.parts:
+            self._logger.debug(f"Skipping {file_path}: found 'processed' in path parts")
+            return False
+
+        # Skip symlinks
+        if file_path.is_symlink():
+            self._logger.debug(f"Skipping {file_path}: is symlink")
+            return False
+
+        # Check extension
+        if file_path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+            self._logger.debug(f"Skipping {file_path}: unsupported extension '{file_path.suffix}'")
+            return False
+
+        # Try to parse and validate filename (delegate to processor)
+        parsed = self._processor._parse_and_validate(file_path.name)
+        if parsed is None:
+             self._logger.debug(f"Skipping {file_path}: failed parse/validate")
+        return parsed is not None
 
     def process(self, file_path: Path, config: dict[str, Any] | None) -> bool:
         """Delegate per-file processing to :class:`FileProcessor`.
@@ -184,3 +225,44 @@ class FileOrganizer:
         """Expose :meth:`FileProcessor._parse_and_validate` for tests."""
 
         return self._processor._parse_and_validate(filename)
+
+    def _calculate_destination_paths(
+        self,
+        file_path: Path,
+        parsed: Any,  # ParsedFilename
+        processed_root: Path
+    ) -> tuple[Path, Path | None, Path | None]:
+        """Calculate destination paths for file and optional log file using Router.
+        
+        Args:
+            file_path: Source file path.
+            parsed: ParsedFilename object.
+            processed_root: Root directory for processed files.
+            
+        Returns:
+            Tuple (dest_path, dest_log_path, source_log_path).
+        """
+        # Check for associated log file
+        source_log_path = file_path.with_suffix('.log')
+        if not source_log_path.exists():
+            source_log_path = None
+
+        # Get normalized filename from router
+        base_name = self._router.get_normalized_filename(parsed)
+        dest_filename = f"{base_name}.{parsed.extension}"
+
+        dest_log_filename = None
+        if source_log_path:
+            dest_log_filename = f"{base_name}.log"
+
+        # Get target folder from router
+        processed_dir = self._router.get_target_folder(parsed, processed_root)
+
+        # Create processed directory if it doesn't exist
+        processed_dir.mkdir(parents=True, exist_ok=True)
+
+        # Destination paths
+        dest_path = processed_dir / dest_filename
+        dest_log_path = processed_dir / dest_log_filename if dest_log_filename else None
+
+        return dest_path, dest_log_path, source_log_path

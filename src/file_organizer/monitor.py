@@ -10,6 +10,8 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileSystemMovedEvent
 
 from common.logger import Logger
+from common.router import Router
+from common.constants import SUPPORTED_IMAGE_EXTENSIONS
 from file_organizer.config import Config
 from file_organizer.processor import FileProcessor
 
@@ -36,6 +38,7 @@ class FileMonitor(FileSystemEventHandler):
         self.logger = logger
         self.copy_mode = copy_mode
         self.processor = FileProcessor(logger)
+        self.router = Router()
         self.observer = Observer()
         self._setup_signal_handlers()
 
@@ -82,6 +85,42 @@ class FileMonitor(FileSystemEventHandler):
         if isinstance(event, FileSystemMovedEvent):
             self._process_file(str(event.dest_path))
 
+    def _should_process(self, file_path: Path) -> bool:
+        """Check if a file should be processed.
+        
+        Checks:
+        - Not in 'processed' subfolder
+        - Not a symlink
+        - Has supported image extension
+        - Has valid parseable filename
+        
+        Args:
+            file_path: Path to the file to check.
+
+        Returns:
+            True if the file should be processed, False otherwise.
+        """
+        # Skip files in 'processed' subfolder
+        if 'processed' in file_path.parts:
+            self.logger.debug(f"Skipping {file_path}: found 'processed' in path parts")
+            return False
+
+        # Skip symlinks
+        if file_path.is_symlink():
+            self.logger.debug(f"Skipping {file_path}: is symlink")
+            return False
+
+        # Check extension
+        if file_path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
+            self.logger.debug(f"Skipping {file_path}: unsupported extension '{file_path.suffix}'")
+            return False
+
+        # Try to parse and validate filename
+        parsed = self.processor._parse_and_validate(file_path.name)
+        if parsed is None:
+             self.logger.debug(f"Skipping {file_path}: failed parse/validate")
+        return parsed is not None
+
     def _process_file(self, file_path_str: str) -> None:
         """Process a file if it matches the criteria."""
 
@@ -91,56 +130,83 @@ class FileMonitor(FileSystemEventHandler):
         if not file_path.exists():
             return
 
-        if self.processor.should_process(file_path):
-            # Small delay to ensure file write is complete (simple heuristic)
-            # For large files, this might not be enough, but it's a start.
-            # A more robust solution would check for file stability (size not changing).
-            time.sleep(1)
+        # Check if file should be processed (path filtering, extension, filename validation)
+        if not self._should_process(file_path):
+            return
 
-            try:
-                # Get fresh metadata from config (in case it was reloaded)
-                metadata = self._get_metadata()
+        # Small delay to ensure file write is complete (simple heuristic)
+        # For large files, this might not be enough, but it's a start.
+        # A more robust solution would check for file stability (size not changing).
+        time.sleep(1)
+
+        try:
+            # Get fresh metadata from config (in case it was reloaded)
+            metadata = self._get_metadata()
+            
+            # Process metadata
+            if self.processor.process(file_path, metadata):
+                # Get parsed filename for destination calculation
+                parsed = self.processor._parse_and_validate(file_path.name)
                 
-                # Process metadata
-                if self.processor.process(file_path, metadata):
-                    # Get parsed filename for destination calculation
-                    parsed = self.processor._parse_and_validate(file_path.name)
+                # At this point parsed should never be None since process() succeeded,
+                # but we add a check for type safety
+                if not parsed:
+                    self.logger.error(f"Unexpected: file passed processing but failed to parse: {file_path.name}")
+                    return
+                
+                # Calculate destination paths
+                processed_root = self.path / "processed"
+                source_log_path = file_path.with_suffix('.log')
+                if not source_log_path.exists():
+                    source_log_path = None
+                log_file_path = source_log_path # alias for existing code
+
+                # Calculate normalized filename and destination
+                base_name = self.router.get_normalized_filename(parsed)
+                dest_filename = f"{base_name}.{parsed.extension}"
+                
+                dest_log_filename = None
+                if source_log_path:
+                    dest_log_filename = f"{base_name}.log"
+                
+                processed_dir = self.router.get_target_folder(parsed, processed_root)
+
+                processed_dir.mkdir(parents=True, exist_ok=True)
+                dest_path = processed_dir / dest_filename
+                dest_log_path = processed_dir / dest_log_filename if dest_log_filename else None
+                
+                # Check if destination already exists
+                if dest_path.exists():
+                    self.logger.error(
+                        f"Destination file already exists: {dest_path}. "
+                        f"Leaving source file in place."
+                    )
+                    return
+                
+                if dest_log_path and dest_log_path.exists():
+                    self.logger.error(
+                        f"Destination log file already exists: {dest_log_path}. "
+                        f"Leaving source files in place."
+                    )
+                    return
+                
+                # Move or copy files
+                if self.copy_mode:
+                    shutil.copy2(str(file_path), str(dest_path))
+                    self.logger.info(f"  Copied to: {dest_path}")
                     
-                    # Get destination paths
-                    dest_path, dest_log_path, log_file_path = self.processor.get_destination_paths(file_path, parsed)
+                    if log_file_path and dest_log_path:
+                        shutil.copy2(str(log_file_path), str(dest_log_path))
+                        self.logger.info(f"  Copied log to: {dest_log_path}")
+                else:
+                    shutil.move(str(file_path), str(dest_path))
+                    self.logger.info(f"  Moved to: {dest_path}")
                     
-                    # Check if destination already exists
-                    if dest_path.exists():
-                        self.logger.error(
-                            f"Destination file already exists: {dest_path}. "
-                            f"Leaving source file in place."
-                        )
-                        return
-                    
-                    if dest_log_path and dest_log_path.exists():
-                        self.logger.error(
-                            f"Destination log file already exists: {dest_log_path}. "
-                            f"Leaving source files in place."
-                        )
-                        return
-                    
-                    # Move or copy files
-                    if self.copy_mode:
-                        shutil.copy2(str(file_path), str(dest_path))
-                        self.logger.info(f"  Copied to: {dest_path}")
-                        
-                        if log_file_path and dest_log_path:
-                            shutil.copy2(str(log_file_path), str(dest_log_path))
-                            self.logger.info(f"  Copied log to: {dest_log_path}")
-                    else:
-                        shutil.move(str(file_path), str(dest_path))
-                        self.logger.info(f"  Moved to: {dest_path}")
-                        
-                        if log_file_path and dest_log_path:
-                            shutil.move(str(log_file_path), str(dest_log_path))
-                            self.logger.info(f"  Moved log to: {dest_log_path}")
-            except Exception as e:
-                self.logger.error(f"Error processing {file_path}: {e}")
+                    if log_file_path and dest_log_path:
+                        shutil.move(str(log_file_path), str(dest_log_path))
+                        self.logger.info(f"  Moved log to: {dest_log_path}")
+        except Exception as e:
+            self.logger.error(f"Error processing {file_path}: {e}")
 
     def start(self) -> None:
         """Start monitoring.

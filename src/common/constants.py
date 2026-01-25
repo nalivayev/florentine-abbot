@@ -9,6 +9,11 @@ that tools like File Organizer and Preview Maker stay in sync.
 # and skip sidecar/auxiliary artifacts such as .log, .icc, etc.
 SUPPORTED_IMAGE_EXTENSIONS = {".tif", ".tiff", ".jpg", ".jpeg", ".png"}
 
+# Image extensions that support EXIF metadata (lowercase).
+# PNG is excluded because it doesn't support EXIF natively.
+# Used by scan_batcher and other tools that write EXIF data.
+EXIF_SUPPORTED_EXTENSIONS = {".tif", ".tiff", ".jpg", ".jpeg"}
+
 # ExifTool timeout for large files (in seconds)
 # Large files (>100MB) use one-off mode with timeout to prevent hanging
 EXIFTOOL_LARGE_FILE_TIMEOUT = 600  # 10 minutes

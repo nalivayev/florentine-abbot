@@ -1,7 +1,6 @@
 import logging
 from sys import exit
 from typing import Sequence
-import importlib.metadata
 
 from common.logger import Logger
 from scan_batcher.batch import Batch, Scan

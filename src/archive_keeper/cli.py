@@ -6,12 +6,18 @@ import sys
 from pathlib import Path
 
 from common.logger import Logger
+from common.version import get_version
 from archive_keeper.config import Config
 from archive_keeper.engine import DatabaseManager
 from archive_keeper.scanner import ArchiveScanner
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Archive Keeper - Digital Preservation Tool")
+    parser.add_argument(
+        '--version',
+        action='version',
+        version=f'archive-keeper (florentine-abbot {get_version()})'
+    )
     parser.add_argument("root_path", help="Root path of the archive to scan")
     parser.add_argument("--config", help="Path to JSON configuration file")
     parser.add_argument("--db", help="Path to SQLite database (overrides config)")

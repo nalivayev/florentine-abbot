@@ -126,8 +126,8 @@ class TestMetadataFlow:
             assert master_tags.get(key) == prv_tags.get(key), f"Mismatch in tag {key}"
 
         # PRV has its own identifiers different from master
-        assert _is_uuid(master_tags["XMP-dc:Identifier"]) and _is_uuid(master_tags["XMP-xmp:Identifier"])  
-        assert _is_uuid(prv_tags["XMP-dc:Identifier"]) and _is_uuid(prv_tags["XMP-xmp:Identifier"])  
+        assert _is_uuid(master_tags["XMP-dc:Identifier"]) and _is_uuid(master_tags["XMP-xmp:Identifier"])
+        assert _is_uuid(prv_tags["XMP-dc:Identifier"]) and _is_uuid(prv_tags["XMP-xmp:Identifier"])
         assert master_tags["XMP-dc:Identifier"] != prv_tags["XMP-dc:Identifier"]
         assert master_tags["XMP-xmp:Identifier"] != prv_tags["XMP-xmp:Identifier"]
 
