@@ -71,6 +71,7 @@ class TestExifer:
         """
         Integration test to verify that Cyrillic and special characters 
         are correctly preserved when writing/reading via exiftool.
+        Also tests multiline values (arrays joined with newlines).
         This ensures regression protection for the stdin/charset encoding issue.
         """
         
@@ -84,26 +85,31 @@ class TestExifer:
             
         exifer = Exifer()
         
-        # 2. Define test data with tricky characters
+        # 2. Define test data with tricky characters and multiline values
         # 'ў' (U+045E - CYRILLIC SMALL LETTER SHORT U) specific to Belarusian
         # 'і' (U+0456 - CYRILLIC SMALL LETTER BYELORUSSIAN-UKRAINIAN I)
         # Generic Russian Cyrillic
         test_description = "Тэставае апісанне: літары ў і і. Русский текст."
         test_subject = "тэст; test; проба"
         
+        # Multiline value with Cyrillic
+        test_multiline_rights = "Скан © 2025 Имя\nВсе права защищены.\nКоммерческое использование запрещено."
+        
         tags_to_write = {
             "XMP-dc:Description": test_description,
-            "XMP-dc:Subject": test_subject
+            "XMP-dc:Subject": test_subject,
+            "XMP-dc:Rights": test_multiline_rights,
         }
         
         # 3. Write metadata (this exercises the persistent process via _run or _run_one_off)
         exifer.write(test_file, tags_to_write)
         
         # 4. Read back
-        result = exifer.read(test_file, ["XMP-dc:Description", "XMP-dc:Subject"])
+        result = exifer.read(test_file, ["XMP-dc:Description", "XMP-dc:Subject", "XMP-dc:Rights"])
         
         # 5. Verify equality
         assert result.get("XMP-dc:Description") == test_description
         assert result.get("XMP-dc:Subject") == test_subject
+        assert result.get("XMP-dc:Rights") == test_multiline_rights
 
 

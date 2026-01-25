@@ -259,6 +259,9 @@ class Exifer:
             # Skip non-tag fields
             if key in ["SourceFile", "ExifTool"]:
                 continue
+            # Normalize line endings: exiftool on Windows returns \r\n, but we write \n
+            if isinstance(value, str):
+                value = value.replace('\r\n', '\n')
             result[key] = value
         
         return result
