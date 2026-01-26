@@ -1,4 +1,4 @@
-"""XMP History for tracking file operations in xmpMM:History."""
+"""XMP Historian for tracking file operations in xmpMM:History."""
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,7 +26,7 @@ XMP_ACTION_RESIZED = "resized"              # Image resized
 XMP_ACTION_SAVED = "saved"                  # File saved
 
 
-class XmpHistory:
+class XMPHistorian:
     """Manages XMP-xmpMM:History entries for workflow logging.
     
     XMP History provides technical logging of file operations according to
