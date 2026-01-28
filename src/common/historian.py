@@ -7,6 +7,17 @@ from typing import Optional
 from .exifer import Exifer
 
 
+# XMP-xmpMM namespace tags
+XMP_TAG_HISTORY = "XMP-xmpMM:History"
+
+# XMP History event fields (stEvt namespace)
+XMP_FIELD_ACTION = "action"
+XMP_FIELD_WHEN = "when"
+XMP_FIELD_SOFTWARE_AGENT = "softwareAgent"
+XMP_FIELD_CHANGED = "changed"
+XMP_FIELD_PARAMETERS = "parameters"
+XMP_FIELD_INSTANCE_ID = "instanceID"
+
 # Standard XMP History action types per XMP Specification Part 2 (xmpMM namespace)
 # Table 8 — ResourceEvent fields: stEvt:action Open Choice of Text
 # https://www.adobe.com/devnet/xmp/library/XMPSpecificationPart2.pdf
@@ -93,22 +104,22 @@ class XMPHistorian:
         
         # Build history entry
         history_entry = {
-            "action": action,
-            "when": when_iso,
-            "softwareAgent": software_agent
+            XMP_FIELD_ACTION: action,
+            XMP_FIELD_WHEN: when_iso,
+            XMP_FIELD_SOFTWARE_AGENT: software_agent
         }
         
         if changed:
-            history_entry["changed"] = changed
+            history_entry[XMP_FIELD_CHANGED] = changed
         
         if parameters:
-            history_entry["parameters"] = parameters
+            history_entry[XMP_FIELD_PARAMETERS] = parameters
         
         # Use exiftool to append to History array
         # History is a bag of structures, use -struct option
         args = []
         for key, value in history_entry.items():
-            args.extend([f"-xmp-xmpMM:History+={{{key}={value}}}"])
+            args.extend([f"-{XMP_TAG_HISTORY}+={{{key}={value}}}"])
         
         success = self.exifer.write_tags(str(file_path), args)
         
@@ -136,14 +147,14 @@ class XMPHistorian:
             return []
         
         # Read History field
-        result = self.exifer.read_tags(str(file_path), ["xmp-xmpMM:History"])
+        result = self.exifer.read_tags(str(file_path), [XMP_TAG_HISTORY])
         
-        if not result or "xmp-xmpMM:History" not in result:
+        if not result or XMP_TAG_HISTORY not in result:
             return []
         
         # Parse history entries (exiftool returns structured data)
         # Implementation depends on exiftool output format
-        history = result.get("xmp-xmpMM:History", [])
+        history = result.get(XMP_TAG_HISTORY, [])
         
         if isinstance(history, str):
             # Single entry might be returned as string
