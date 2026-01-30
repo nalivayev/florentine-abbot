@@ -9,6 +9,17 @@ from .constants import EXIFTOOL_LARGE_FILE_TIMEOUT
 
 # XMP-xmpMM namespace tags
 XMP_TAG_HISTORY = "XMP-xmpMM:History"
+XMP_TAG_INSTANCE_ID = "XMP-xmpMM:InstanceID"
+XMP_TAG_DOCUMENT_ID = "XMP-xmpMM:DocumentID"
+XMP_TAG_CREATOR_TOOL = "XMP-xmp:CreatorTool"
+
+# XMP History flattened tags (exiftool expands structures)
+XMP_TAG_HISTORY_ACTION = "XMP-xmpMM:HistoryAction"
+XMP_TAG_HISTORY_WHEN = "XMP-xmpMM:HistoryWhen"
+XMP_TAG_HISTORY_SOFTWARE_AGENT = "XMP-xmpMM:HistorySoftwareAgent"
+XMP_TAG_HISTORY_CHANGED = "XMP-xmpMM:HistoryChanged"
+XMP_TAG_HISTORY_PARAMETERS = "XMP-xmpMM:HistoryParameters"
+XMP_TAG_HISTORY_INSTANCE_ID = "XMP-xmpMM:HistoryInstanceID"
 
 # XMP History event fields (stEvt namespace)
 XMP_FIELD_ACTION = "action"
@@ -158,20 +169,60 @@ class XMPHistorian:
                 logger.error(f"File not found: {file_path}")
             return []
         
-        # Read History field
-        result = self._exifer.read(file_path, [XMP_TAG_HISTORY])
+        # ExifTool flattens structured History into separate array tags:
+        # XMP-xmpMM:HistoryAction, XMP-xmpMM:HistoryWhen, etc.
+        # Read all History-related tags
+        history_tags = [
+            XMP_TAG_HISTORY_ACTION,
+            XMP_TAG_HISTORY_WHEN,
+            XMP_TAG_HISTORY_SOFTWARE_AGENT,
+            XMP_TAG_HISTORY_CHANGED,
+            XMP_TAG_HISTORY_PARAMETERS,
+            XMP_TAG_HISTORY_INSTANCE_ID,
+        ]
         
-        if not result or XMP_TAG_HISTORY not in result:
-            return []
+        result = self._exifer.read(file_path, history_tags)
         
-        # Parse history entries (exiftool returns structured data)
-        # Implementation depends on exiftool output format
-        history = result.get(XMP_TAG_HISTORY, [])
+        # Extract arrays (exiftool returns lists for repeated tags)
+        actions = result.get(XMP_TAG_HISTORY_ACTION, [])
+        whens = result.get(XMP_TAG_HISTORY_WHEN, [])
+        agents = result.get(XMP_TAG_HISTORY_SOFTWARE_AGENT, [])
+        changeds = result.get(XMP_TAG_HISTORY_CHANGED, [])
+        parameters = result.get(XMP_TAG_HISTORY_PARAMETERS, [])
+        instance_ids = result.get(XMP_TAG_HISTORY_INSTANCE_ID, [])
         
-        if isinstance(history, str):
-            # Single entry might be returned as string
-            return [{"raw": history}]
-        elif isinstance(history, list):
-            return history
-        else:
-            return []
+        # Ensure all are lists
+        if not isinstance(actions, list):
+            actions = [actions] if actions else []
+        if not isinstance(whens, list):
+            whens = [whens] if whens else []
+        if not isinstance(agents, list):
+            agents = [agents] if agents else []
+        if not isinstance(changeds, list):
+            changeds = [changeds] if changeds else []
+        if not isinstance(parameters, list):
+            parameters = [parameters] if parameters else []
+        if not isinstance(instance_ids, list):
+            instance_ids = [instance_ids] if instance_ids else []
+        
+        # Build history entries by index
+        max_len = max(len(actions), len(whens), len(agents), len(changeds), len(parameters), len(instance_ids))
+        history = []
+        for i in range(max_len):
+            entry = {}
+            if i < len(actions):
+                entry["action"] = actions[i]
+            if i < len(whens):
+                entry["when"] = whens[i]
+            if i < len(agents):
+                entry["softwareAgent"] = agents[i]
+            if i < len(changeds):
+                entry["changed"] = changeds[i]
+            if i < len(parameters):
+                entry["parameters"] = parameters[i]
+            if i < len(instance_ids):
+                entry["instanceID"] = instance_ids[i]
+            if entry:  # Only add non-empty entries
+                history.append(entry)
+        
+        return history
