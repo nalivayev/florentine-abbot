@@ -266,7 +266,7 @@ class Exifer:
         
         return result
 
-    def write(self, file_path: Path, tags: dict[str, Any], overwrite_original: bool = True, timeout: int | None = None) -> None:
+    def write(self, file_path: Path, tags: dict[str, Any], overwrite_original: bool = True, timeout: int | None = None) -> bool:
         """Write metadata tags.
         
         Args:
@@ -299,6 +299,9 @@ class Exifer:
             self._run_one_off(args, timeout=timeout)
         else:
             self._run(args)
+
+        # If no exception was raised, consider the write successful
+        return True
 
 # Register cleanup
 atexit.register(Exifer._stop_all)

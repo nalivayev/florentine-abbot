@@ -112,4 +112,3 @@ class TestFilenameParser:
         assert result.modifier == 'E'
         assert result.side == 'A'
         assert result.suffix == 'msr'
-

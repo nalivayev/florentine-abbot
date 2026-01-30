@@ -9,11 +9,16 @@ from pathlib import Path
 from typing import Optional
 
 from common.config_utils import get_config_dir
-from common.constants import DEFAULT_PATH_TEMPLATE, DEFAULT_FILENAME_TEMPLATE
 from common.logger import Logger
 from common.naming import ParsedFilename
 
 
+# Default path template (kept local to Formatter since it's only used here)
+DEFAULT_PATH_TEMPLATE = "{year:04d}/{year:04d}.{month:02d}.{day:02d}"
+
+# Filename template defines the normalized filename (without extension)
+DEFAULT_FILENAME_TEMPLATE = "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+    
 class Formatter:
     """Formats file paths and names using configurable templates.
     
@@ -26,7 +31,7 @@ class Formatter:
     Templates are loaded from formats.json in user config directory,
     or default templates from constants are used.
     """
-    
+
     def __init__(
         self,
         path_template: Optional[str] = None,

@@ -36,6 +36,11 @@ class VuescanWorkflow(Workflow):
         "digitization_second"
     ]
     
+    # Image extensions that support EXIF metadata (lowercase).
+    # PNG is excluded because it doesn't support EXIF natively.
+    # Used by scan_batcher and other tools that write EXIF data.
+    EXIF_SUPPORTED_EXTENSIONS = {".tif", ".tiff", ".jpg", ".jpeg"}
+
     # EXIF tag names for reading date information
     _EXIF_DATE_TAGS = [
         "ExifIFD:DateTimeDigitized",

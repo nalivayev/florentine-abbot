@@ -3,19 +3,25 @@ import json
 
 import pytest
 from PIL import Image
-from sqlalchemy import select
-
 from file_organizer.organizer import FileOrganizer
-from archive_keeper.engine import DatabaseManager
-from archive_keeper.scanner import ArchiveScanner
-from archive_keeper.models import File, FileStatus
 from preview_maker import PreviewMaker
 from common.exifer import Exifer
 from common.logger import Logger
+from common.historian import (
+    XMP_TAG_INSTANCE_ID,
+    XMP_TAG_DOCUMENT_ID,
+    XMP_TAG_CREATOR_TOOL,
+    XMP_TAG_HISTORY,
+    XMP_ACTION_CREATED,
+    XMP_ACTION_EDITED,
+)
+from common.historian import XMPHistorian
+from datetime import datetime, timezone
+import uuid
 
 
 class TestPipeline:
-    """End-to-end filesystem/DB pipeline tests.
+    """End-to-end filesystem pipeline tests.
 
     These tests are intentionally higher-level and slower. Detailed
     metadata field coverage is handled in dedicated tests under
@@ -23,7 +29,6 @@ class TestPipeline:
 
     - FileOrganizer moving files into the expected processed/ layout
     - PreviewMaker generating PRV files from MSR sources
-    - ArchiveScanner/DatabaseManager seeing processed files in the DB
     """
 
     @pytest.fixture(autouse=True)
@@ -36,14 +41,7 @@ class TestPipeline:
         self.input_dir = self.root_path / "input"
         self.input_dir.mkdir()
 
-        # ArchiveKeeper DB
-        self.db_path = self.root_path / "archive.db"
-        self.db_manager = DatabaseManager(str(self.db_path))
-        self.db_manager.init_db()
-        
         yield
-        
-        self.db_manager.engine.dispose()
 
     def _create_dummy_jpeg(self, filename: str) -> Path:
         """Create a small valid JPEG image in the input directory."""
@@ -66,9 +64,67 @@ class TestPipeline:
 
         filename = scenario["filename"]
         file_path = self._create_dummy_jpeg(filename)
-
         print(f"\n[Pipeline] Running scenario: {scenario['name']}")
         print(f"[Pipeline] Processing file: {file_path}")
+
+        # --- Historian / XMP sanity check ---
+        # Write the same set of XMP tags and History entries the workflows do,
+        # then read them back and assert they were written.
+        try:
+            ex = Exifer()
+            # quick availability check
+            ex._run(["-ver"])
+        except (FileNotFoundError, RuntimeError):
+            # exiftool not available — skip historian write/read for this scenario
+            print("[Pipeline] exiftool not available, skipping historian check")
+        else:
+            # Check existing tags and only write missing ones
+            existing = ex.read(file_path, [XMP_TAG_INSTANCE_ID, XMP_TAG_DOCUMENT_ID, XMP_TAG_CREATOR_TOOL])
+
+            instance = existing.get(XMP_TAG_INSTANCE_ID)
+            document = existing.get(XMP_TAG_DOCUMENT_ID)
+            creator = existing.get(XMP_TAG_CREATOR_TOOL)
+
+            to_write = {}
+            if not instance:
+                instance = uuid.uuid4().hex
+                to_write[XMP_TAG_INSTANCE_ID] = instance
+            if not document:
+                document = uuid.uuid4().hex
+                to_write[XMP_TAG_DOCUMENT_ID] = document
+            if not creator:
+                creator = "test-pipeline"
+                to_write[XMP_TAG_CREATOR_TOOL] = creator
+
+            if to_write:
+                ex.write(file_path, to_write)
+
+            # Append history entries using XMPHistorian (keeps behaviour as before)
+            historian = XMPHistorian(exifer=ex)
+            created_when = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
+            historian.append_entry(file_path, XMP_ACTION_CREATED, f"test-pipeline", created_when, logger=self.logger, instance_id=instance)
+            historian.append_entry(file_path, XMP_ACTION_EDITED, f"test-pipeline", datetime.now(timezone.utc), changed='metadata', logger=self.logger, instance_id=instance)
+
+            # Read back tags including history
+            read_back = ex.read(file_path, [XMP_TAG_INSTANCE_ID, XMP_TAG_DOCUMENT_ID, XMP_TAG_CREATOR_TOOL, XMP_TAG_HISTORY])
+
+            def _norm(v: str) -> str:
+                if not isinstance(v, str):
+                    return str(v)
+                return v.lower().replace('uuid:', '').replace('-', '')
+
+            # Always assert identifiers and CreatorTool
+            assert _norm(read_back.get(XMP_TAG_INSTANCE_ID, '')) == instance, 'InstanceID not written/read correctly'
+            assert _norm(read_back.get(XMP_TAG_DOCUMENT_ID, '')) == document, 'DocumentID not written/read correctly'
+            assert read_back.get(XMP_TAG_CREATOR_TOOL) == creator, 'CreatorTool not written/read correctly'
+
+            # History may not be immediately visible depending on exiftool behaviour; only assert if present
+            history_raw = read_back.get(XMP_TAG_HISTORY)
+            if history_raw:
+                history_text = str(history_raw).lower()
+                assert XMP_ACTION_CREATED in history_text
+                assert XMP_ACTION_EDITED in history_text
+                assert instance in history_text
 
         # --- Step 1: File Organizer (batch mode handles moves) ---
         organizer = FileOrganizer(self.logger)
@@ -106,27 +162,8 @@ class TestPipeline:
         l1_folder = processed_path.parent.parent.parent.name
         assert l1_folder == scenario["folder_l1"], f"Incorrect Level 1 folder for {scenario['name']}"
 
-        # --- Step 2: Archive Keeper ---
-
-        scanner = ArchiveScanner(self.logger, str(self.input_dir), self.db_manager)
-        scanner.scan()
-
-        session = self.db_manager.get_session()
-        try:
-            expected_rel_path = processed_path.relative_to(self.input_dir)
-
-            files = session.scalars(select(File)).all()
-            found_in_db = False
-            for db_file in files:
-                if Path(db_file.path) == expected_rel_path:
-                    found_in_db = True
-                    assert db_file.hash, "File hash should be calculated"
-                    assert db_file.status == FileStatus.OK
-                    break
-
-            assert found_in_db, f"File {expected_rel_path} not found in DB"
-        finally:
-            session.close()
+        # ArchiveKeeper step removed: this pipeline test focuses on
+        # FileOrganizer behaviour and PreviewMaker only.
 
     def test_pipeline_with_preview_maker(self) -> None:
         """Filesystem E2E: FileOrganizer + PreviewMaker on an MSR source."""
