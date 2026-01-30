@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from .exifer import Exifer
-
+from .constants import EXIFTOOL_LARGE_FILE_TIMEOUT
 
 # XMP-xmpMM namespace tags
 XMP_TAG_HISTORY = "XMP-xmpMM:History"
@@ -66,7 +66,8 @@ class XMPHistorian:
         Args:
             exifer: Exifer instance. If None, creates new instance.
         """
-        self.exifer = exifer or Exifer()
+        # Keep Exifer as an implementation detail (private)
+        self._exifer = exifer or Exifer()
     
     def append_entry(
         self,
@@ -76,7 +77,8 @@ class XMPHistorian:
         when: datetime,
         changed: Optional[str] = None,
         parameters: Optional[str] = None,
-        logger = None
+        logger = None,
+        instance_id: Optional[str] = None,
     ) -> bool:
         """Append new entry to XMP-xmpMM:History.
         
@@ -108,20 +110,30 @@ class XMPHistorian:
             XMP_FIELD_WHEN: when_iso,
             XMP_FIELD_SOFTWARE_AGENT: software_agent
         }
-        
+
+        if instance_id:
+            history_entry[XMP_FIELD_INSTANCE_ID] = instance_id
+
         if changed:
             history_entry[XMP_FIELD_CHANGED] = changed
-        
+
         if parameters:
             history_entry[XMP_FIELD_PARAMETERS] = parameters
         
-        # Use exiftool to append to History array
-        # History is a bag of structures, use -struct option
-        args = []
+        # Use exiftool to append a single structured History entry.
+        # Build a struct like: {action=...,when=...,softwareAgent=...,...}
+        struct_items = []
         for key, value in history_entry.items():
-            args.extend([f"-{XMP_TAG_HISTORY}+={{{key}={value}}}"])
-        
-        success = self.exifer.write_tags(str(file_path), args)
+            # Ensure values are serialized as strings without surrounding braces
+            struct_items.append(f"{key}={value}")
+
+        struct_value = "{" + ",".join(struct_items) + "}"
+
+        # ExifTool append operator is represented by a trailing '+' on the tag name
+        tag_name = XMP_TAG_HISTORY + "+"
+
+        # Exifer.write expects a mapping of tag -> value (or list of values)
+        success = self._exifer.write(file_path, {tag_name: struct_value}, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
         
         if logger:
             if success:
@@ -147,7 +159,7 @@ class XMPHistorian:
             return []
         
         # Read History field
-        result = self.exifer.read_tags(str(file_path), [XMP_TAG_HISTORY])
+        result = self._exifer.read(file_path, [XMP_TAG_HISTORY])
         
         if not result or XMP_TAG_HISTORY not in result:
             return []
