@@ -10,7 +10,6 @@ import datetime
 
 from common.exifer import Exifer
 from common.logger import Logger
-from common.constants import EXIF_SUPPORTED_EXTENSIONS
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import Workflow
 from scan_batcher.constants import EXIF_DATETIME_FORMAT
@@ -38,8 +37,7 @@ class VuescanWorkflow(Workflow):
     
     # Image extensions that support EXIF metadata (lowercase).
     # PNG is excluded because it doesn't support EXIF natively.
-    # Used by scan_batcher and other tools that write EXIF data.
-    EXIF_SUPPORTED_EXTENSIONS = {".tif", ".tiff", ".jpg", ".jpeg"}
+    _EXIF_SUPPORTED_EXTENSIONS = {".tif", ".tiff", ".jpg", ".jpeg"}
 
     # EXIF tag names for reading date information
     _EXIF_DATE_TAGS = [
@@ -229,7 +227,7 @@ class VuescanWorkflow(Workflow):
             path (Path): Path to the scanned file.
         """
         moment = None
-        if path.suffix.lower() in EXIF_SUPPORTED_EXTENSIONS:
+        if path.suffix.lower() in self._EXIF_SUPPORTED_EXTENSIONS:
             try:
                 tool = Exifer()
                 tags = tool.read(path, self._EXIF_DATE_TAGS)
