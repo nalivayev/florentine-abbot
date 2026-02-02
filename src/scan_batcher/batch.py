@@ -264,14 +264,16 @@ class Process(Batch):
     Iterates over files in a directory matching a filter and yields file info.
     """
 
-    def __init__(self, path: str | Path, file_filter: str = "*.*") -> None:
+    def __init__(self, logger: Logger, path: str | Path, file_filter: str = "*.*") -> None:
         """
         Initialize the Process batch.
 
         Args:
+            logger: Logger instance for this batch.
             path (str | Path): Path to the folder.
             file_filter (str, optional): File filter pattern (default: "*.*").
         """
+        self.logger = logger
         self.path = Path(path)
         self.file_filter = file_filter
         self._validate_path()

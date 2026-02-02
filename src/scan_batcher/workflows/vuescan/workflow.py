@@ -7,9 +7,12 @@ from pathlib import Path
 from re import finditer
 from os import makedirs
 import datetime
+import uuid
 
 from common.exifer import Exifer
 from common.logger import Logger
+from common.version import get_version
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import Workflow
 from scan_batcher.constants import EXIF_DATETIME_FORMAT
@@ -46,6 +49,9 @@ class VuescanWorkflow(Workflow):
         "ExifIFD:CreateDate",
         "IFD0:DateTime"
     ]
+    
+    # EXIF tag for software/creator tool
+    _EXIF_SOFTWARE_TAG = "IFD0:Software"
 
     def __init__(self, logger: Logger) -> None:
         """Initialize the VueScan workflow.
@@ -55,6 +61,10 @@ class VuescanWorkflow(Workflow):
         """
         super().__init__()
         self._logger = logger
+        self._exifer = Exifer()
+        self._historian = XMPHistorian(exifer=self._exifer)
+        self._scan_datetime: datetime.datetime | None = None
+        self._output_file_path: Path | None = None
 
     def _read_settings_file(self, path: Path) -> ConfigParser:
         """
@@ -222,6 +232,8 @@ class VuescanWorkflow(Workflow):
     def _add_output_file_templates(self, path: Path) -> None:
         """
         Extract EXIF data from scanned file and add datetime templates.
+        
+        Also stores the datetime in self._scan_datetime for use by other methods.
 
         Args:
             path (Path): Path to the scanned file.
@@ -229,8 +241,7 @@ class VuescanWorkflow(Workflow):
         moment = None
         if path.suffix.lower() in self._EXIF_SUPPORTED_EXTENSIONS:
             try:
-                tool = Exifer()
-                tags = tool.read(path, self._EXIF_DATE_TAGS)
+                tags = self._exifer.read(path, self._EXIF_DATE_TAGS)
                 
                 # Try to get date from any of the tags (in priority order)
                 for tag_name in self._EXIF_DATE_TAGS:
@@ -246,6 +257,9 @@ class VuescanWorkflow(Workflow):
 
         if moment is None:
             moment = datetime.datetime.fromtimestamp(getmtime(path))
+
+        # Store for use by _write_xmp_history
+        self._scan_datetime = moment
 
         if moment:
             for key in self._EXIF_TEMPLATE_NAMES:
@@ -272,6 +286,8 @@ class VuescanWorkflow(Workflow):
     def _move_output_file(self) -> None:
         """
         Move the scanned file from VueScan output to final destination.
+        
+        Also stores the output path in self._output_file_path for use by other methods.
 
         Raises:
             FileNotFoundError: If output file not found.
@@ -292,6 +308,8 @@ class VuescanWorkflow(Workflow):
             )
             try:
                 move(input_path, output_path)
+                # Store for use by _write_xmp_history
+                self._output_file_path = output_path
                 self._logger.info(
                     f"Scanned file '{input_path.name}' moved from '{input_path.parent}' to '{output_path.parent}', "
                     f"final name: '{output_path.name}'"
@@ -328,6 +346,103 @@ class VuescanWorkflow(Workflow):
         else:
             self._logger.warning("VueScan logging file not found")
 
+    def _get_major_version(self) -> str:
+        """Get major version number from package version.
+        
+        Returns:
+            Major version string (e.g., "1.0" from "1.0.5").
+        """
+        version = get_version()
+        if version == "unknown":
+            return "0.0"
+        parts = version.split(".")
+        if len(parts) >= 2:
+            return f"{parts[0]}.{parts[1]}"
+        return version
+
+    def _write_xmp_history(self) -> None:
+        """
+        Write XMP-xmpMM:History entries for the scanned file.
+        
+        Writes two history entries:
+        1. 'created' action - file creation by scanning software
+        2. 'edited' action - metadata changes by scan-batcher
+        
+        Also ensures DocumentID and InstanceID are set.
+        """
+        if self._output_file_path is None or not self._output_file_path.exists():
+            self._logger.warning("Cannot write XMP history: output file path not set or file doesn't exist")
+            return
+        
+        if self._scan_datetime is None:
+            self._logger.warning("Cannot write XMP history: scan datetime not set")
+            return
+        
+        file_path = self._output_file_path
+        
+        try:
+            # Read existing DocumentID and InstanceID
+            existing_tags = self._exifer.read(file_path, [
+                TAG_XMP_XMPMM_DOCUMENT_ID, 
+                TAG_XMP_XMPMM_INSTANCE_ID,
+                self._EXIF_SOFTWARE_TAG,
+            ])
+            
+            # Get or generate DocumentID (without dashes)
+            document_id = existing_tags.get(TAG_XMP_XMPMM_DOCUMENT_ID)
+            if not document_id:
+                document_id = uuid.uuid4().hex
+                
+            # Get or generate InstanceID (without dashes)  
+            instance_id = existing_tags.get(TAG_XMP_XMPMM_INSTANCE_ID)
+            if not instance_id:
+                instance_id = uuid.uuid4().hex
+            
+            # Write DocumentID and InstanceID to file
+            self._exifer.write(file_path, {
+                TAG_XMP_XMPMM_DOCUMENT_ID: document_id,
+                TAG_XMP_XMPMM_INSTANCE_ID: instance_id,
+            })
+            self._logger.debug(f"Set DocumentID={document_id}, InstanceID={instance_id}")
+            
+            # Get software agent for 'created' action
+            software_tag = existing_tags.get(self._EXIF_SOFTWARE_TAG)
+            if software_tag:
+                created_agent = software_tag
+            else:
+                created_agent = f"scan-batcher {self._get_major_version()}"
+            
+            # Write first history entry: 'created'
+            success = self._historian.append_entry(
+                file_path=file_path,
+                action=XMP_ACTION_CREATED,
+                software_agent=created_agent,
+                when=self._scan_datetime,
+                instance_id=instance_id,
+                logger=self._logger,
+            )
+            if not success:
+                self._logger.warning(f"Failed to write 'created' history entry for {file_path.name}")
+            
+            # Write second history entry: 'edited'
+            edited_agent = f"scan-batcher {self._get_major_version()}"
+            success = self._historian.append_entry(
+                file_path=file_path,
+                action=XMP_ACTION_EDITED,
+                software_agent=edited_agent,
+                when=self._scan_datetime,
+                changed="metadata",
+                instance_id=instance_id,
+                logger=self._logger,
+            )
+            if not success:
+                self._logger.warning(f"Failed to write 'edited' history entry for {file_path.name}")
+            
+            self._logger.info(f"XMP history written for {file_path.name}")
+            
+        except Exception as e:
+            self._logger.warning(f"Failed to write XMP history: {e}")
+
     def __call__(self, workflow_path: str, templates: dict[str, str]) -> None:
         """
         Execute the complete VueScan workflow.
@@ -345,4 +460,5 @@ class VuescanWorkflow(Workflow):
         self._run_vuescan()
         self._move_output_file()
         self._move_logging_file()
+        self._write_xmp_history()
         self._logger.info("Workflow completed successfully")
