@@ -8,18 +8,18 @@ from .exifer import Exifer
 from .constants import EXIFTOOL_LARGE_FILE_TIMEOUT
 
 # XMP-xmpMM namespace tags
-XMP_TAG_HISTORY = "XMP-xmpMM:History"
-XMP_TAG_INSTANCE_ID = "XMP-xmpMM:InstanceID"
-XMP_TAG_DOCUMENT_ID = "XMP-xmpMM:DocumentID"
-XMP_TAG_CREATOR_TOOL = "XMP-xmp:CreatorTool"
+TAG_XMP_XMPMM_HISTORY = "XMP-xmpMM:History"
+TAG_XMP_XMPMM_INSTANCE_ID = "XMP-xmpMM:InstanceID"
+TAG_XMP_XMPMM_DOCUMENT_ID = "XMP-xmpMM:DocumentID"
+TAG_XMP_XMP_CREATOR_TOOL = "XMP-xmp:CreatorTool"
 
 # XMP History flattened tags (exiftool expands structures)
-XMP_TAG_HISTORY_ACTION = "XMP-xmpMM:HistoryAction"
-XMP_TAG_HISTORY_WHEN = "XMP-xmpMM:HistoryWhen"
-XMP_TAG_HISTORY_SOFTWARE_AGENT = "XMP-xmpMM:HistorySoftwareAgent"
-XMP_TAG_HISTORY_CHANGED = "XMP-xmpMM:HistoryChanged"
-XMP_TAG_HISTORY_PARAMETERS = "XMP-xmpMM:HistoryParameters"
-XMP_TAG_HISTORY_INSTANCE_ID = "XMP-xmpMM:HistoryInstanceID"
+TAG_XMP_XMPMM_HISTORY_ACTION = "XMP-xmpMM:HistoryAction"
+TAG_XMP_XMPMM_HISTORY_WHEN = "XMP-xmpMM:HistoryWhen"
+TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT = "XMP-xmpMM:HistorySoftwareAgent"
+TAG_XMP_XMPMM_HISTORY_CHANGED = "XMP-xmpMM:HistoryChanged"
+TAG_XMP_XMPMM_HISTORY_PARAMETERS = "XMP-xmpMM:HistoryParameters"
+TAG_XMP_XMPMM_HISTORY_INSTANCE_ID = "XMP-xmpMM:HistoryInstanceID"
 
 # XMP History event fields (stEvt namespace)
 XMP_FIELD_ACTION = "action"
@@ -141,7 +141,7 @@ class XMPHistorian:
         struct_value = "{" + ",".join(struct_items) + "}"
 
         # ExifTool append operator is represented by a trailing '+' on the tag name
-        tag_name = XMP_TAG_HISTORY + "+"
+        tag_name = TAG_XMP_XMPMM_HISTORY + "+"
 
         # Exifer.write expects a mapping of tag -> value (or list of values)
         success = self._exifer.write(file_path, {tag_name: struct_value}, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
@@ -173,23 +173,23 @@ class XMPHistorian:
         # XMP-xmpMM:HistoryAction, XMP-xmpMM:HistoryWhen, etc.
         # Read all History-related tags
         history_tags = [
-            XMP_TAG_HISTORY_ACTION,
-            XMP_TAG_HISTORY_WHEN,
-            XMP_TAG_HISTORY_SOFTWARE_AGENT,
-            XMP_TAG_HISTORY_CHANGED,
-            XMP_TAG_HISTORY_PARAMETERS,
-            XMP_TAG_HISTORY_INSTANCE_ID,
+            TAG_XMP_XMPMM_HISTORY_ACTION,
+            TAG_XMP_XMPMM_HISTORY_WHEN,
+            TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT,
+            TAG_XMP_XMPMM_HISTORY_CHANGED,
+            TAG_XMP_XMPMM_HISTORY_PARAMETERS,
+            TAG_XMP_XMPMM_HISTORY_INSTANCE_ID,
         ]
         
         result = self._exifer.read(file_path, history_tags)
         
         # Extract arrays (exiftool returns lists for repeated tags)
-        actions = result.get(XMP_TAG_HISTORY_ACTION, [])
-        whens = result.get(XMP_TAG_HISTORY_WHEN, [])
-        agents = result.get(XMP_TAG_HISTORY_SOFTWARE_AGENT, [])
-        changeds = result.get(XMP_TAG_HISTORY_CHANGED, [])
-        parameters = result.get(XMP_TAG_HISTORY_PARAMETERS, [])
-        instance_ids = result.get(XMP_TAG_HISTORY_INSTANCE_ID, [])
+        actions = result.get(TAG_XMP_XMPMM_HISTORY_ACTION, [])
+        whens = result.get(TAG_XMP_XMPMM_HISTORY_WHEN, [])
+        agents = result.get(TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT, [])
+        changeds = result.get(TAG_XMP_XMPMM_HISTORY_CHANGED, [])
+        parameters = result.get(TAG_XMP_XMPMM_HISTORY_PARAMETERS, [])
+        instance_ids = result.get(TAG_XMP_XMPMM_HISTORY_INSTANCE_ID, [])
         
         # Ensure all are lists
         if not isinstance(actions, list):

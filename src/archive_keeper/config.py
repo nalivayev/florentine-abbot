@@ -4,12 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from common.logger import Logger
-from common.config_utils import (
-    get_config_path,
-    ensure_config_exists,
-    load_config,
-    get_template_path
-)
+from common.config_utils import get_config_path, ensure_config_exists, load_config, get_template_path
 
 
 class Config:

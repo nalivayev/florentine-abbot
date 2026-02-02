@@ -4,13 +4,17 @@ import json
 import shutil
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path
+from datetime import datetime, timezone
 
 from PIL import Image
 from file_organizer.organizer import FileOrganizer
 from file_organizer.processor import FileProcessor
 from common.naming import FilenameParser
 from common.logger import Logger
+from common.exifer import Exifer
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED
 
 
 class TestFileOrganizer:
@@ -235,6 +239,163 @@ class TestFileOrganizerIntegration:
         # Sanity check: no SOURCES/ or DERIVATIVES/ subfolder created for this PRV file
         assert not (expected_dir / "SOURCES").exists()
         assert not (expected_dir / "DERIVATIVES").exists()
+
+    def test_date_modifier_scenarios(self, logger):
+        """Test FileOrganizer with different date modifiers (E, C, B, F, A).
+        
+        This test validates that files with various date precision levels
+        are correctly processed and placed in appropriate year folders.
+        Also verifies XMP History tracking works across different scenarios.
+        """
+        import pytest
+        
+        # Skip if exiftool not available
+        try:
+            Exifer()._run(["-ver"])
+        except (FileNotFoundError, RuntimeError):
+            pytest.skip("ExifTool not found, skipping date modifier scenarios")
+        
+        scenarios = [
+            {
+                "name": "Exact Date",
+                "filename": "2023.10.27.12.00.00.E.Group.Sub.0001.A.Orig.jpg",
+                "folder_l1": "2023",
+            },
+            {
+                "name": "Circa Year",
+                "filename": "1950.00.00.00.00.00.C.Group.Sub.0002.A.Orig.jpg",
+                "folder_l1": "1950",
+            },
+            {
+                "name": "Before Year-Month",
+                "filename": "1960.01.00.00.00.00.B.Group.Sub.0003.A.Orig.jpg",
+                "folder_l1": "1960",
+            },
+            {
+                "name": "After Year-Month-Day",
+                "filename": "1970.05.20.00.00.00.F.Group.Sub.0004.A.Orig.jpg",
+                "folder_l1": "1970",
+            },
+            {
+                "name": "Absent Date",
+                "filename": "0000.00.00.00.00.00.A.Group.Sub.0005.A.Orig.jpg",
+                "folder_l1": "0000",
+            },
+        ]
+        
+        for scenario in scenarios:
+            temp_dir = self.create_temp_dir()
+            filename = scenario["filename"]
+            file_path = temp_dir / filename
+            
+            # Create test image
+            self.create_dummy_image(file_path)
+            
+            # Write XMP identifiers and history entries
+            ex = Exifer()
+            
+            # Check existing tags and only write missing ones
+            existing = ex.read(file_path, [TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL])
+            
+            instance = existing.get(TAG_XMP_XMPMM_INSTANCE_ID)
+            document = existing.get(TAG_XMP_XMPMM_DOCUMENT_ID)
+            creator = existing.get(TAG_XMP_XMP_CREATOR_TOOL)
+            
+            to_write = {}
+            if not instance:
+                instance = uuid.uuid4().hex
+                to_write[TAG_XMP_XMPMM_INSTANCE_ID] = instance
+            if not document:
+                document = uuid.uuid4().hex
+                to_write[TAG_XMP_XMPMM_DOCUMENT_ID] = document
+            if not creator:
+                creator = "test-organizer"
+                to_write[TAG_XMP_XMP_CREATOR_TOOL] = creator
+            
+            if to_write:
+                ex.write(file_path, to_write)
+            
+            # Append history entries
+            historian = XMPHistorian(exifer=ex)
+            created_when = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
+            historian.append_entry(
+                file_path, 
+                XMP_ACTION_CREATED, 
+                "test-organizer", 
+                created_when, 
+                logger=logger, 
+                instance_id=instance
+            )
+            historian.append_entry(
+                file_path, 
+                XMP_ACTION_EDITED, 
+                "test-organizer", 
+                datetime.now(timezone.utc), 
+                changed='metadata', 
+                logger=logger, 
+                instance_id=instance
+            )
+            
+            # Read back tags including history
+            read_back = ex.read(file_path, [TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY])
+            
+            def _norm(v: str) -> str:
+                if not isinstance(v, str):
+                    return str(v)
+                return v.lower().replace('uuid:', '').replace('-', '')
+            
+            # Verify identifiers and CreatorTool
+            assert _norm(read_back.get(TAG_XMP_XMPMM_INSTANCE_ID, '')) == instance, f"{scenario['name']}: InstanceID not written correctly"
+            assert _norm(read_back.get(TAG_XMP_XMPMM_DOCUMENT_ID, '')) == document, f"{scenario['name']}: DocumentID not written correctly"
+            assert read_back.get(TAG_XMP_XMP_CREATOR_TOOL) == creator, f"{scenario['name']}: CreatorTool not written correctly"
+            
+            # Verify history if present
+            history_raw = read_back.get(TAG_XMP_XMPMM_HISTORY)
+            if history_raw:
+                history_text = str(history_raw).lower()
+                assert XMP_ACTION_CREATED in history_text, f"{scenario['name']}: Missing 'created' action in history"
+                assert XMP_ACTION_EDITED in history_text, f"{scenario['name']}: Missing 'edited' action in history"
+                assert instance in history_text, f"{scenario['name']}: Missing instance ID in history"
+            
+            # Process with FileOrganizer
+            organizer = FileOrganizer(logger)
+            config = {
+                "metadata": {
+                    "languages": {
+                        "en-US": {
+                            "default": True,
+                            "creator": "Test User",
+                            "rights": "Public Domain",
+                        }
+                    }
+                }
+            }
+            
+            config_path = temp_dir / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            
+            processed_count = organizer(
+                input_path=temp_dir,
+                config_path=config_path,
+                recursive=False,
+                copy_mode=False,
+            )
+            
+            assert processed_count == 1, f"{scenario['name']}: FileOrganizer failed to process file"
+            
+            # Verify file moved into processed/YYYY/... tree
+            processed_root = temp_dir / "processed"
+            found_files = list(processed_root.rglob(filename))
+            assert len(found_files) == 1, f"{scenario['name']}: File not found in processed folder"
+            processed_path = found_files[0]
+            
+            # Level 1 folder should match expected year
+            l1_folder = processed_path.parent.parent.parent.name
+            assert l1_folder == scenario["folder_l1"], f"{scenario['name']}: Expected folder {scenario['folder_l1']}, got {l1_folder}"
+            
+            # Cleanup for next scenario
+            shutil.rmtree(temp_dir)
+            self.temp_dir = None
 
 
 class TestFileOrganizerCustomFormats:

@@ -8,11 +8,14 @@ and moving files into the ``processed/`` tree. Higher-level orchestration
 
 from pathlib import Path
 from typing import Any
+from datetime import datetime, timezone
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename, FilenameValidator
 from common.constants import SUPPORTED_IMAGE_EXTENSIONS
 from common.archive_metadata import ArchiveMetadata
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_EDITED
+from common.version import get_version
 
 
 class FileProcessor:
@@ -42,6 +45,7 @@ class FileProcessor:
         self.parser = FilenameParser()
         self.validator = FilenameValidator()
         self._metadata = ArchiveMetadata(metadata_tags=metadata_tags, logger=logger)
+        self._historian = XMPHistorian()
 
     def process(self, file_path: Path, config: dict[str, Any] | None) -> bool:
         """Process a file: parse filename, validate, write EXIF/XMP metadata.
@@ -105,6 +109,10 @@ class FileProcessor:
                 config=config,
                 logger=self.logger,
             )
+            
+            # Write XMP History entry for file-organizer
+            self._write_history_entry(file_path)
+            
             return True
         except (FileNotFoundError, RuntimeError, ValueError) as e:
             self.logger.error(f"Exiftool failed: {e}")
@@ -113,3 +121,46 @@ class FileProcessor:
             self.logger.error(f"Failed to write metadata to {file_path}: {e}")
             return False
 
+    def _write_history_entry(self, file_path: Path) -> None:
+        """Write XMP History entry for file-organizer metadata changes.
+        
+        Args:
+            file_path: Path to the file.
+        """
+        try:
+            # Read InstanceID from file
+            from common.exifer import Exifer
+            exifer = Exifer()
+            tags = exifer.read(file_path, [TAG_XMP_XMPMM_INSTANCE_ID])
+            instance_id = tags.get(TAG_XMP_XMPMM_INSTANCE_ID)
+            
+            if not instance_id:
+                self.logger.warning(f"No InstanceID found for {file_path.name}, skipping history entry")
+                return
+            
+            # Get version for software agent
+            version = get_version()
+            if version == "unknown":
+                version = "0.0"
+            else:
+                parts = version.split(".")
+                if len(parts) >= 2:
+                    version = f"{parts[0]}.{parts[1]}"
+            
+            software_agent = f"file-organizer {version}"
+            
+            # Write history entry with current time
+            success = self._historian.append_entry(
+                file_path=file_path,
+                action=XMP_ACTION_EDITED,
+                software_agent=software_agent,
+                when=datetime.now(timezone.utc),
+                changed="metadata",
+                instance_id=instance_id,
+                logger=self.logger,
+            )
+            
+            if not success:
+                self.logger.warning(f"Failed to write history entry for {file_path.name}")
+        except Exception as e:
+            self.logger.warning(f"Failed to write XMP history for {file_path.name}: {e}")

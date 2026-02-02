@@ -4,14 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from common.logger import Logger
-from common.config_utils import (
-    get_config_path,
-    get_config_dir,
-    ensure_config_exists,
-    load_config,
-    load_optional_config,
-    get_template_path
-)
+from common.config_utils import get_config_path, get_config_dir, ensure_config_exists, load_config, load_optional_config, get_template_path
 from common.constants import DEFAULT_METADATA_TAGS, DEFAULT_SUFFIX_ROUTING
 
 

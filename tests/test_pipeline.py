@@ -7,28 +7,20 @@ from file_organizer.organizer import FileOrganizer
 from preview_maker import PreviewMaker
 from common.exifer import Exifer
 from common.logger import Logger
-from common.historian import (
-    XMP_TAG_INSTANCE_ID,
-    XMP_TAG_DOCUMENT_ID,
-    XMP_TAG_CREATOR_TOOL,
-    XMP_TAG_HISTORY,
-    XMP_ACTION_CREATED,
-    XMP_ACTION_EDITED,
-)
-from common.historian import XMPHistorian
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED
+from common.archive_metadata import TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIFIFD_CREATE_DATE, TAG_IFD0_SOFTWARE, TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION
+from tests.scan_batcher.fake_workflow import FakeVuescanWorkflow
 from datetime import datetime, timezone
 import uuid
 
 
 class TestPipeline:
-    """End-to-end filesystem pipeline tests.
-
-    These tests are intentionally higher-level and slower. Detailed
-    metadata field coverage is handled in dedicated tests under
-    tests/file_organizer, so here we focus on:
-
-    - FileOrganizer moving files into the expected processed/ layout
-    - PreviewMaker generating PRV files from MSR sources
+    """End-to-end pipeline test: scan-batcher → file-organizer → preview-maker.
+    
+    This test class focuses on full integration testing of the complete
+    archival workflow. Component-specific tests (e.g., different date modifiers,
+    metadata handling) are covered in dedicated test files under tests/file_organizer,
+    tests/preview_maker, etc.
     """
 
     @pytest.fixture(autouse=True)
@@ -43,227 +35,223 @@ class TestPipeline:
 
         yield
 
-    def _create_dummy_jpeg(self, filename: str) -> Path:
-        """Create a small valid JPEG image in the input directory."""
-
-        file_path = self.input_dir / filename
-        img = Image.new("RGB", (100, 100), color="red")
-        img.save(file_path, format="JPEG")
-        return file_path
-
-    def _create_dummy_tiff(self, filename: str) -> Path:
-        """Create a small valid TIFF image in the input directory."""
-
-        file_path = self.input_dir / filename
-        img = Image.new("RGB", (100, 100), color="white")
-        img.save(file_path, format="TIFF")
-        return file_path
-
-    def _run_scenario(self, scenario: dict) -> None:
-        """Run a single FileOrganizer + ArchiveKeeper scenario."""
-
-        filename = scenario["filename"]
-        file_path = self._create_dummy_jpeg(filename)
-        print(f"\n[Pipeline] Running scenario: {scenario['name']}")
-        print(f"[Pipeline] Processing file: {file_path}")
-
-        # --- Historian / XMP sanity check ---
-        # Write the same set of XMP tags and History entries the workflows do,
-        # then read them back and assert they were written.
+    def _create_realistic_scan(self, file_path: Path, datetime_digitized: str = "2024:01:15 14:30:00", software: str = "VueScan 9.12.45") -> Path:
+        """Create a realistic fake scanned TIFF file with proper EXIF tags.
+        
+        Args:
+            file_path: Where to create the file.
+            datetime_digitized: EXIF datetime in format "YYYY:MM:DD HH:MM:SS".
+            software: Software tag value (simulates scanner software).
+            
+        Returns:
+            Path to created file.
+        """
+        # Create a realistic scan-like image (grayscale, larger size)
+        img = Image.new("L", (2400, 3200), color=240)  # Gray background like scanned paper
+        img.save(file_path, format="TIFF", compression="lzw")
+        
+        # Write realistic EXIF tags that VueScan would write
         try:
             ex = Exifer()
-            # quick availability check
-            ex._run(["-ver"])
+            ex.write(file_path, {
+                TAG_EXIFIFD_DATETIME_DIGITIZED: datetime_digitized,
+                TAG_EXIFIFD_CREATE_DATE: datetime_digitized,
+                TAG_IFD0_SOFTWARE: software,
+                TAG_IFD0_MAKE: "Epson",
+                TAG_IFD0_MODEL: "Perfection V600",
+            })
         except (FileNotFoundError, RuntimeError):
-            # exiftool not available — skip historian write/read for this scenario
-            print("[Pipeline] exiftool not available, skipping historian check")
-        else:
-            # Check existing tags and only write missing ones
-            existing = ex.read(file_path, [XMP_TAG_INSTANCE_ID, XMP_TAG_DOCUMENT_ID, XMP_TAG_CREATOR_TOOL])
+            # If exiftool not available, just skip EXIF writing
+            pass
+        
+        return file_path
 
-            instance = existing.get(XMP_TAG_INSTANCE_ID)
-            document = existing.get(XMP_TAG_DOCUMENT_ID)
-            creator = existing.get(XMP_TAG_CREATOR_TOOL)
-
-            to_write = {}
-            if not instance:
-                instance = uuid.uuid4().hex
-                to_write[XMP_TAG_INSTANCE_ID] = instance
-            if not document:
-                document = uuid.uuid4().hex
-                to_write[XMP_TAG_DOCUMENT_ID] = document
-            if not creator:
-                creator = "test-pipeline"
-                to_write[XMP_TAG_CREATOR_TOOL] = creator
-
-            if to_write:
-                ex.write(file_path, to_write)
-
-            # Append history entries using XMPHistorian (keeps behaviour as before)
-            historian = XMPHistorian(exifer=ex)
-            created_when = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
-            historian.append_entry(file_path, XMP_ACTION_CREATED, f"test-pipeline", created_when, logger=self.logger, instance_id=instance)
-            historian.append_entry(file_path, XMP_ACTION_EDITED, f"test-pipeline", datetime.now(timezone.utc), changed='metadata', logger=self.logger, instance_id=instance)
-
-            # Read back tags including history
-            read_back = ex.read(file_path, [XMP_TAG_INSTANCE_ID, XMP_TAG_DOCUMENT_ID, XMP_TAG_CREATOR_TOOL, XMP_TAG_HISTORY])
-
-            def _norm(v: str) -> str:
-                if not isinstance(v, str):
-                    return str(v)
-                return v.lower().replace('uuid:', '').replace('-', '')
-
-            # Always assert identifiers and CreatorTool
-            assert _norm(read_back.get(XMP_TAG_INSTANCE_ID, '')) == instance, 'InstanceID not written/read correctly'
-            assert _norm(read_back.get(XMP_TAG_DOCUMENT_ID, '')) == document, 'DocumentID not written/read correctly'
-            assert read_back.get(XMP_TAG_CREATOR_TOOL) == creator, 'CreatorTool not written/read correctly'
-
-            # History may not be immediately visible depending on exiftool behaviour; only assert if present
-            history_raw = read_back.get(XMP_TAG_HISTORY)
-            if history_raw:
-                history_text = str(history_raw).lower()
-                assert XMP_ACTION_CREATED in history_text
-                assert XMP_ACTION_EDITED in history_text
-                assert instance in history_text
-
-        # --- Step 1: File Organizer (batch mode handles moves) ---
-        organizer = FileOrganizer(self.logger)
-        config = {
-            "metadata": {
-                "languages": {
-                    "en-US": {
-                        "default": True,
-                        "creator": "Test User",
-                        "rights": "Public Domain",
-                    }
-                }
-            }
-        }
-
-        # Persist config and call organizer in batch mode on input_dir
-        config_path = self.input_dir / "config.json"
-        config_path.write_text(json.dumps(config), encoding="utf-8")
-
-        processed_count = organizer(
-            input_path=self.input_dir,
-            config_path=config_path,
-            recursive=False,
-            copy_mode=False,
-        )
-        assert processed_count == 1, f"File Organizer failed to process file in scenario: {scenario['name']}"
-
-        # Verify file moved into processed/YYYY/... tree
-        processed_root = self.input_dir / "processed"
-        found_files = list(processed_root.rglob(filename))
-        assert len(found_files) == 1, f"File {filename} not found in processed folder"
-        processed_path = found_files[0]
-
-        # Level 1 folder should match provided expectation
-        l1_folder = processed_path.parent.parent.parent.name
-        assert l1_folder == scenario["folder_l1"], f"Incorrect Level 1 folder for {scenario['name']}"
-
-        # ArchiveKeeper step removed: this pipeline test focuses on
-        # FileOrganizer behaviour and PreviewMaker only.
-
-    def test_pipeline_with_preview_maker(self) -> None:
-        """Filesystem E2E: FileOrganizer + PreviewMaker on an MSR source."""
-
-        # Ensure exiftool is available (required by FileOrganizer)
-        try:
-            Exifer()._run(["-ver"])
-        except (FileNotFoundError, RuntimeError):
-            pytest.skip("ExifTool not found, skipping E2E test with PreviewMaker")
-
-        filename = "2023.10.27.12.00.00.E.Group.Sub.0001.A.MSR.tiff"
-        file_path = self._create_dummy_tiff(filename)
-
-        # Step 1: organize MSR into processed/YYYY/YYYY.MM.DD/SOURCES via batch API
-        organizer = FileOrganizer(self.logger)
-        config = {
-            "metadata": {
-                "languages": {
-                    "en-US": {
-                        "default": True,
-                        "creator": "Test User",
-                        "rights": "Public Domain",
-                    }
-                }
-            }
-        }
-
-        config_path = self.input_dir / "config.json"
-        config_path.write_text(json.dumps(config), encoding="utf-8")
-
-        processed_count = organizer(
-            input_path=self.input_dir,
-            config_path=config_path,
-            recursive=False,
-            copy_mode=False,
-        )
-        assert processed_count == 1, "File Organizer failed to process MSR file in PreviewMaker pipeline test"
-
-        processed_root = self.input_dir / "processed"
-        found_files = list(processed_root.rglob(filename))
-        assert len(found_files) == 1, f"MSR file {filename} not found in processed folder"
-        processed_msr_path = found_files[0]
-
-        assert processed_msr_path.parent.name == "SOURCES"
-        assert processed_msr_path.parent.parent.name == "2023.10.27"
-        assert processed_msr_path.parent.parent.parent.name == "2023"
-
-        # Step 2: generate PRV via PreviewMaker
-        maker = PreviewMaker(self.logger)
-        # Pass the archive base (processed/) where year folders begin
-        count = maker(path=processed_root, overwrite=False, max_size=1000, quality=70)
-        assert count == 1, "PreviewMaker should generate exactly one PRV file"
-
-        date_dir = processed_msr_path.parent.parent
-        prv_name = "2023.10.27.12.00.00.E.Group.Sub.0001.A.PRV.jpg"
-        prv_path = date_dir / prv_name
-
-        assert prv_path.exists(), f"PRV file not found at expected path: {prv_path}"
-
-    def test_scenarios(self) -> None:
-        """Run multiple pipeline scenarios for different date modifiers.
-
-        This keeps the high-level pipeline coverage (organizer + scanner) for
-        several filename patterns, while detailed EXIF/XMP expectations live
-        in test_exiftool_compliance.
+    def test_full_pipeline_scan_to_preview(self, tmp_path) -> None:
+        """Complete end-to-end test: scan-batcher → file-organizer → preview-maker.
+        
+        This test simulates the entire workflow:
+        1. Fake scanning with scan-batcher (VuescanWorkflow)
+        2. Organizing scanned file with file-organizer
+        3. Generating preview with preview-maker
         """
-
-        # Skip completely if exiftool is unavailable
+        # Skip if exiftool not available
         try:
             Exifer()._run(["-ver"])
         except (FileNotFoundError, RuntimeError):
-            pytest.skip("ExifTool not found, skipping E2E test")
+            pytest.skip("ExifTool not found, skipping full pipeline test")
+        
+        logger = Logger("test-pipeline")
+        
+        # === Step 0: Prepare fake scan file and workflow config ===
+        fixtures_dir = tmp_path / "fixtures"
+        fixtures_dir.mkdir()
+        
+        fake_scan_file = fixtures_dir / "temp_scan.tif"
+        self._create_realistic_scan(
+            fake_scan_file,
+            datetime_digitized="2024:01:15 14:30:00",
+            software="VueScan 9.12.45"
+        )
+        
+        # Create minimal workflow configuration
+        workflow_dir = tmp_path / "workflow"
+        workflow_dir.mkdir()
+        
+        vuescan_output_dir = tmp_path / "vuescan_output"
+        vuescan_output_dir.mkdir()
+        
+        final_output_dir = tmp_path / "scanned"
+        final_output_dir.mkdir()
+        
+        # Create workflow.ini
+        workflow_ini = workflow_dir / "workflow.ini"
+        workflow_ini.write_text(f"""[main]
+description = Test scan workflow
+output_path = {final_output_dir}
+output_file_name = 2024.01.15.14.30.00.E.FAM.ALB.0001.A.MSR
 
-        scenarios = [
-            {
-                "name": "Exact Date",
-                "filename": "2023.10.27.12.00.00.E.Group.Sub.0001.A.Orig.jpg",
-                "folder_l1": "2023",
-            },
-            {
-                "name": "Circa Year",
-                "filename": "1950.00.00.00.00.00.C.Group.Sub.0002.A.Orig.jpg",
-                "folder_l1": "1950",
-            },
-            {
-                "name": "Before Year-Month",
-                "filename": "1960.01.00.00.00.00.B.Group.Sub.0003.A.Orig.jpg",
-                "folder_l1": "1960",
-            },
-            {
-                "name": "After Year-Month-Day",
-                "filename": "1970.05.20.00.00.00.F.Group.Sub.0004.A.Orig.jpg",
-                "folder_l1": "1970",
-            },
-            {
-                "name": "Absent Date",
-                "filename": "0000.00.00.00.00.00.A.Group.Sub.0005.A.Orig.jpg",
-                "folder_l1": "0000",
-            },
-        ]
-
-        for case in scenarios:
-            self._run_scenario(case)
+[vuescan]
+output_path = {vuescan_output_dir}
+output_file_name = temp_scan
+output_extension_name = tif
+""", encoding="utf-8")
+        
+        # Create minimal vuescan.ini (required by workflow)
+        vuescan_ini_dir = Path(__file__).parent.parent / "src" / "scan_batcher" / "workflows" / "vuescan"
+        vuescan_ini_path = vuescan_ini_dir / "vuescan.ini"
+        
+        # Backup original vuescan.ini if it exists
+        vuescan_ini_backup = None
+        if vuescan_ini_path.exists():
+            vuescan_ini_backup = vuescan_ini_path.read_text(encoding="utf-8")
+        
+        # Create test vuescan.ini with paths in tmp_path
+        vuescan_settings_dir = tmp_path / "vuescan_settings"
+        vuescan_settings_dir.mkdir()
+        
+        vuescan_ini_path.write_text(f"""[main]
+settings_path = {vuescan_settings_dir}
+settings_name = vuescan_settings.ini
+program_path = {tmp_path}
+program_name = vuescan_fake.exe
+logging_path = {tmp_path}
+logging_name = scan.log
+""", encoding="utf-8")
+        
+        # === Step 1: Run scan-batcher with FakeVuescanWorkflow ===
+        workflow = FakeVuescanWorkflow(logger, fake_scan_file)
+        
+        try:
+            workflow(str(workflow_dir), templates={})
+        except FileNotFoundError as e:
+            # Expected if vuescan.ini is missing - skip test
+            pytest.skip(f"Workflow configuration incomplete: {e}")
+        finally:
+            # Restore original vuescan.ini
+            if vuescan_ini_backup:
+                vuescan_ini_path.write_text(vuescan_ini_backup, encoding="utf-8")
+        
+        # Verify scan-batcher output
+        expected_scan_output = final_output_dir / "2024.01.15.14.30.00.E.FAM.ALB.0001.A.MSR.tif"
+        assert expected_scan_output.exists(), f"Scan-batcher output not found: {expected_scan_output}"
+        
+        # Verify XMP History was written by scan-batcher
+        ex = Exifer()
+        historian = XMPHistorian(exifer=ex)
+        history = historian.read_history(expected_scan_output)
+        
+        assert len(history) >= 2, "Expected at least 2 history entries from scan-batcher"
+        
+        # Check for 'created' and 'edited' actions
+        actions = [entry.get('action') for entry in history]
+        assert XMP_ACTION_CREATED in actions, "Expected 'created' action in history"
+        assert XMP_ACTION_EDITED in actions, "Expected 'edited' action in history"
+        
+        # Verify DocumentID and InstanceID were set
+        ids = ex.read(expected_scan_output, [
+            TAG_XMP_XMPMM_DOCUMENT_ID, 
+            TAG_XMP_XMPMM_INSTANCE_ID, 
+            TAG_XMP_DC_IDENTIFIER, 
+            TAG_XMP_XMP_IDENTIFIER
+        ])
+        assert ids.get(TAG_XMP_XMPMM_DOCUMENT_ID), "DocumentID should be set"
+        assert ids.get(TAG_XMP_XMPMM_INSTANCE_ID), "InstanceID should be set"
+        
+        logger.info(f"✓ scan-batcher completed: {expected_scan_output.name}")
+        
+        # === Step 2: Run file-organizer ===
+        organizer = FileOrganizer(logger)
+        config = {
+            "metadata": {
+                "languages": {
+                    "en-US": {
+                        "default": True,
+                        "creator": "Test User",
+                        "description": "Test scan from pipeline",
+                        "rights": "Public Domain",
+                    }
+                }
+            }
+        }
+        
+        config_path = final_output_dir / "config.json"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        
+        processed_count = organizer(
+            input_path=final_output_dir,
+            config_path=config_path,
+            recursive=False,
+            copy_mode=False,
+        )
+        
+        assert processed_count == 1, "file-organizer should process 1 file"
+        
+        # Verify file was moved to processed/YYYY/YYYY.MM.DD/SOURCES/
+        processed_root = final_output_dir / "processed"
+        expected_organized = processed_root / "2024" / "2024.01.15" / "SOURCES" / "2024.01.15.14.30.00.E.FAM.ALB.0001.A.MSR.tif"
+        assert expected_organized.exists(), f"Organized file not found: {expected_organized}"
+        
+        # Re-read master file identifiers for later comparison with PRV
+        master_ids = ex.read(expected_organized, [
+            TAG_XMP_DC_IDENTIFIER, 
+            TAG_XMP_XMP_IDENTIFIER
+        ])
+        master_identifier = master_ids.get(TAG_XMP_DC_IDENTIFIER) or master_ids.get(TAG_XMP_XMP_IDENTIFIER)
+        assert master_identifier, "Master should have dc:Identifier after organizer processing"
+        
+        logger.info(f"✓ file-organizer completed: {expected_organized}")
+        
+        # === Step 3: Run preview-maker ===
+        maker = PreviewMaker(logger)
+        prv_count = maker(path=processed_root, overwrite=False, max_size=800, quality=75)
+        
+        assert prv_count == 1, "preview-maker should generate 1 PRV file"
+        
+        # Verify PRV was created in date root folder
+        expected_prv = processed_root / "2024" / "2024.01.15" / "2024.01.15.14.30.00.E.FAM.ALB.0001.A.PRV.jpg"
+        assert expected_prv.exists(), f"PRV file not found: {expected_prv}"
+        
+        # Verify PRV has proper metadata
+        # PRV should NOT have DocumentID/InstanceID - those are for provenance tracking
+        # PRV is a derivative, not part of the master's XMP History chain
+        # It should only have dc:Relation linking back to master's dc:Identifier
+        prv_tags = ex.read(expected_prv, [
+            TAG_XMP_DC_IDENTIFIER, 
+            TAG_XMP_XMP_IDENTIFIER, 
+            TAG_XMP_DC_RELATION
+        ])
+        assert prv_tags.get(TAG_XMP_DC_IDENTIFIER), "PRV should have its own dc:Identifier"
+        assert prv_tags.get(TAG_XMP_DC_RELATION), "PRV should link back to master via dc:Relation"
+        
+        # Verify the relation points to master's identifier
+        assert prv_tags[TAG_XMP_DC_RELATION] == master_identifier, "PRV's dc:Relation should point to master's identifier"
+        
+        logger.info(f"✓ preview-maker completed: {expected_prv.name}")
+        
+        print(f"\n{'='*60}")
+        print("✅ FULL PIPELINE TEST PASSED")
+        print(f"{'='*60}")
+        print(f"1. scan-batcher   → {expected_scan_output.name}")
+        print(f"2. file-organizer → {expected_organized.relative_to(processed_root)}")
+        print(f"3. preview-maker  → {expected_prv.relative_to(processed_root)}")
+        print(f"{'='*60}\n")

@@ -5,7 +5,7 @@ import pytest
 from PIL import Image
 
 from common.exifer import Exifer
-from common.historian import XMPHistorian, XMP_TAG_HISTORY, XMP_ACTION_CREATED
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED
 
 
 def test_append_and_read_history(tmp_path):
@@ -32,7 +32,7 @@ def test_append_and_read_history(tmp_path):
 
     # Read back using Exifer.read: raw History tag may not be present
     # since exiftool often exposes structured history as flattened subfields.
-    data = ex.read(file_path, [XMP_TAG_HISTORY])
+    data = ex.read(file_path, [TAG_XMP_XMPMM_HISTORY])
 
     # Verify structured read via XMPHistorian.read_history (preferred API)
     structured = historian.read_history(file_path)

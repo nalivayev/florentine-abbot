@@ -16,6 +16,46 @@ from common.logger import Logger
 from common.config_utils import get_config_dir, load_optional_config
 
 
+# Tag names (shared across organizer and preview maker)
+TAG_XMP_EXIF_DATETIME_DIGITIZED = "XMP-exif:DateTimeDigitized"
+TAG_EXIFIFD_DATETIME_DIGITIZED = "ExifIFD:DateTimeDigitized"
+TAG_EXIFIFD_CREATE_DATE = "ExifIFD:CreateDate"
+TAG_EXIF_DATETIME_ORIGINAL = "Exif:DateTimeOriginal"
+TAG_XMP_PHOTOSHOP_DATE_CREATED = "XMP-photoshop:DateCreated"
+TAG_XMP_XMP_IDENTIFIER = "XMP-xmp:Identifier"  # XMP-xmp:Identifier
+TAG_XMP_DC_IDENTIFIER = "XMP-dc:Identifier"    # XMP-dc:Identifier
+TAG_XMP_DC_DESCRIPTION = "XMP-dc:Description"
+TAG_XMP_DC_TITLE = "XMP-dc:Title"
+TAG_XMP_DC_CREATOR = "XMP-dc:Creator"
+TAG_XMP_PHOTOSHOP_CREDIT = "XMP-photoshop:Credit"
+TAG_XMP_DC_RIGHTS = "XMP-dc:Rights"
+TAG_XMP_XMPRIGHTS_USAGE_TERMS = "XMP-xmpRights:UsageTerms"
+TAG_XMP_DC_SOURCE = "XMP-dc:Source"
+TAG_XMP_DC_RELATION = "XMP-dc:Relation"
+
+# Scanner/camera metadata tags
+TAG_IFD0_SOFTWARE = "IFD0:Software"
+TAG_IFD0_MAKE = "IFD0:Make"
+TAG_IFD0_MODEL = "IFD0:Model"
+
+# Groupings for easier reuse
+IDENTIFIER_TAGS = (TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER)
+CONTEXT_TAGS = (
+    TAG_XMP_DC_DESCRIPTION,
+    TAG_XMP_DC_TITLE,
+    TAG_XMP_DC_CREATOR,
+    TAG_XMP_PHOTOSHOP_CREDIT,
+    TAG_XMP_DC_RIGHTS,
+    TAG_XMP_XMPRIGHTS_USAGE_TERMS,
+    TAG_XMP_DC_SOURCE,
+)
+DATE_TAGS = (
+    TAG_EXIF_DATETIME_ORIGINAL,
+    TAG_XMP_PHOTOSHOP_DATE_CREATED,
+    TAG_XMP_EXIF_DATETIME_DIGITIZED,
+)
+
+
 class ArchiveMetadata:
     """High-level archival metadata helper built on top of Exifer.
 
@@ -23,40 +63,6 @@ class ArchiveMetadata:
     populate them for master files and PRV derivatives. Lower-level
     interaction with exiftool is delegated to :class:`Exifer`.
     """
-
-    # Tag names (shared across organizer and preview maker)
-    TAG_XMP_EXIF_DATETIME_DIGITIZED = "XMP-exif:DateTimeDigitized"
-    TAG_EXIFIFD_DATETIME_DIGITIZED = "ExifIFD:DateTimeDigitized"
-    TAG_EXIFIFD_CREATE_DATE = "ExifIFD:CreateDate"
-    TAG_EXIF_DATETIME_ORIGINAL = "Exif:DateTimeOriginal"
-    TAG_XMP_PHOTOSHOP_DATE_CREATED = "XMP-photoshop:DateCreated"
-    TAG_XMP_XMP_IDENTIFIER = "XMP-xmp:Identifier"  # XMP-xmp:Identifier
-    TAG_XMP_DC_IDENTIFIER = "XMP-dc:Identifier"    # XMP-dc:Identifier
-    TAG_XMP_DC_DESCRIPTION = "XMP-dc:Description"
-    TAG_XMP_DC_TITLE = "XMP-dc:Title"
-    TAG_XMP_DC_CREATOR = "XMP-dc:Creator"
-    TAG_XMP_PHOTOSHOP_CREDIT = "XMP-photoshop:Credit"
-    TAG_XMP_DC_RIGHTS = "XMP-dc:Rights"
-    TAG_XMP_XMPRIGHTS_USAGE_TERMS = "XMP-xmpRights:UsageTerms"
-    TAG_XMP_DC_SOURCE = "XMP-dc:Source"
-    TAG_XMP_DC_RELATION = "XMP-dc:Relation"
-
-    # Groupings for easier reuse
-    IDENTIFIER_TAGS = (TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER)
-    CONTEXT_TAGS = (
-        TAG_XMP_DC_DESCRIPTION,
-        TAG_XMP_DC_TITLE,
-        TAG_XMP_DC_CREATOR,
-        TAG_XMP_PHOTOSHOP_CREDIT,
-        TAG_XMP_DC_RIGHTS,
-        TAG_XMP_XMPRIGHTS_USAGE_TERMS,
-        TAG_XMP_DC_SOURCE,
-    )
-    DATE_TAGS = (
-        TAG_EXIF_DATETIME_ORIGINAL,
-        TAG_XMP_PHOTOSHOP_DATE_CREATED,
-        TAG_XMP_EXIF_DATETIME_DIGITIZED,
-    )
 
     def __init__(
         self,
@@ -90,9 +96,9 @@ class ArchiveMetadata:
         """
 
         return [
-            cls.TAG_XMP_EXIF_DATETIME_DIGITIZED,
-            cls.TAG_EXIFIFD_DATETIME_DIGITIZED,
-            cls.TAG_EXIFIFD_CREATE_DATE,
+            TAG_XMP_EXIF_DATETIME_DIGITIZED,
+            TAG_EXIFIFD_DATETIME_DIGITIZED,
+            TAG_EXIFIFD_CREATE_DATE,
         ]
 
     @classmethod
@@ -101,8 +107,8 @@ class ArchiveMetadata:
 
         # Also include EXIFIFD DateTimeDigitized as a fallback source for
         # XMP-exif:DateTimeDigitized.
-        return list(cls.IDENTIFIER_TAGS + cls.CONTEXT_TAGS + cls.DATE_TAGS) + [
-            cls.TAG_EXIFIFD_DATETIME_DIGITIZED,
+        return list(IDENTIFIER_TAGS + CONTEXT_TAGS + DATE_TAGS) + [
+            TAG_EXIFIFD_DATETIME_DIGITIZED,
         ]
 
     def write_master_tags(
@@ -134,9 +140,9 @@ class ArchiveMetadata:
         tags: dict[str, Any] = {}
 
         # 1. Identifiers (XMP)
-        file_uuid = str(uuid.uuid4())
-        tags[self.TAG_XMP_DC_IDENTIFIER] = file_uuid
-        tags[self.TAG_XMP_XMP_IDENTIFIER] = file_uuid
+        file_uuid = uuid.uuid4().hex
+        tags[TAG_XMP_DC_IDENTIFIER] = file_uuid
+        tags[TAG_XMP_XMP_IDENTIFIER] = file_uuid
 
         def _normalize_text(value: Any) -> Optional[str]:
             """Normalize config text field to a single string.
@@ -160,7 +166,7 @@ class ArchiveMetadata:
 
         # 2. Title (description is handled in configurable fields section
         # to support per-language values and x-default mapping).
-        tags[self.TAG_XMP_DC_TITLE] = file_path.stem
+        tags[TAG_XMP_DC_TITLE] = file_path.stem
 
         # 3. Dates
         # 3.1 DateTimeDigitized - preserve scanning date from CreateDate
@@ -171,14 +177,14 @@ class ArchiveMetadata:
             )
 
             date_digitized = (
-                existing_tags.get(self.TAG_XMP_EXIF_DATETIME_DIGITIZED)
-                or existing_tags.get(self.TAG_EXIFIFD_DATETIME_DIGITIZED)
+                existing_tags.get(TAG_XMP_EXIF_DATETIME_DIGITIZED)
+                or existing_tags.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
             )
 
             if not date_digitized:
-                create_date = existing_tags.get(self.TAG_EXIFIFD_CREATE_DATE)
+                create_date = existing_tags.get(TAG_EXIFIFD_CREATE_DATE)
                 if create_date:
-                    tags[self.TAG_XMP_EXIF_DATETIME_DIGITIZED] = create_date
+                    tags[TAG_XMP_EXIF_DATETIME_DIGITIZED] = create_date
                     logger.debug("Set DateTimeDigitized from CreateDate: %s", create_date)
             else:
                 logger.debug("DateTimeDigitized already set: %s", date_digitized)
@@ -191,12 +197,12 @@ class ArchiveMetadata:
                 f"{parsed.year:04d}:{parsed.month:02d}:{parsed.day:02d} "
                 f"{parsed.hour:02d}:{parsed.minute:02d}:{parsed.second:02d}"
             )
-            tags[self.TAG_EXIF_DATETIME_ORIGINAL] = dt_str
-            tags[self.TAG_XMP_PHOTOSHOP_DATE_CREATED] = dt_str.replace(":", "-", 2).replace(" ", "T")
+            tags[TAG_EXIF_DATETIME_ORIGINAL] = dt_str
+            tags[TAG_XMP_PHOTOSHOP_DATE_CREATED] = dt_str.replace(":", "-", 2).replace(" ", "T")
         else:
             # Partial date: clear EXIF DateTimeOriginal and encode partial
             # date in XMP-photoshop:DateCreated.
-            tags[self.TAG_EXIF_DATETIME_ORIGINAL] = ""
+            tags[TAG_EXIF_DATETIME_ORIGINAL] = ""
 
             if parsed.year > 0:
                 date_val = f"{parsed.year:04d}"
@@ -205,7 +211,7 @@ class ArchiveMetadata:
                     if parsed.day > 0:
                         date_val += f"-{parsed.day:02d}"
 
-                tags[self.TAG_XMP_PHOTOSHOP_DATE_CREATED] = date_val
+                tags[TAG_XMP_PHOTOSHOP_DATE_CREATED] = date_val
 
         # 4. Configurable fields (new multi-language configuration only)
         #
@@ -246,7 +252,7 @@ class ArchiveMetadata:
                 if isinstance(default_block, dict):
                     creator_value = default_block.get("creator")
                     if creator_value:
-                        tags[self.TAG_XMP_DC_CREATOR] = creator_value if isinstance(creator_value, list) else [creator_value]
+                        tags[TAG_XMP_DC_CREATOR] = creator_value if isinstance(creator_value, list) else [creator_value]
 
                 # Language-aware text fields. For each language we write TAG-langCode,
                 # and for the default language we also write the plain TAG (which
@@ -318,26 +324,26 @@ class ArchiveMetadata:
         tags_to_write: dict[str, Any] = {}
 
         # Fresh identifier for PRV
-        file_uuid = str(uuid.uuid4())
-        tags_to_write[self.TAG_XMP_DC_IDENTIFIER] = file_uuid
-        tags_to_write[self.TAG_XMP_XMP_IDENTIFIER] = file_uuid
+        file_uuid = uuid.uuid4().hex
+        tags_to_write[TAG_XMP_DC_IDENTIFIER] = file_uuid
+        tags_to_write[TAG_XMP_XMP_IDENTIFIER] = file_uuid
 
         # Link back to master identifier if present
-        master_id = existing.get(self.TAG_XMP_DC_IDENTIFIER) or existing.get(self.TAG_XMP_XMP_IDENTIFIER)
+        master_id = existing.get(TAG_XMP_DC_IDENTIFIER) or existing.get(TAG_XMP_XMP_IDENTIFIER)
         if master_id:
-            tags_to_write[self.TAG_XMP_DC_RELATION] = master_id
+            tags_to_write[TAG_XMP_DC_RELATION] = master_id
 
         # Title is based on PRV filename; rest of contextual fields are
         # inherited when present.
-        tags_to_write[self.TAG_XMP_DC_TITLE] = prv_path.stem
+        tags_to_write[TAG_XMP_DC_TITLE] = prv_path.stem
 
         for key in (
-            self.TAG_XMP_DC_DESCRIPTION,
-            self.TAG_XMP_DC_CREATOR,
-            self.TAG_XMP_PHOTOSHOP_CREDIT,
-            self.TAG_XMP_DC_RIGHTS,
-            self.TAG_XMP_XMPRIGHTS_USAGE_TERMS,
-            self.TAG_XMP_DC_SOURCE,
+            TAG_XMP_DC_DESCRIPTION,
+            TAG_XMP_DC_CREATOR,
+            TAG_XMP_PHOTOSHOP_CREDIT,
+            TAG_XMP_DC_RIGHTS,
+            TAG_XMP_XMPRIGHTS_USAGE_TERMS,
+            TAG_XMP_DC_SOURCE,
         ):
             value = existing.get(key)
             if value is not None:
@@ -345,13 +351,13 @@ class ArchiveMetadata:
 
         # Dates: inherit from master, with fallback for DateTimeDigitized.
         for key in (
-            self.TAG_EXIF_DATETIME_ORIGINAL,
-            self.TAG_XMP_PHOTOSHOP_DATE_CREATED,
-            self.TAG_XMP_EXIF_DATETIME_DIGITIZED,
+            TAG_EXIF_DATETIME_ORIGINAL,
+            TAG_XMP_PHOTOSHOP_DATE_CREATED,
+            TAG_XMP_EXIF_DATETIME_DIGITIZED,
         ):
             value = existing.get(key)
-            if value is None and key == self.TAG_XMP_EXIF_DATETIME_DIGITIZED:
-                value = existing.get(self.TAG_EXIFIFD_DATETIME_DIGITIZED)
+            if value is None and key == TAG_XMP_EXIF_DATETIME_DIGITIZED:
+                value = existing.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
             if value is not None:
                 tags_to_write[key] = value
 
