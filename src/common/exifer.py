@@ -59,9 +59,6 @@ class Exifer:
                 bufsize=1  # Line buffered
             )
             cls._processes[executable] = process
-            # Register cleanup only once per executable
-            # (atexit handles duplicates fine, but let's be clean)
-            pass 
         except Exception as e:
             raise RuntimeError(f"Failed to start exiftool: {e}")
 
@@ -196,26 +193,6 @@ class Exifer:
                     Path(temp_file_path).unlink()
                 except Exception:
                     pass
-
-        try:
-            # Use utf-8 encoding for stdin/stdout to ensure correct metadata handling
-            result = subprocess.run(
-                cmd,
-                input=input_str,
-                capture_output=True,
-                text=True,
-                check=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=timeout
-            )
-            return result.stdout
-        except subprocess.TimeoutExpired as e:
-            raise RuntimeError(f"Exiftool timed out after {timeout} seconds") from e
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Exiftool failed: {e.stderr}") from e
-        except Exception as e:
-            raise RuntimeError(f"Error running exiftool: {e}") from e
 
     def _read_json(self, file_path: Path, args: Sequence[str] | None = None) -> dict[str, Any]:
         """Read metadata as JSON.

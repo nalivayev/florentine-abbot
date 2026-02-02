@@ -72,27 +72,6 @@ class PreviewMaker:
             quality,
         )
 
-    def _generate_previews_for_sources(
-        self,
-        *,
-        path: Path,
-        overwrite: bool,
-        max_size: int,
-        quality: int,
-    ) -> int:
-        """Walk under ``path`` and generate PRV JPEGs for master files (RAW/MSR)."""
-
-        parser = FilenameParser()
-        written = 0
-
-        self._logger.debug(
-            "Starting batch preview generation under %s (overwrite=%s, max_size=%d, quality=%d)",
-            path,
-            overwrite,
-            max_size,
-            quality,
-        )
-
         # Get folders where RAW/MSR files are stored according to routing rules
         master_suffixes = ["RAW", "MSR"]
         target_folders = self._router.get_folders_for_suffixes(master_suffixes)

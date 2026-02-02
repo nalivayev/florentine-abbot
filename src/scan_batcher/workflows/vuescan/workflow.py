@@ -54,7 +54,7 @@ class VuescanWorkflow(Workflow):
             logger: Logger instance for this workflow.
         """
         super().__init__()
-        self.logger = logger
+        self._logger = logger
 
     def _read_settings_file(self, path: Path) -> ConfigParser:
         """
@@ -70,10 +70,10 @@ class VuescanWorkflow(Workflow):
             FileNotFoundError: If the file doesn't exist.
         """
         if path.exists():
-            self.logger.info(f"Loading settings from '{str(path)}'")
+            self._logger.info(f"Loading settings from '{str(path)}'")
             parser = ConfigParser(interpolation=ExtendedInterpolation())
             parser.read(path)
-            self.logger.info("Settings loaded")
+            self._logger.info("Settings loaded")
             return parser
         else:
             raise FileNotFoundError(f"Error loading settings from file '{path}'")
@@ -90,7 +90,7 @@ class VuescanWorkflow(Workflow):
         """
         self._script_parser = self._read_settings_file(Path(Path(__file__).parent, self._VUESCAN_SETTINGS_NAME))
         self._workflow_parser = self._read_settings_file(Path(self._workflow_path, self._WORKFLOW_SETTINGS_NAME))
-        self.logger.info(f"Workflow description: {self._get_workflow_value('main', 'description')}")
+        self._logger.info(f"Workflow description: {self._get_workflow_value('main', 'description')}")
 
     def _get_workflow_value(self, section: str, key: str) -> str:
         """
@@ -143,7 +143,7 @@ class VuescanWorkflow(Workflow):
                 parser.write(file)
         except (SameFileError, OSError) as e:
             raise RuntimeError("Error overwriting the VueScan settings file") from e
-        self.logger.info(f"VueScan settings file '{path}' overwritten")
+        self._logger.info(f"VueScan settings file '{path}' overwritten")
 
     def _run_vuescan(self) -> None:
         """
@@ -159,9 +159,9 @@ class VuescanWorkflow(Workflow):
             output_path_name = self._get_workflow_value("vuescan", "output_path")
             if not Path(output_path_name).exists():
                 makedirs(output_path_name, True)
-            self.logger.info(f"Launching VueScan from '{program_path}'")
+            self._logger.info(f"Launching VueScan from '{program_path}'")
             run([program_path], cwd=self._get_script_value("main", "program_path"), shell=False)
-            self.logger.info("VueScan is closed")
+            self._logger.info("VueScan is closed")
         else:
             raise FileNotFoundError(f"File '{program_path}' not found")
 
@@ -214,7 +214,7 @@ class VuescanWorkflow(Workflow):
             try:
                 value = self._convert_value(template[1:-1])
             except (KeyError, ValueError):
-                self.logger.warning(f"Error converting template '{string[1:-1]}' to value")
+                self._logger.warning(f"Error converting template '{string[1:-1]}' to value")
                 continue
             result = result.replace(template, value)
         return result
@@ -242,7 +242,7 @@ class VuescanWorkflow(Workflow):
                         except ValueError:
                             pass
             except Exception as e:
-                self.logger.warning(f"Unable to extract EXIF from file '{path.name}': {e}")
+                self._logger.warning(f"Unable to extract EXIF from file '{path.name}': {e}")
 
         if moment is None:
             moment = datetime.datetime.fromtimestamp(getmtime(path))
@@ -292,7 +292,7 @@ class VuescanWorkflow(Workflow):
             )
             try:
                 move(input_path, output_path)
-                self.logger.info(
+                self._logger.info(
                     f"Scanned file '{input_path.name}' moved from '{input_path.parent}' to '{output_path.parent}', "
                     f"final name: '{output_path.name}'"
                 )
@@ -317,7 +317,7 @@ class VuescanWorkflow(Workflow):
             )
             try:
                 move(input_path, output_path)
-                self.logger.info(
+                self._logger.info(
                     f"Logging file '{input_path.name}' moved from '{input_path.parent}' to '{output_path.parent}', "
                     f"final name: '{output_path.name}'"
                 )
@@ -326,7 +326,7 @@ class VuescanWorkflow(Workflow):
                     f"Error moving resulting file from '{input_path}' to '{output_path}'"
                 ) from e
         else:
-            self.logger.warning("VueScan logging file not found")
+            self._logger.warning("VueScan logging file not found")
 
     def __call__(self, workflow_path: str, templates: dict[str, str]) -> None:
         """
@@ -339,10 +339,10 @@ class VuescanWorkflow(Workflow):
         self._templates = templates if templates else {}
         self._add_system_templates()
         self._workflow_path = Path(workflow_path).resolve()
-        self.logger.info("Starting the workflow")
+        self._logger.info("Starting the workflow")
         self._read_settings()
         self._overwrite_vuescan_settings_file()
         self._run_vuescan()
         self._move_output_file()
         self._move_logging_file()
-        self.logger.info("Workflow completed successfully")
+        self._logger.info("Workflow completed successfully")
