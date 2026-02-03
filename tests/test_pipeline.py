@@ -8,7 +8,7 @@ from preview_maker import PreviewMaker
 from common.exifer import Exifer
 from common.logger import Logger
 from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED
-from common.archive_metadata import TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIFIFD_CREATE_DATE, TAG_IFD0_SOFTWARE, TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION
+from common.metadata import TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIFIFD_CREATE_DATE, TAG_IFD0_SOFTWARE, TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION
 from tests.scan_batcher.fake_workflow import FakeVuescanWorkflow
 from datetime import datetime, timezone
 import uuid
@@ -35,20 +35,30 @@ class TestPipeline:
 
         yield
 
-    def _create_realistic_scan(self, file_path: Path, datetime_digitized: str = "2024:01:15 14:30:00", software: str = "VueScan 9.12.45") -> Path:
+    def _create_realistic_scan(self, file_path: Path, datetime_digitized: str = "2024:01:15 14:30:00", software: str = "VueScan 9.12.45", large_file: bool = False) -> Path:
         """Create a realistic fake scanned TIFF file with proper EXIF tags.
         
         Args:
             file_path: Where to create the file.
             datetime_digitized: EXIF datetime in format "YYYY:MM:DD HH:MM:SS".
             software: Software tag value (simulates scanner software).
+            large_file: If True, create a ~2GB file to test large file handling.
             
         Returns:
             Path to created file.
         """
         # Create a realistic scan-like image (grayscale, larger size)
-        img = Image.new("L", (2400, 3200), color=240)  # Gray background like scanned paper
-        img.save(file_path, format="TIFF", compression="lzw")
+        if large_file:
+            # Create a huge image (~2GB uncompressed TIFF)
+            # RGB mode: 25000 x 27000 pixels x 3 bytes = ~2.02GB
+            self.logger.info(f"Creating large test file (~2GB): {file_path.name}")
+            img = Image.new("RGB", (25000, 27000), color=(240, 240, 240))
+            img.save(file_path, format="TIFF", compression=None)  # No compression for large size
+            file_size_mb = file_path.stat().st_size / (1024 ** 2)
+            self.logger.info(f"Large file created: {file_size_mb:.1f} MB")
+        else:
+            img = Image.new("L", (2400, 3200), color=240)  # Gray background like scanned paper
+            img.save(file_path, format="TIFF", compression="lzw")
         
         # Write realistic EXIF tags that VueScan would write
         try:
@@ -90,7 +100,8 @@ class TestPipeline:
         self._create_realistic_scan(
             fake_scan_file,
             datetime_digitized="2024:01:15 14:30:00",
-            software="VueScan 9.12.45"
+            software="VueScan 9.12.45",
+            large_file=False  # Disable large file creation for normal tests
         )
         
         # Create minimal workflow configuration

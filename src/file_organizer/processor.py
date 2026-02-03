@@ -6,14 +6,25 @@ and moving files into the ``processed/`` tree. Higher-level orchestration
 (batch/daemon) is handled by :class:`file_organizer.organizer.FileOrganizer`.
 """
 
+import uuid
 from pathlib import Path
 from typing import Any
 from datetime import datetime, timezone
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename, FilenameValidator
-from common.constants import SUPPORTED_IMAGE_EXTENSIONS
-from common.archive_metadata import ArchiveMetadata
+from common.constants import SUPPORTED_IMAGE_EXTENSIONS, EXIFTOOL_LARGE_FILE_TIMEOUT
+from common.metadata import (
+    ArchiveMetadata,
+    TAG_XMP_DC_IDENTIFIER,
+    TAG_XMP_XMP_IDENTIFIER,
+    TAG_EXIF_DATETIME_ORIGINAL,
+    TAG_XMP_PHOTOSHOP_DATE_CREATED,
+    TAG_XMP_EXIF_DATETIME_DIGITIZED,
+    TAG_EXIFIFD_DATETIME_DIGITIZED,
+    TAG_EXIFIFD_CREATE_DATE,
+)
+from common.exifer import Exifer
 from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_EDITED
 from common.version import get_version
 
@@ -30,46 +41,41 @@ class FileProcessor:
     - File organization/movement (handled by FileOrganizer)
     """
 
-    def __init__(
-        self,
-        logger: Logger,
-        metadata_tags: dict[str, str] | None = None,
-    ) -> None:
+    def __init__(self, logger: Logger) -> None:
         """Initialize FileProcessor.
         
         Args:
             logger: Logger instance.
-            metadata_tags: Optional metadata field to XMP tag mapping.
         """
-        self.logger = logger
-        self.parser = FilenameParser()
-        self.validator = FilenameValidator()
-        self._metadata = ArchiveMetadata(metadata_tags=metadata_tags, logger=logger)
+        self._logger = logger
+        self._parser = FilenameParser()
+        self._validator = FilenameValidator()
+        self._metadata = ArchiveMetadata(logger=logger)
+        self._exifer = Exifer()
         self._historian = XMPHistorian()
 
-    def process(self, file_path: Path, config: dict[str, Any] | None) -> bool:
+    def process(self, file_path: Path) -> bool:
         """Process a file: parse filename, validate, write EXIF/XMP metadata.
 
         Args:
             file_path: Path to the file to process.
-            config: Configuration parameters (metadata dict), or None to skip metadata writing.
 
         Returns:
             True if processing successful, False otherwise.
         """
-        self.logger.info(f"Processing file: {file_path}")
+        self._logger.info(f"Processing file: {file_path}")
 
         # Parse and validate filename
         parsed = self._parse_and_validate(file_path.name)
         if not parsed:
-            self.logger.error(f"Failed to parse or validate filename: {file_path.name}")
+            self._logger.error(f"Failed to parse or validate filename: {file_path.name}")
             return False
 
         # Write EXIF/XMP metadata
-        if not self._write_metadata(file_path, parsed, config):
+        if not self._write_metadata(file_path, parsed):
             return False
 
-        self.logger.info(f"Successfully processed: {file_path.name}")
+        self._logger.info(f"Successfully processed: {file_path.name}")
         return True
 
     def _parse_and_validate(self, filename: str) -> ParsedFilename | None:
@@ -81,44 +87,107 @@ class FileProcessor:
         Returns:
             Parsed filename data if valid, None otherwise.
         """
-        parsed = self.parser.parse(filename)
+        parsed = self._parser.parse(filename)
         if not parsed:
             return None
 
-        validation_errors = self.validator.validate(parsed)
+        validation_errors = self._validator.validate(parsed)
         if validation_errors:
             return None
 
         return parsed
 
-    def _write_metadata(self, file_path: Path, parsed: ParsedFilename, config: dict[str, Any] | None) -> bool:
+    def _write_metadata(self, file_path: Path, parsed: ParsedFilename) -> bool:
         """Write metadata to EXIF/XMP fields using exiftool.
 
         Args:
             file_path: Path to the file.
             parsed: Parsed filename data.
-            config: Plugin configuration (metadata dict), or None to skip metadata writing.
 
         Returns:
             True if all metadata written successfully, False otherwise.
         """
         try:
-            self._metadata.write_master_tags(
-                file_path=file_path,
-                parsed=parsed,
-                config=config,
-                logger=self.logger,
-            )
+            tags: dict[str, Any] = {}
+
+            # 1. Identifiers (XMP) - generate unique UUID
+            file_uuid = uuid.uuid4().hex
+            tags[TAG_XMP_DC_IDENTIFIER] = file_uuid
+            tags[TAG_XMP_XMP_IDENTIFIER] = file_uuid
+
+            # 2. Dates
+            # 2.1 DateTimeDigitized - preserve scanning date from CreateDate
+            try:
+                existing_tags = self._exifer.read(
+                    file_path,
+                    [TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIFIFD_CREATE_DATE],
+                )
+
+                date_digitized = (
+                    existing_tags.get(TAG_XMP_EXIF_DATETIME_DIGITIZED)
+                    or existing_tags.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
+                )
+
+                if not date_digitized:
+                    create_date = existing_tags.get(TAG_EXIFIFD_CREATE_DATE)
+                    if create_date:
+                        tags[TAG_XMP_EXIF_DATETIME_DIGITIZED] = create_date
+                        self._logger.debug("Set DateTimeDigitized from CreateDate: %s", create_date)
+                else:
+                    self._logger.debug("DateTimeDigitized already set: %s", date_digitized)
+            except Exception as exc:  # pragma: no cover - defensive
+                self._logger.warning("Could not process DateTimeDigitized: %s", exc)
+
+            # 2.2 DateTimeOriginal - date from filename (original photo date)
+            if parsed.modifier == "E":
+                dt_str = (
+                    f"{parsed.year:04d}:{parsed.month:02d}:{parsed.day:02d} "
+                    f"{parsed.hour:02d}:{parsed.minute:02d}:{parsed.second:02d}"
+                )
+                tags[TAG_EXIF_DATETIME_ORIGINAL] = dt_str
+                tags[TAG_XMP_PHOTOSHOP_DATE_CREATED] = dt_str.replace(":", "-", 2).replace(" ", "T")
+            else:
+                # Partial date: clear EXIF DateTimeOriginal and encode partial
+                # date in XMP-photoshop:DateCreated.
+                tags[TAG_EXIF_DATETIME_ORIGINAL] = ""
+
+                if parsed.year > 0:
+                    date_val = f"{parsed.year:04d}"
+                    if parsed.month > 0:
+                        date_val += f"-{parsed.month:02d}"
+                        if parsed.day > 0:
+                            date_val += f"-{parsed.day:02d}"
+
+                    tags[TAG_XMP_PHOTOSHOP_DATE_CREATED] = date_val
+
+            # 3. Configurable fields from metadata.json
+            metadata_values = self._metadata.get_metadata_values(logger=self._logger)
+            tags.update(metadata_values)
+
+            # 4. Write all tags using Exifer
+            file_size = file_path.stat().st_size
+            if file_size > 100 * 1024 * 1024:  # > 100MB
+                self._logger.info(
+                    "Running exiftool on large file (%.1f MB): %s",
+                    file_size / (1024**2),
+                    file_path.name,
+                )
+                self._exifer.write(file_path, tags, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
+            else:
+                self._logger.info("Running exiftool on %s...", file_path.name)
+                self._exifer.write(file_path, tags)
+            
+            self._logger.info("  Metadata written successfully.")
             
             # Write XMP History entry for file-organizer
             self._write_history_entry(file_path)
             
             return True
         except (FileNotFoundError, RuntimeError, ValueError) as e:
-            self.logger.error(f"Exiftool failed: {e}")
+            self._logger.error(f"Exiftool failed: {e}")
             return False
         except Exception as e:  # pragma: no cover - defensive
-            self.logger.error(f"Failed to write metadata to {file_path}: {e}")
+            self._logger.error(f"Failed to write metadata to {file_path}: {e}")
             return False
 
     def _write_history_entry(self, file_path: Path) -> None:
@@ -129,13 +198,11 @@ class FileProcessor:
         """
         try:
             # Read InstanceID from file
-            from common.exifer import Exifer
-            exifer = Exifer()
-            tags = exifer.read(file_path, [TAG_XMP_XMPMM_INSTANCE_ID])
+            tags = self._exifer.read(file_path, [TAG_XMP_XMPMM_INSTANCE_ID])
             instance_id = tags.get(TAG_XMP_XMPMM_INSTANCE_ID)
             
             if not instance_id:
-                self.logger.warning(f"No InstanceID found for {file_path.name}, skipping history entry")
+                self._logger.warning(f"No InstanceID found for {file_path.name}, skipping history entry")
                 return
             
             # Get version for software agent
@@ -157,10 +224,10 @@ class FileProcessor:
                 when=datetime.now(timezone.utc),
                 changed="metadata",
                 instance_id=instance_id,
-                logger=self.logger,
+                logger=self._logger,
             )
             
             if not success:
-                self.logger.warning(f"Failed to write history entry for {file_path.name}")
+                self._logger.warning(f"Failed to write history entry for {file_path.name}")
         except Exception as e:
-            self.logger.warning(f"Failed to write XMP history for {file_path.name}: {e}")
+            self._logger.warning(f"Failed to write XMP history for {file_path.name}: {e}")

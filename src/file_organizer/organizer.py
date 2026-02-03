@@ -80,12 +80,6 @@ class FileOrganizer:
         """
 
         config = self._load_config(config_path)
-        metadata: dict[str, Any] | None = config.get_metadata()
-
-        # Create a new processor (stateless regarding path structure)
-        # metadata_tags is self-loaded by components if needed
-        # We can reuse self._processor usually but creating new one is fine too if config changes
-        # Actually _processor is lightweight.
         
         mode_str = "RECURSIVE" if recursive else "BATCH"
         self._logger.info(f"Starting File Organizer in {mode_str} mode on {input_path}")
@@ -109,7 +103,7 @@ class FileOrganizer:
                 continue
 
             # Process metadata
-            if self._processor.process(file_path, metadata):
+            if self._processor.process(file_path):
                 # Get parsed filename for destination calculation
                 parsed = self._processor._parse_and_validate(file_path.name)
                 
@@ -207,19 +201,14 @@ class FileOrganizer:
         
         Args:
             file_path: Path to the file to process.
-            config: Configuration dict (full organizer config with 'metadata' key,
-                   or raw metadata dict), or None to skip metadata fields.
+            config: DEPRECATED - Configuration dict is no longer used.
+                   Metadata is now loaded from metadata.json automatically.
         
         Returns:
             True if processing successful, False otherwise.
         """
-        # Accept either a full organizer config (with top-level "metadata"
-        # block) or a raw metadata dict. For the former, extract the
-        # "metadata" section so that FileProcessor receives only the
-        # metadata configuration, mirroring the batch/Config path.
-        # If config is None, pass None to processor to skip configurable metadata.
-        metadata = config.get("metadata", config) if config is not None else None
-        return self._processor.process(file_path, metadata)
+        # Config parameter is deprecated - metadata is now loaded from metadata.json
+        return self._processor.process(file_path)
 
     def _parse_and_validate(self, filename: str):
         """Expose :meth:`FileProcessor._parse_and_validate` for tests."""

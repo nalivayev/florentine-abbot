@@ -1,66 +1,9 @@
 {
-  "_comment": "Configuration for File Organizer",
-
-  "metadata": {
-    "_comment": [
-      "Human-readable metadata texts (multi-language, multi-line).",
-      "languages: keys are BCP-47 codes like 'ru-RU', 'en-US'.",
-      "Each language block may contain: creator, credit, description, rights, terms, source.",
-      "creator: string or array of strings (author names), written to XMP-dc:Creator as a list.",
-      "Other fields: string or array of strings (multi-line text).",
-      "Exactly one language SHOULD have 'default': true – it is used as the default/x-default language."
-    ],
-
-    "languages": {
-      "ru-RU": {
-        "default": true,
-
-        "creator": ["Имя Фамилия", "Соавтор"],
-
-        "credit": [
-          "Ваш семейный архив"
-        ],
-
-        "description": [
-          "Краткое описание этого архива (по-русски)."
-        ],
-
-        "rights": [
-          "Скан © 2025 Ваше имя"
-        ],
-
-        "terms": [
-          "Только для личного использования."
-        ],
-
-        "source": [
-          "Место хранения оригинального физического носителя."
-        ]
-      },
-
-      "en-US": {
-        "creator": ["Name Surname", "Co-author"],
-
-        "credit": [
-          "Your Family Archive"
-        ],
-
-        "description": [
-          "Short description of this archive (in English)."
-        ],
-
-        "rights": [
-          "Scan © 2025 Your Name"
-        ],
-
-        "terms": [
-          "Personal use only."
-        ],
-
-        "source": [
-          "Original physical item location."
-        ]
-      }
-    }
-  }
+  "_comment": [
+    "Configuration for File Organizer",
+    "",
+    "DEPRECATED: The 'metadata' block has been moved to metadata.json in the config directory.",
+    "Use metadata.template.json as a template to create your metadata.json file.",
+    "This config.template.json is kept for backward compatibility only."
+  ]
 }

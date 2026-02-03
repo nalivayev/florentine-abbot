@@ -17,10 +17,17 @@ EXIFTOOL_LARGE_FILE_TIMEOUT = 600  # 10 minutes
 # Used by ArchiveMetadata when tags.json is not present
 DEFAULT_METADATA_TAGS = {
     "description": "XMP-dc:Description",
+    "creator": "XMP-dc:Creator",
     "credit": "XMP-photoshop:Credit",
     "rights": "XMP-dc:Rights",
     "terms": "XMP-xmpRights:UsageTerms",
     "source": "XMP-dc:Source",
+}
+
+# Default metadata configuration
+# Used by ArchiveMetadata when metadata.json is not present
+DEFAULT_METADATA = {
+    "languages": {}
 }
 
 # Default suffix routing rules

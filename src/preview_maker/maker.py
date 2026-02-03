@@ -6,14 +6,28 @@ The primary API is exposed via the :class:`PreviewMaker` class, which is
 configured with parameters and then executed via :meth:`__call__`.
 """
 
+import uuid
 from pathlib import Path
+from typing import Any
 
 from PIL import Image
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename
 from common.constants import SUPPORTED_IMAGE_EXTENSIONS
-from common.archive_metadata import ArchiveMetadata
+from common.metadata import (
+    ArchiveMetadata,
+    TAG_XMP_DC_IDENTIFIER,
+    TAG_XMP_XMP_IDENTIFIER,
+    TAG_XMP_DC_RELATION,
+    TAG_EXIF_DATETIME_ORIGINAL,
+    TAG_XMP_PHOTOSHOP_DATE_CREATED,
+    TAG_XMP_EXIF_DATETIME_DIGITIZED,
+    TAG_EXIFIFD_DATETIME_DIGITIZED,
+    IDENTIFIER_TAGS,
+    DATE_TAGS,
+)
+from common.exifer import Exifer
 from common.router import Router
 
 
@@ -27,7 +41,8 @@ class PreviewMaker:
 
     def __init__(self, logger: Logger) -> None:
         self._logger = logger
-        self._metadata = ArchiveMetadata()
+        self._metadata = ArchiveMetadata(logger=logger)
+        self._exifer = Exifer()
         self._router = Router(logger=logger)
 
     def __call__(
@@ -203,13 +218,60 @@ class PreviewMaker:
         # After pixels are written, propagate archival metadata from source
         # master (MSR/RAW) to the PRV derivative.
         try:
-            self._metadata.write_derivative_tags(
-                master_path=input_path,
-                prv_path=output_path,
-                logger=self._logger,
-            )
+            self._write_derivative_metadata(input_path, output_path)
         except (FileNotFoundError, RuntimeError, ValueError) as exc:
             # Treat metadata issues as errors in logs but keep the image.
             self._logger.error("Failed to copy metadata to PRV %s: %s", output_path, exc)
 
         self._logger.info("Saved PRV: %s", output_path)
+
+    def _write_derivative_metadata(self, master_path: Path, prv_path: Path) -> None:
+        """Write EXIF/XMP metadata to PRV derivative based on master.
+        
+        Args:
+            master_path: Path to the master (MSR/RAW) file.
+            prv_path: Path to the PRV file.
+        """
+        # Build list of tags to read from master: dates + configurable
+        configurable_tags = self._metadata.get_configurable_tags()
+        tags_to_read = list(IDENTIFIER_TAGS) + list(DATE_TAGS) + configurable_tags + [TAG_EXIFIFD_DATETIME_DIGITIZED]
+        
+        # Read tags from master
+        existing = self._exifer.read(master_path, tags_to_read)
+        
+        tags_to_write: dict[str, Any] = {}
+        
+        # 1. Fresh identifier for PRV
+        prv_uuid = uuid.uuid4().hex
+        tags_to_write[TAG_XMP_DC_IDENTIFIER] = prv_uuid
+        tags_to_write[TAG_XMP_XMP_IDENTIFIER] = prv_uuid
+        
+        # 2. Relation to master
+        master_id = existing.get(TAG_XMP_DC_IDENTIFIER) or existing.get(TAG_XMP_XMP_IDENTIFIER)
+        if master_id:
+            tags_to_write[TAG_XMP_DC_RELATION] = master_id
+        
+        # 3. Copy dates (with fallback for DateTimeDigitized)
+        for tag in DATE_TAGS:
+            value = existing.get(tag)
+            if value is None and tag == TAG_XMP_EXIF_DATETIME_DIGITIZED:
+                value = existing.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
+            if value is not None:
+                tags_to_write[tag] = value
+        
+        # 4. Copy configurable tags and their language variants
+        for tag in configurable_tags:
+            # Copy base tag
+            value = existing.get(tag)
+            if value is not None:
+                tags_to_write[tag] = value
+            
+            # Copy language variants (TAG-langCode format)
+            for tag_name, tag_value in existing.items():
+                if tag_name.startswith(tag + "-") and tag_value is not None:
+                    tags_to_write[tag_name] = tag_value
+        
+        # 5. Write all tags to PRV
+        if tags_to_write:
+            self._logger.debug("Writing metadata to PRV %s based on master %s", prv_path, master_path)
+            self._exifer.write(prv_path, tags_to_write)
