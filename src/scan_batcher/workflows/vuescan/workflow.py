@@ -12,6 +12,7 @@ import uuid
 from common.exifer import Exifer
 from common.logger import Logger
 from common.version import get_version
+from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
 from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import Workflow
@@ -380,8 +381,16 @@ class VuescanWorkflow(Workflow):
         
         file_path = self._output_file_path
         
+        # Log file size for large files
+        file_size = file_path.stat().st_size
+        if file_size > 100 * 1024 * 1024:  # > 100MB
+            self._logger.info(
+                f"Writing XMP history to large file ({file_size / (1024**2):.1f} MB): {file_path.name}"
+            )
+        
         try:
             # Read existing DocumentID and InstanceID
+            self._logger.debug(f"Reading existing XMP tags from {file_path.name}...")
             existing_tags = self._exifer.read(file_path, [
                 TAG_XMP_XMPMM_DOCUMENT_ID, 
                 TAG_XMP_XMPMM_INSTANCE_ID,
@@ -392,18 +401,25 @@ class VuescanWorkflow(Workflow):
             document_id = existing_tags.get(TAG_XMP_XMPMM_DOCUMENT_ID)
             if not document_id:
                 document_id = uuid.uuid4().hex
+                self._logger.debug(f"Generated new DocumentID: {document_id}")
+            else:
+                self._logger.debug(f"Using existing DocumentID: {document_id}")
                 
             # Get or generate InstanceID (without dashes)  
             instance_id = existing_tags.get(TAG_XMP_XMPMM_INSTANCE_ID)
             if not instance_id:
                 instance_id = uuid.uuid4().hex
+                self._logger.debug(f"Generated new InstanceID: {instance_id}")
+            else:
+                self._logger.debug(f"Using existing InstanceID: {instance_id}")
             
             # Write DocumentID and InstanceID to file
+            self._logger.debug(f"Writing DocumentID and InstanceID to {file_path.name}...")
             self._exifer.write(file_path, {
                 TAG_XMP_XMPMM_DOCUMENT_ID: document_id,
                 TAG_XMP_XMPMM_INSTANCE_ID: instance_id,
-            })
-            self._logger.debug(f"Set DocumentID={document_id}, InstanceID={instance_id}")
+            }, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
+            self._logger.debug(f"Successfully wrote DocumentID and InstanceID")
             
             # Get software agent for 'created' action
             software_tag = existing_tags.get(self._EXIF_SOFTWARE_TAG)
@@ -413,6 +429,7 @@ class VuescanWorkflow(Workflow):
                 created_agent = f"scan-batcher {self._get_major_version()}"
             
             # Write first history entry: 'created'
+            self._logger.debug(f"Writing 'created' history entry for {file_path.name}...")
             success = self._historian.append_entry(
                 file_path=file_path,
                 action=XMP_ACTION_CREATED,
@@ -423,9 +440,12 @@ class VuescanWorkflow(Workflow):
             )
             if not success:
                 self._logger.warning(f"Failed to write 'created' history entry for {file_path.name}")
+            else:
+                self._logger.debug(f"Successfully wrote 'created' history entry")
             
             # Write second history entry: 'edited'
             edited_agent = f"scan-batcher {self._get_major_version()}"
+            self._logger.debug(f"Writing 'edited' history entry for {file_path.name}...")
             success = self._historian.append_entry(
                 file_path=file_path,
                 action=XMP_ACTION_EDITED,
@@ -437,6 +457,8 @@ class VuescanWorkflow(Workflow):
             )
             if not success:
                 self._logger.warning(f"Failed to write 'edited' history entry for {file_path.name}")
+            else:
+                self._logger.debug(f"Successfully wrote 'edited' history entry")
             
             self._logger.info(f"XMP history written for {file_path.name}")
             
