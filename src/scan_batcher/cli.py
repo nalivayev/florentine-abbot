@@ -60,6 +60,9 @@ def _create_batch(
     # Search through all subclasses (including nested)
     for cls in _get_subclasses(Batch):
         if cls.__name__.lower() == kind:
+            # Process batch has different signature (logger, path, file_filter)
+            if cls.__name__ == "Process":
+                return cls(logger, *batch[1:])
             return cls(logger, min_res, max_res, res_list, rounding, *batch[1:])
     
     raise ValueError(f"Unknown batch type: {batch[0]}")

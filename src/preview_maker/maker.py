@@ -18,6 +18,7 @@ from common.constants import SUPPORTED_IMAGE_EXTENSIONS
 from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, IDENTIFIER_TAGS, DATE_TAGS
 from common.exifer import Exifer
 from common.router import Router
+from common.historian import TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID
 
 
 class PreviewMaker:
@@ -158,13 +159,17 @@ class PreviewMaker:
 
                     self._logger.info("Creating PRV: %s -> %s", src_path.name, prv_path)
 
-                    self._convert_to_prv(
-                        input_path=src_path,
-                        output_path=prv_path,
-                        max_size=max_size,
-                        quality=quality,
-                    )
-                    written += 1
+                    try:
+                        self._convert_to_prv(
+                            input_path=src_path,
+                            output_path=prv_path,
+                            max_size=max_size,
+                            quality=quality,
+                        )
+                        written += 1
+                    except ValueError:
+                        # Missing DocumentID/InstanceID - already logged, skip this file
+                        continue
 
         self._logger.info("Finished batch preview generation: %d file(s) written", written)
 
@@ -183,6 +188,16 @@ class PreviewMaker:
         if not input_path.exists():
             self._logger.error("Input file does not exist: %s", input_path)
             raise FileNotFoundError(f"Input file does not exist: {input_path}")
+
+        # Check for DocumentID/InstanceID in master (must be set by scan-batcher)
+        existing_ids = self._exifer.read(input_path, [TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID])
+        if not existing_ids.get(TAG_XMP_XMPMM_DOCUMENT_ID) or not existing_ids.get(TAG_XMP_XMPMM_INSTANCE_ID):
+            self._logger.warning(
+                "Skipping PRV generation for %s: missing DocumentID or InstanceID. "
+                "These must be set by scan-batcher before processing.",
+                input_path.name,
+            )
+            raise ValueError(f"Missing DocumentID or InstanceID in {input_path.name}")
 
         Image.MAX_IMAGE_PIXELS = None
 
@@ -221,12 +236,13 @@ class PreviewMaker:
             master_path: Path to the master (MSR/RAW) file.
             prv_path: Path to the PRV file.
         """
-        # Build list of tags to read from master: dates + configurable
+        # Build list of base tags to read from master
         configurable_tags = self._metadata.get_configurable_tags()
         tags_to_read = list(IDENTIFIER_TAGS) + list(DATE_TAGS) + configurable_tags + [TAG_EXIFIFD_DATETIME_DIGITIZED]
         
-        # Read tags from master
-        existing = self._exifer.read(master_path, tags_to_read)
+        # Read all XMP tags from master (including language variants)
+        # Use empty list to get ALL tags, then filter what we need
+        all_tags = self._exifer.read(master_path, [])
         
         tags_to_write: dict[str, Any] = {}
         
@@ -236,27 +252,27 @@ class PreviewMaker:
         tags_to_write[TAG_XMP_XMP_IDENTIFIER] = prv_uuid
         
         # 2. Relation to master
-        master_id = existing.get(TAG_XMP_DC_IDENTIFIER) or existing.get(TAG_XMP_XMP_IDENTIFIER)
+        master_id = all_tags.get(TAG_XMP_DC_IDENTIFIER) or all_tags.get(TAG_XMP_XMP_IDENTIFIER)
         if master_id:
             tags_to_write[TAG_XMP_DC_RELATION] = master_id
         
         # 3. Copy dates (with fallback for DateTimeDigitized)
         for tag in DATE_TAGS:
-            value = existing.get(tag)
+            value = all_tags.get(tag)
             if value is None and tag == TAG_XMP_EXIF_DATETIME_DIGITIZED:
-                value = existing.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
+                value = all_tags.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
             if value is not None:
                 tags_to_write[tag] = value
         
         # 4. Copy configurable tags and their language variants
         for tag in configurable_tags:
             # Copy base tag
-            value = existing.get(tag)
+            value = all_tags.get(tag)
             if value is not None:
                 tags_to_write[tag] = value
             
             # Copy language variants (TAG-langCode format)
-            for tag_name, tag_value in existing.items():
+            for tag_name, tag_value in all_tags.items():
                 if tag_name.startswith(tag + "-") and tag_value is not None:
                     tags_to_write[tag_name] = tag_value
         
@@ -264,3 +280,4 @@ class PreviewMaker:
         if tags_to_write:
             self._logger.debug("Writing metadata to PRV %s based on master %s", prv_path, master_path)
             self._exifer.write(prv_path, tags_to_write)
+

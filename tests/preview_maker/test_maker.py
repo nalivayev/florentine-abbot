@@ -10,6 +10,7 @@ from PIL import Image
 from preview_maker import PreviewMaker
 from file_organizer.organizer import FileOrganizer
 from common.logger import Logger
+from tests.common.test_utils import create_test_image
 
 
 class TestPreviewMakerBatch:
@@ -29,8 +30,8 @@ class TestPreviewMakerBatch:
         return self.temp_dir
 
     def _create_tiff(self, path: Path, size=(4000, 3000)) -> None:
-        img = Image.new("RGB", size, color="white")
-        img.save(path, format="TIFF")
+        """Create a TIFF image with required DocumentID/InstanceID."""
+        create_test_image(path, size=size, color="white", format="TIFF")
 
     def _get_exiftool_json(self, file_path: Path) -> dict:
         cmd = ["exiftool", "-json", "-G", str(file_path)]
@@ -249,8 +250,8 @@ class TestPreviewMakerCustomFormats:
         return self.temp_dir
     
     def _create_tiff(self, path: Path, size=(4000, 3000)) -> None:
-        img = Image.new("RGB", size, color="green")
-        img.save(path, format="TIFF")
+        """Create a TIFF image with required DocumentID/InstanceID."""
+        create_test_image(path, size=size, color="green", format="TIFF")
     
     def test_generate_prv_with_flat_path_structure(self):
         """Test preview generation with flat path structure (no year folder)."""

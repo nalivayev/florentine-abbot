@@ -5,10 +5,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from PIL import Image
 
 from common.logger import Logger
 from file_organizer.processor import FileProcessor
+from tests.common.test_utils import create_test_image
 
 
 class TestFileProcessor:
@@ -31,9 +31,8 @@ class TestFileProcessor:
         return self.temp_dir
 
     def create_dummy_image(self, path: Path):
-        """Create a simple 100x100 RGB image."""
-        img = Image.new('RGB', (100, 100), color='red')
-        img.save(path)
+        """Create a simple 100x100 RGB image with DocumentID/InstanceID."""
+        create_test_image(path, color='red')
 
     def _minimal_config(self) -> dict:
         """Minimal configuration for testing."""

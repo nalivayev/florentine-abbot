@@ -25,7 +25,7 @@ from common.metadata import (
     TAG_EXIFIFD_CREATE_DATE,
 )
 from common.exifer import Exifer
-from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_EDITED
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, XMP_ACTION_EDITED
 from common.version import get_version
 
 
@@ -64,6 +64,15 @@ class FileProcessor:
             True if processing successful, False otherwise.
         """
         self._logger.info(f"Processing file: {file_path}")
+
+        # Check for DocumentID/InstanceID (must be set by scan-batcher)
+        existing_ids = self._exifer.read(file_path, [TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID])
+        if not existing_ids.get(TAG_XMP_XMPMM_DOCUMENT_ID) or not existing_ids.get(TAG_XMP_XMPMM_INSTANCE_ID):
+            self._logger.error(
+                f"File {file_path.name} is missing DocumentID or InstanceID. "
+                "These must be set by scan-batcher before processing."
+            )
+            return False
 
         # Parse and validate filename
         parsed = self._parse_and_validate(file_path.name)
