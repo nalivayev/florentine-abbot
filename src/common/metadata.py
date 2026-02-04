@@ -46,26 +46,6 @@ DATE_TAGS = (
 )
 
 
-def _normalize_text(value: Any) -> Optional[str]:
-    """Normalize config text field to a single string.
-
-    Supports both scalar strings and lists of strings. Lists are
-    joined with newlines so that multi-line / bilingual values end up
-    in a single XMP field. Empty values result in None.
-    """
-    if value is None:
-        return None
-
-    if isinstance(value, list):
-        joined = "\n".join(str(item) for item in value if item)
-        return joined or None
-
-    if isinstance(value, str):
-        return value or None
-
-    return str(value)
-
-
 class ArchiveMetadata:
     """Thin configuration provider for archival metadata.
 
@@ -93,6 +73,25 @@ class ArchiveMetadata:
         # Load metadata configuration (languages and their values)
         metadata_path = get_config_dir() / "metadata.json"
         self._metadata_config = load_optional_config(self._logger, metadata_path, DEFAULT_METADATA)
+
+    def _normalize_text(self, value: Any) -> Optional[str]:
+        """Normalize config text field to a single string.
+
+        Supports both scalar strings and lists of strings. Lists are
+        joined with newlines so that multi-line / bilingual values end up
+        in a single XMP field. Empty values result in None.
+        """
+        if value is None:
+            return None
+
+        if isinstance(value, list):
+            joined = "\n".join(str(item) for item in value if item)
+            return joined or None
+
+        if isinstance(value, str):
+            return value or None
+
+        return str(value)
 
     def get_configurable_tags(self) -> list[str]:
         """Return list of XMP tags from tags.json for reading/copying.
@@ -176,7 +175,7 @@ class ArchiveMetadata:
                     else:
                         normalized = [str(raw_value)]
                 else:
-                    normalized = _normalize_text(raw_value)
+                    normalized = self._normalize_text(raw_value)
                 
                 if not normalized:
                     continue

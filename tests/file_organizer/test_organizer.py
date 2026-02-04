@@ -4,7 +4,6 @@ import json
 import shutil
 import subprocess
 import tempfile
-import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -15,6 +14,7 @@ from common.naming import FilenameParser
 from common.logger import Logger
 from common.exifer import Exifer
 from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED
+from tests.common.test_utils import create_test_image
 
 
 class TestFileOrganizer:
@@ -63,9 +63,8 @@ class TestFileOrganizerIntegration:
         return self.temp_dir
 
     def create_dummy_image(self, path: Path):
-        """Create a simple 100x100 RGB image."""
-        img = Image.new('RGB', (100, 100), color='red')
-        img.save(path)
+        """Create a simple 100x100 RGB image with DocumentID/InstanceID."""
+        create_test_image(path, color='red')
 
     def get_exiftool_json(self, file_path: Path):
         """Helper to read metadata using exiftool."""
@@ -417,9 +416,8 @@ class TestFileOrganizerCustomFormats:
         return self.temp_dir
     
     def create_dummy_image(self, path: Path):
-        """Create a simple 100x100 RGB image."""
-        img = Image.new('RGB', (100, 100), color='blue')
-        img.save(path)
+        """Create a simple 100x100 RGB image with DocumentID/InstanceID."""
+        create_test_image(path, color='blue')
     
     def _write_config(self, temp_dir: Path, config: dict | None) -> Path | None:
         """Helper: write config dict to temp_dir/config.json and return its path."""
@@ -618,9 +616,8 @@ class TestExiftoolCompliance:
         return self.temp_dir
 
     def create_dummy_image(self, path: Path):
-        """Create a simple 100x100 RGB image."""
-        img = Image.new('RGB', (100, 100), color='blue')
-        img.save(path)
+        """Create a simple 100x100 RGB image with DocumentID/InstanceID."""
+        create_test_image(path, color='blue')
 
     def get_exiftool_json(self, file_path: Path):
         """Helper to read metadata using exiftool."""
