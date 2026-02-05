@@ -102,59 +102,80 @@ class FileOrganizer:
                 skipped += 1
                 continue
 
-            # Process metadata
-            if self._processor.process(file_path):
-                # Get parsed filename for destination calculation
-                parsed = self._processor._parse_and_validate(file_path.name)
+            # Validate source file (DocumentID/InstanceID, parse, validate)
+            parsed = self._processor.validate(file_path)
+            if not parsed:
+                skipped += 1
+                continue
                 
-                # Get destination paths using Router directly
+            # Get destination paths using Router
+            try:
+                dest_path, dest_log_path, log_file_path = self._calculate_destination_paths(
+                    file_path, parsed, processed_root
+                )
+            except Exception as e:
+                 self._logger.error(f"Failed to calculate destination path: {e}")
+                 skipped += 1
+                 continue
+            
+            # Check if destination already exists
+            if dest_path.exists():
+                self._logger.error(
+                    f"Destination file already exists: {dest_path}. "
+                    f"Leaving source file in place."
+                )
+                skipped += 1
+                continue
+            
+            if dest_log_path and dest_log_path.exists():
+                self._logger.error(
+                    f"Destination log file already exists: {dest_log_path}. "
+                    f"Leaving source files in place."
+                )
+                skipped += 1
+                continue
+            
+            # Copy files to destination (always copy first)
+            try:
+                dest_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(str(file_path), str(dest_path))
+                self._logger.info(f"  Copied to: {dest_path}")
+                
+                if log_file_path and dest_log_path:
+                    dest_log_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(str(log_file_path), str(dest_log_path))
+                    self._logger.info(f"  Copied log to: {dest_log_path}")
+            except Exception as e:
+                self._logger.error(f"Failed to copy file: {e}")
+                skipped += 1
+                continue
+            
+            # Write metadata to destination file
+            if not self._processor.process(dest_path, parsed):
+                # Metadata write failed - rollback by deleting destination
+                self._logger.warning(f"Metadata write failed, rolling back copy of {file_path.name}")
                 try:
-                    dest_path, dest_log_path, log_file_path = self._calculate_destination_paths(
-                        file_path, parsed, processed_root
-                    )
+                    dest_path.unlink()
+                    if dest_log_path and dest_log_path.exists():
+                        dest_log_path.unlink()
                 except Exception as e:
-                     self._logger.error(f"Failed to calculate destination path: {e}")
-                     skipped += 1
-                     continue
-                
-                # Check if destination already exists
-                if dest_path.exists():
-                    self._logger.error(
-                        f"Destination file already exists: {dest_path}. "
-                        f"Leaving source file in place."
-                    )
-                    skipped += 1
-                    continue
-                
-                if dest_log_path and dest_log_path.exists():
-                    self._logger.error(
-                        f"Destination log file already exists: {dest_log_path}. "
-                        f"Leaving source files in place."
-                    )
-                    skipped += 1
-                    continue
-                
-                # Move or copy files
+                    self._logger.error(f"Failed to rollback copy: {e}")
+                skipped += 1
+                continue
+            
+            # Success! If move mode, delete source files
+            if not copy_mode:
                 try:
-                    if copy_mode:
-                        shutil.copy2(str(file_path), str(dest_path))
-                        self._logger.info(f"  Copied to: {dest_path}")
-                        
-                        if log_file_path and dest_log_path:
-                            shutil.copy2(str(log_file_path), str(dest_log_path))
-                            self._logger.info(f"  Copied log to: {dest_log_path}")
-                    else:
-                        shutil.move(str(file_path), str(dest_path))
-                        self._logger.info(f"  Moved to: {dest_path}")
-                        
-                        if log_file_path and dest_log_path:
-                            shutil.move(str(log_file_path), str(dest_log_path))
-                            self._logger.info(f"  Moved log to: {dest_log_path}")
+                    file_path.unlink()
+                    self._logger.info(f"  Deleted source: {file_path}")
                     
-                    count += 1
+                    if log_file_path and log_file_path.exists():
+                        log_file_path.unlink()
+                        self._logger.info(f"  Deleted source log: {log_file_path}")
                 except Exception as e:
-                    self._logger.error(f"Failed to {'copy' if copy_mode else 'move'} file: {e}")
-                    skipped += 1
+                    self._logger.warning(f"Failed to delete source file after successful copy: {e}")
+            
+            count += 1
 
         self._logger.info(f"Batch processing complete. Processed {count} files, skipped {skipped} files.")
 
@@ -167,7 +188,8 @@ class FileOrganizer:
         - Not in 'processed' subfolder
         - Not a symlink
         - Has supported image extension
-        - Has valid parseable filename
+        
+        Note: Filename validation is done separately in validate() method.
         
         Args:
             file_path: Path to the file to check.
@@ -190,25 +212,7 @@ class FileOrganizer:
             self._logger.debug(f"Skipping {file_path}: unsupported extension '{file_path.suffix}'")
             return False
 
-        # Try to parse and validate filename (delegate to processor)
-        parsed = self._processor._parse_and_validate(file_path.name)
-        if parsed is None:
-             self._logger.debug(f"Skipping {file_path}: failed parse/validate")
-        return parsed is not None
-
-    def process(self, file_path: Path, config: dict[str, Any] | None) -> bool:
-        """Delegate per-file processing to :class:`FileProcessor`.
-        
-        Args:
-            file_path: Path to the file to process.
-            config: DEPRECATED - Configuration dict is no longer used.
-                   Metadata is now loaded from metadata.json automatically.
-        
-        Returns:
-            True if processing successful, False otherwise.
-        """
-        # Config parameter is deprecated - metadata is now loaded from metadata.json
-        return self._processor.process(file_path)
+        return True
 
     def _parse_and_validate(self, filename: str):
         """Expose :meth:`FileProcessor._parse_and_validate` for tests."""

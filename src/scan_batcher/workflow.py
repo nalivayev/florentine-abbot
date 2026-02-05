@@ -7,13 +7,7 @@ from common.exifer import Exifer
 from common.logger import Logger
 from common.version import get_version
 from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
-from common.historian import (
-    XMPHistorian,
-    TAG_XMP_XMPMM_DOCUMENT_ID,
-    TAG_XMP_XMPMM_INSTANCE_ID,
-    XMP_ACTION_CREATED,
-    XMP_ACTION_EDITED,
-)
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED 
 from scan_batcher.constants import EXIF_DATETIME_FORMAT
 
 

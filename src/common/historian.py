@@ -90,6 +90,8 @@ class XMPHistorian:
         parameters: Optional[str] = None,
         logger = None,
         instance_id: Optional[str] = None,
+        derived_from_instance_id: Optional[str] = None,
+        derived_from_document_id: Optional[str] = None,
     ) -> bool:
         """Append new entry to XMP-xmpMM:History.
         
@@ -103,6 +105,9 @@ class XMPHistorian:
             changed: Optional description of what changed, e.g. '/metadata'
             parameters: Optional parameters, e.g. 'from source.tif'
             logger: Optional logger instance for debug/error messages
+            instance_id: Optional InstanceID for this version
+            derived_from_instance_id: Not used (kept for compatibility)
+            derived_from_document_id: Not used (kept for compatibility)
         
         Returns:
             True if successful, False otherwise

@@ -1,9 +1,5 @@
 {
   "_comment": [
-    "Configuration for File Organizer",
-    "",
-    "DEPRECATED: The 'metadata' block has been moved to metadata.json in the config directory.",
-    "Use metadata.template.json as a template to create your metadata.json file.",
-    "This config.template.json is kept for backward compatibility only."
+    "Configuration for File Organizer"
   ]
 }

@@ -7,6 +7,7 @@ configured with parameters and then executed via :meth:`__call__`.
 """
 
 import uuid
+import datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,7 +19,8 @@ from common.constants import SUPPORTED_IMAGE_EXTENSIONS
 from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, IDENTIFIER_TAGS, DATE_TAGS
 from common.exifer import Exifer
 from common.router import Router
-from common.historian import TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED
+from common.version import get_version
 
 
 class PreviewMaker:
@@ -34,6 +36,7 @@ class PreviewMaker:
         self._metadata = ArchiveMetadata(logger=logger)
         self._exifer = Exifer()
         self._router = Router(logger=logger)
+        self._historian = XMPHistorian(exifer=self._exifer)
 
     def __call__(
         self,
@@ -276,8 +279,43 @@ class PreviewMaker:
                 if tag_name.startswith(tag + "-") and tag_value is not None:
                     tags_to_write[tag_name] = tag_value
         
-        # 5. Write all tags to PRV
+        # 5. DocumentID from master, fresh InstanceID for derivative
+        master_document_id = all_tags.get(TAG_XMP_XMPMM_DOCUMENT_ID)
+        if master_document_id:
+            tags_to_write[TAG_XMP_XMPMM_DOCUMENT_ID] = master_document_id
+        
+        prv_instance_id = uuid.uuid4().hex
+        tags_to_write[TAG_XMP_XMPMM_INSTANCE_ID] = prv_instance_id
+        
+        # 6. Write all tags to PRV
         if tags_to_write:
             self._logger.debug("Writing metadata to PRV %s based on master %s", prv_path, master_path)
             self._exifer.write(prv_path, tags_to_write)
+        
+        # 7. Write XMP History entries for PRV creation (like VuescanWorkflow)
+        if master_document_id:
+            version = get_version()
+            major_version = "0.0" if version == "unknown" else ".".join(version.split(".")[:2])
+            now = datetime.datetime.now()
+            
+            # First entry: 'created' - PRV file creation
+            self._historian.append_entry(
+                file_path=prv_path,
+                action=XMP_ACTION_CREATED,
+                software_agent=f"preview-maker {major_version}",
+                when=now,
+                instance_id=prv_instance_id,
+                logger=self._logger,
+            )
+            
+            # Second entry: 'edited' - metadata population from master
+            self._historian.append_entry(
+                file_path=prv_path,
+                action=XMP_ACTION_EDITED,
+                software_agent=f"preview-maker {major_version}",
+                when=now,
+                changed="metadata",
+                instance_id=prv_instance_id,
+                logger=self._logger,
+            )
 
