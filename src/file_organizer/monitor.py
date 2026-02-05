@@ -140,71 +140,75 @@ class FileMonitor(FileSystemEventHandler):
         time.sleep(1)
 
         try:
-            # Get fresh metadata from config (in case it was reloaded)
-            metadata = self._get_metadata()
+            # Validate source file (DocumentID/InstanceID, parse, validate)
+            parsed = self.processor.validate(file_path)
+            if not parsed:
+                return
             
-            # Process metadata
-            if self.processor.process(file_path, metadata):
-                # Get parsed filename for destination calculation
-                parsed = self.processor._parse_and_validate(file_path.name)
-                
-                # At this point parsed should never be None since process() succeeded,
-                # but we add a check for type safety
-                if not parsed:
-                    self.logger.error(f"Unexpected: file passed processing but failed to parse: {file_path.name}")
-                    return
-                
-                # Calculate destination paths
-                processed_root = self.path / "processed"
-                source_log_path = file_path.with_suffix('.log')
-                if not source_log_path.exists():
-                    source_log_path = None
-                log_file_path = source_log_path # alias for existing code
+            # Calculate destination paths
+            processed_root = self.path / "processed"
+            source_log_path = file_path.with_suffix('.log')
+            if not source_log_path.exists():
+                source_log_path = None
+            log_file_path = source_log_path  # alias for existing code
 
-                # Calculate normalized filename and destination
-                base_name = self.router.get_normalized_filename(parsed)
-                dest_filename = f"{base_name}.{parsed.extension}"
-                
-                dest_log_filename = None
-                if source_log_path:
-                    dest_log_filename = f"{base_name}.log"
-                
-                processed_dir = self.router.get_target_folder(parsed, processed_root)
+            # Calculate normalized filename and destination
+            base_name = self.router.get_normalized_filename(parsed)
+            dest_filename = f"{base_name}.{parsed.extension}"
+            
+            dest_log_filename = None
+            if source_log_path:
+                dest_log_filename = f"{base_name}.log"
+            
+            processed_dir = self.router.get_target_folder(parsed, processed_root)
 
-                processed_dir.mkdir(parents=True, exist_ok=True)
-                dest_path = processed_dir / dest_filename
-                dest_log_path = processed_dir / dest_log_filename if dest_log_filename else None
+            processed_dir.mkdir(parents=True, exist_ok=True)
+            dest_path = processed_dir / dest_filename
+            dest_log_path = processed_dir / dest_log_filename if dest_log_filename else None
+            
+            # Check if destination already exists
+            if dest_path.exists():
+                self.logger.error(
+                    f"Destination file already exists: {dest_path}. "
+                    f"Leaving source file in place."
+                )
+                return
+            
+            if dest_log_path and dest_log_path.exists():
+                self.logger.error(
+                    f"Destination log file already exists: {dest_log_path}. "
+                    f"Leaving source files in place."
+                )
+                return
+            
+            # Copy files to destination (always copy first)
+            shutil.copy2(str(file_path), str(dest_path))
+            self.logger.info(f"  Copied to: {dest_path}")
+            
+            if log_file_path and dest_log_path:
+                shutil.copy2(str(log_file_path), str(dest_log_path))
+                self.logger.info(f"  Copied log to: {dest_log_path}")
+            
+            # Write metadata to destination file
+            if not self.processor.process(dest_path, parsed):
+                # Metadata write failed - rollback by deleting destination
+                self.logger.warning(f"Metadata write failed, rolling back copy of {file_path.name}")
+                try:
+                    dest_path.unlink()
+                    if dest_log_path and dest_log_path.exists():
+                        dest_log_path.unlink()
+                except Exception as e:
+                    self.logger.error(f"Failed to rollback copy: {e}")
+                return
+            
+            # Success! If move mode, delete source files
+            if not self.copy_mode:
+                file_path.unlink()
+                self.logger.info(f"  Deleted source: {file_path}")
                 
-                # Check if destination already exists
-                if dest_path.exists():
-                    self.logger.error(
-                        f"Destination file already exists: {dest_path}. "
-                        f"Leaving source file in place."
-                    )
-                    return
-                
-                if dest_log_path and dest_log_path.exists():
-                    self.logger.error(
-                        f"Destination log file already exists: {dest_log_path}. "
-                        f"Leaving source files in place."
-                    )
-                    return
-                
-                # Move or copy files
-                if self.copy_mode:
-                    shutil.copy2(str(file_path), str(dest_path))
-                    self.logger.info(f"  Copied to: {dest_path}")
-                    
-                    if log_file_path and dest_log_path:
-                        shutil.copy2(str(log_file_path), str(dest_log_path))
-                        self.logger.info(f"  Copied log to: {dest_log_path}")
-                else:
-                    shutil.move(str(file_path), str(dest_path))
-                    self.logger.info(f"  Moved to: {dest_path}")
-                    
-                    if log_file_path and dest_log_path:
-                        shutil.move(str(log_file_path), str(dest_log_path))
-                        self.logger.info(f"  Moved log to: {dest_log_path}")
+                if log_file_path and log_file_path.exists():
+                    log_file_path.unlink()
+                    self.logger.info(f"  Deleted source log: {log_file_path}")
         except Exception as e:
             self.logger.error(f"Error processing {file_path}: {e}")
 

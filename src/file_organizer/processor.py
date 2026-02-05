@@ -54,17 +54,20 @@ class FileProcessor:
         self._exifer = Exifer()
         self._historian = XMPHistorian()
 
-    def process(self, file_path: Path) -> bool:
-        """Process a file: parse filename, validate, write EXIF/XMP metadata.
-
+    def validate(self, file_path: Path) -> ParsedFilename | None:
+        """Validate source file before processing.
+        
+        Checks:
+        - DocumentID/InstanceID exist (must be set by scan-batcher)
+        - Filename can be parsed
+        - Filename passes validation rules
+        
         Args:
-            file_path: Path to the file to process.
-
+            file_path: Path to the source file to validate.
+            
         Returns:
-            True if processing successful, False otherwise.
+            ParsedFilename if validation successful, None otherwise.
         """
-        self._logger.info(f"Processing file: {file_path}")
-
         # Check for DocumentID/InstanceID (must be set by scan-batcher)
         existing_ids = self._exifer.read(file_path, [TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID])
         if not existing_ids.get(TAG_XMP_XMPMM_DOCUMENT_ID) or not existing_ids.get(TAG_XMP_XMPMM_INSTANCE_ID):
@@ -72,19 +75,33 @@ class FileProcessor:
                 f"File {file_path.name} is missing DocumentID or InstanceID. "
                 "These must be set by scan-batcher before processing."
             )
-            return False
+            return None
 
         # Parse and validate filename
         parsed = self._parse_and_validate(file_path.name)
         if not parsed:
             self._logger.error(f"Failed to parse or validate filename: {file_path.name}")
+            return None
+        
+        return parsed
+
+    def process(self, dest_path: Path, parsed: ParsedFilename) -> bool:
+        """Write EXIF/XMP metadata to destination file.
+
+        Args:
+            dest_path: Path to the destination file (already copied).
+            parsed: Parsed filename data from source.
+
+        Returns:
+            True if metadata written successfully, False otherwise.
+        """
+        self._logger.info(f"Writing metadata to: {dest_path}")
+
+        # Write EXIF/XMP metadata to destination
+        if not self._write_metadata(dest_path, parsed):
             return False
 
-        # Write EXIF/XMP metadata
-        if not self._write_metadata(file_path, parsed):
-            return False
-
-        self._logger.info(f"Successfully processed: {file_path.name}")
+        self._logger.info(f"Successfully processed: {dest_path.name}")
         return True
 
     def _parse_and_validate(self, filename: str) -> ParsedFilename | None:

@@ -26,11 +26,15 @@ class TestFileOrganizer:
         self.parser = FilenameParser()
 
     def test_should_process_delegation(self, logger):
-        """Test that should_process correctly delegates to FileProcessor."""
+        """Test that should_process checks extension and path filters."""
         organizer = FileOrganizer(logger)
-        # Smoke test: verify delegation works for valid and invalid files
+        # Valid extension
         assert organizer.should_process(Path('1950.06.15.12.00.00.E.FAM.POR.000001.A.MSR.tiff')) is True
-        assert organizer.should_process(Path('invalid.jpg')) is False
+        assert organizer.should_process(Path('invalid.jpg')) is True  # .jpg is supported extension
+        # Invalid extension
+        assert organizer.should_process(Path('file.txt')) is False
+        # In processed folder
+        assert organizer.should_process(Path('processed/file.jpg')) is False
 
     def test_parse_and_validate_delegation(self, logger):
         """Test that _parse_and_validate correctly delegates to FileProcessor."""
