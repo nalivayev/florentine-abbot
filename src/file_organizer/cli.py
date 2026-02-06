@@ -15,7 +15,7 @@ from file_organizer.monitor import FileMonitor
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="File Organizer - Metadata Extraction and Organization Tool",
-        epilog="Use --config to specify a JSON configuration file with metadata settings.",
+        epilog="Metadata is configured in metadata.json in the config directory.",
     )
     parser.add_argument(
         '--version',
