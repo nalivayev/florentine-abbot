@@ -16,10 +16,10 @@ from PIL import Image
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename
 from common.constants import SUPPORTED_IMAGE_EXTENSIONS
-from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, IDENTIFIER_TAGS, DATE_TAGS
+from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, IDENTIFIER_TAGS, DATE_TAGS, TAG_XMP_DC_FORMAT
 from common.exifer import Exifer
 from common.router import Router
-from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED
 from common.version import get_version
 
 
@@ -287,12 +287,23 @@ class PreviewMaker:
         prv_instance_id = uuid.uuid4().hex
         tags_to_write[TAG_XMP_XMPMM_INSTANCE_ID] = prv_instance_id
         
-        # 6. Write all tags to PRV
+        # 6. dc:Format based on PRV file extension
+        prv_extension = prv_path.suffix.lower().lstrip('.')
+        tags_to_write[TAG_XMP_DC_FORMAT] = f"image/{prv_extension}"
+        
+        # 6.1. xmpMM:DerivedFrom structure pointing to master
+        master_instance_id = all_tags.get(TAG_XMP_XMPMM_INSTANCE_ID)
+        if master_document_id:
+            tags_to_write[TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID] = master_document_id
+        if master_instance_id:
+            tags_to_write[TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID] = master_instance_id
+        
+        # 7. Write all tags to PRV
         if tags_to_write:
             self._logger.debug("Writing metadata to PRV %s based on master %s", prv_path, master_path)
             self._exifer.write(prv_path, tags_to_write)
         
-        # 7. Write XMP History entries for PRV creation (like VuescanWorkflow)
+        # 8. Write XMP History entries for PRV creation (like VuescanWorkflow)
         if master_document_id:
             version = get_version()
             major_version = "0.0" if version == "unknown" else ".".join(version.split(".")[:2])

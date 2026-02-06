@@ -13,6 +13,10 @@ TAG_XMP_XMPMM_INSTANCE_ID = "XMP-xmpMM:InstanceID"
 TAG_XMP_XMPMM_DOCUMENT_ID = "XMP-xmpMM:DocumentID"
 TAG_XMP_XMP_CREATOR_TOOL = "XMP-xmp:CreatorTool"
 
+# XMP-xmpMM DerivedFrom structure tags
+TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID = "XMP-xmpMM:DerivedFromDocumentID"
+TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID = "XMP-xmpMM:DerivedFromInstanceID"
+
 # XMP History flattened tags (exiftool expands structures)
 TAG_XMP_XMPMM_HISTORY_ACTION = "XMP-xmpMM:HistoryAction"
 TAG_XMP_XMPMM_HISTORY_WHEN = "XMP-xmpMM:HistoryWhen"

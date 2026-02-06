@@ -35,7 +35,7 @@ class TestPreviewMakerBatch:
 
     def _get_exiftool_json(self, file_path: Path) -> dict:
         cmd = ["exiftool", "-json", "-G", str(file_path)]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
         return json.loads(result.stdout)[0]
 
     def test_generate_prv_from_msr_prefers_msr_over_raw(self):
