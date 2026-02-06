@@ -9,10 +9,12 @@ Actual reading/writing of metadata is done by individual components
 """
 
 from typing import Any, Optional
+from pathlib import Path
+import json
 
 from common.constants import DEFAULT_METADATA_TAGS, DEFAULT_METADATA
 from common.logger import Logger
-from common.config_utils import get_config_dir, load_optional_config
+from common.config_utils import get_config_dir, load_optional_config, ensure_config_exists, get_template_path
 
 
 # Tag names (shared across organizer and preview maker)
@@ -31,6 +33,7 @@ TAG_XMP_DC_RIGHTS = "XMP-dc:Rights"
 TAG_XMP_XMPRIGHTS_USAGE_TERMS = "XMP-xmpRights:UsageTerms"
 TAG_XMP_DC_SOURCE = "XMP-dc:Source"
 TAG_XMP_DC_RELATION = "XMP-dc:Relation"
+TAG_XMP_DC_FORMAT = "XMP-dc:Format"
 
 # Scanner/camera metadata tags
 TAG_IFD0_SOFTWARE = "IFD0:Software"
@@ -70,8 +73,12 @@ class ArchiveMetadata:
         tags_path = get_config_dir() / "tags.json"
         self._metadata_tags = load_optional_config(self._logger, tags_path, DEFAULT_METADATA_TAGS)
         
-        # Load metadata configuration (languages and their values)
+        # Ensure metadata.json exists, create from template if needed
         metadata_path = get_config_dir() / "metadata.json"
+        template_path = get_template_path('common', 'metadata.template.json')
+        ensure_config_exists(self._logger, metadata_path, DEFAULT_METADATA, template_path)
+        
+        # Load metadata configuration (languages and their values)
         self._metadata_config = load_optional_config(self._logger, metadata_path, DEFAULT_METADATA)
 
     def _normalize_text(self, value: Any) -> Optional[str]:
