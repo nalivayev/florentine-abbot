@@ -60,13 +60,7 @@ class FileMonitor(FileSystemEventHandler):
             # Windows doesn't have SIGHUP
             self.logger.debug("SIGHUP not available on this platform")
 
-    def _get_metadata(self) -> dict[str, Any] | None:
-        """Get current metadata configuration.
-        
-        Returns:
-            Dictionary with current XMP field values, or None if not configured.
-        """
-        return self.config.get_metadata()
+
 
     def on_created(self, event: FileSystemEvent) -> None:
         """Handle file creation events."""

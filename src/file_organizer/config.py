@@ -31,14 +31,7 @@ class Config:
         # Ensure config exists, create from template if needed
         template_path = get_template_path('file_organizer', 'config.template.json')
         default_config = {
-            "_comment": "Configuration for File Organizer",
-            "metadata": {
-                "_comment": [
-                    "Human-readable metadata texts (see config.template.json for full example).",
-                    "languages: keys are BCP-47 codes like 'ru-RU', 'en-US'."
-                ],
-                "languages": {}
-            }
+            "_comment": "Configuration for File Organizer"
         }
         
         if ensure_config_exists(self.logger, self.config_path, default_config, template_path):
@@ -74,36 +67,7 @@ class Config:
             self.logger.debug("Configuration unchanged")
             return False
     
-    def get_metadata(self) -> dict[str, Any] | None:
-        """Get metadata configuration block used for XMP fields.
 
-        DEPRECATED: Metadata should be configured in metadata.json in the
-        config directory, not in the organizer's config.json. This method
-        is maintained for backward compatibility and testing purposes only.
-        
-        In production, ArchiveMetadata loads metadata.json automatically.
-        In tests, this allows passing metadata through config.json.
-
-        Returns the raw ``metadata`` section from the config, which is
-        expected to contain a ``languages`` mapping. ``ArchiveMetadata`` is
-        responsible for interpreting this structure and writing appropriate
-        XMP/LangAlt tags.
-        
-        Returns:
-            Metadata dictionary, or None if not configured.
-        """
-
-        metadata = self.data.get("metadata")
-        if not isinstance(metadata, dict):
-            self.logger.warning(
-                "Config does not contain a 'metadata' object. "
-                "Archive metadata (creator, rights, description, etc.) will not be written. "
-                f"To enable metadata, create metadata.json in the config directory "
-                f"(use metadata.template.json as a template)."
-            )
-            return None
-
-        return metadata
     
     def get_metadata_tags(self) -> dict[str, str]:
         """Get metadata field to XMP tag mapping.
