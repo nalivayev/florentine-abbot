@@ -2,7 +2,6 @@
 
 ## Contents
 - **Introduction**
-- **Part 0: Quick Start**
 - **Part 1: File Naming Rules**
 - **Part 2: Storage Architecture**
 - **Part 3: Archive Operation in Practice**
@@ -23,126 +22,11 @@ This guide describes naming and organization rules that turn chaos into an order
 *   **Preservation:** The context of each photo (who, what, where, when) will be known not only to you, but also preserved in the file's metadata.
 *   **Continuity:** The archive will likely remain understandable even in 20, 30, or 50 years.
 
-You can start simple using the rules from the **"Quick Start"**, and gradually move to the full format. After reading all three parts of the guide, you will have a complete understanding.
+
 
 ---
 
-## Part 0. Quick Start
 
-### Purpose of this chapter
-
-Without reading the entire guide, quickly learn the basic principles and get started. You'll get a working approach that you can later refine.
-
-### Getting started
-
-#### Basic format: `YYYY.MM.DD.X.GGG.NNNN.A.extension`
-
-| Component | Meaning | Examples |
-|:-|:-|:-|
-| **YYYY.MM.DD** | Shooting date | `1960.06.15` (exact) <br> `1975.08.00` (year and month known) <br> `1985.00.00` (year only known) |
-| **X** | Date modifier | `E` - exact date <br> `C` - approximate date |
-| **GGG** | Photo category | `FAM` - family <br> `TRV` - travel |
-| **NNNN** | Sequential number | `0001`, `0002`, `0003`... |
-| **A** | Scan side | `A` - obverse (front), always `A` for digital photos |
-
-> **Important about obverse and reverse:** For scanned analog photos, use `A` for the front side and `R` for the back (if there are inscriptions, stamps). For digital photos, always use `A`.
-
-#### Examples to start immediately
-
-- Family portrait, exactly June 15, 1960 → `1960.06.15.E.FAM.0001.A.tiff`
-- Landscape from a trip, circa 1985 → `1985.00.00.C.TRV.0001.A.jpg`
-- A friend's photo, circa August 1975 → `1975.08.00.C.FRD.0001.A.tiff`
-- Wedding, date unknown → `0000.00.00.A.WED.0001.A.tiff`
-- Back of an old photo with inscriptions → `1960.06.15.E.FAM.0001.R.tiff`
-
-**Main rule: START.** It's better to name a file `1990.00.00.C.XXX.0001.A.tiff` than to leave `IMG_8547.JPG`.
-
-### Category code cheat sheet
-
-Create your own codes or use these ready-made ones:
-
-| Code | Meaning | Usage examples |
-|:-|:-|:-|
-| **FAM** | Family | Family portraits, home events |
-| **TRV** | Travel | Vacation, trips, excursions |
-| **WED** | Wedding | Ceremonies, banquets |
-| **FRD** | Friends | Meetings with friends, parties |
-| **EVT** | Events | Holidays, concerts, sports events |
-| **WRK** | Work | Work moments, colleagues |
-| **SCH** | Study | School, university, graduation |
-| **HOL** | Leisure | Vacation, holidays, weekends |
-| **000** | General | If you don’t know where to assign |
-
-### Startup algorithm
-
-#### Step 1: Preparation
-Choose 10–20 test photos from different events. Create a `TEST` folder for experiments.
-
-#### Step 2: Analyze each photo
-For each file determine:
-
-1. **Date:** What is known? Year? Month? Day?
-2. **Modifier:** Is it exact (`E`) or approximate (`C`)?
-3. **Category:** Which theme does it belong to?
-4. **Number:** Start at `0001` for each new category
-
-#### Step 3: Renaming
-Manually rename files using the template `YYYY.MM.DD.X.GGG.0001.A.tiff`
-
-**Example process:**
-- Was: `DSC_1234.JPG`
-- Became: `1987.05.00.C.FAM.0001.A.jpg`
-
-#### Step 4: Fill in metadata (REQUIRED STEP!)
-
-This is even more important than the perfect name! Right-click the file → Properties → Details or Comment.
-
-**In the "Description" field, enter ALL known information:**
-- Who is depicted (names, relationships)
-- What is happening (event, holiday)
-- Where the date comes from ("from grandmother's words", "inscription on the back")
-- Shooting location
-
-**Example description:**
-*"John Smith (grandfather) and Mary Smith (grandmother) in the backyard of their house on Maple St. The picture was taken approximately in the summer of 1975. Information from Aunt Emma."*
-
----
-
-**Congratulations! You've just laid the foundation of your future professional archive.**
-
-### What’s next? How the archive structure will grow with you
-
-This simplified approach is not a dead end. It’s a full-fledged core that you will gradually extend as your archive and needs grow.
-
-| When you need... | What to add | Example |
-|:-|:-|:-|
-| More detail | Subgroup (`SSS`) | `1960.06.15.E.FAM.**POR**.0001.A.tiff` |
-| Photos with exact time appear | Time (`HH.NN.SS`) | `1960.06.15.**14.30.00**.E.FAM.0001.A.tiff` |
-| Complex dating | Other modifiers | `1940.00.00.**B**.FAM.0001.A.tiff` |
-
-**Key advantage:** You won't have to change the names of already created files! You'll simply start using a longer and more precise format for *new* photos. All your old files will sort perfectly together with the new ones.
-
-### Frequently asked questions at the start
-
-**Question 1:** Can I use Cyrillic characters in category codes?
-
-**Answer:** NO. Only uppercase Latin letters (`A-Z`) and digits. This ensures compatibility across all devices for 20+ years.
-
-**Question 2:** What if I'm not sure about the date?
-
-**Answer:** Use the `C` (circa) modifier and specify in the description where the date came from.
-
-**Question 3:** Do I need to create a complex folder structure right away?
-
-**Answer:** NO. Start with a simple folder "MY_ARCHIVE". Add structure later, when you have 100+ files.
-
----
-
-> **Tips:** 
-- try applying the instructions to a few files; this will give you more understanding than just reading the recommendations.
-- if you're ready, study the full naming rules in Part 1: working with file versions, automation, and professional storage structure.
-
----
 
 ## Part 1. File Naming Rules
 
