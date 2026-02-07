@@ -6,6 +6,8 @@ import threading
 from pathlib import Path
 from typing import Any, Sequence
 
+from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
+
 
 class Exifer:
     """
@@ -77,11 +79,19 @@ class Exifer:
                     process.communicate()
         cls._processes.clear()
 
-    def _run(self, args: Sequence[str]) -> str:
+    def _kill_process_and_signal(self, process: subprocess.Popen, event: threading.Event) -> None:
+        """Kill process and set event flag. Used as Timer callback."""
+        event.set()
+        try:
+            process.kill()
+        except Exception:
+            pass
+
+    def _run(self, args: Sequence[str], timeout: float = EXIFTOOL_LARGE_FILE_TIMEOUT) -> str:
         """Run exiftool with arguments using the shared persistent process."""
         # Check for newlines in args which break -stay_open protocol
         if any("\n" in str(arg) for arg in args):
-             return self._run_one_off(args)
+             return self._run_one_off(args, timeout=timeout)
 
         try:
             process = self._get_process(self.executable)
@@ -98,30 +108,48 @@ class Exifer:
                 if not stdin or not stdout:
                     raise RuntimeError("Exiftool process streams are not available")
 
-                # Write args
-                for arg in args:
-                    stdin.write(str(arg) + "\n")
-                
-                stdin.write("-execute\n")
-                stdin.flush()
-                
-                # Read output
-                output_lines = []
-                while True:
-                    line = stdout.readline()
-                    if not line:
-                        break 
-                    if line.strip() == "{ready}":
-                        break
-                    output_lines.append(line)
+                # Timeout handling via Event
+                timeout_event = threading.Event()
+                timer = threading.Timer(
+                    timeout, 
+                    self._kill_process_and_signal, 
+                    args=(process, timeout_event)
+                )
+                timer.start()
+
+                try:
+                    # Write args
+                    for arg in args:
+                        stdin.write(str(arg) + "\n")
                     
-                return "".join(output_lines)
+                    stdin.write("-execute\n")
+                    stdin.flush()
+                    
+                    # Read output
+                    output_lines = []
+                    while True:
+                        line = stdout.readline()
+                        if not line:
+                            break 
+                        if line.strip() == "{ready}":
+                            break
+                        output_lines.append(line)
+                    
+                    if timeout_event.is_set():
+                        raise RuntimeError(f"Exiftool operation timed out after {timeout} seconds")
+                    
+                    if not line and process.poll() is not None:
+                         raise RuntimeError("Exiftool process died unexpectedly during execution")
+
+                    return "".join(output_lines)
+                finally:
+                    timer.cancel()
                 
         except Exception:
             # Fallback to one-off if persistent process fails
-            return self._run_one_off(args)
+            return self._run_one_off(args, timeout=timeout)
 
-    def _run_one_off(self, args: Sequence[str], timeout: int | None = None) -> str:
+    def _run_one_off(self, args: Sequence[str], timeout: float | int | None = None) -> str:
         import tempfile
         
         # Check if any args contain newlines (multiline values)
@@ -251,7 +279,14 @@ class Exifer:
             tags: Dictionary of tag names and values to write.
             overwrite_original: Whether to overwrite the original file.
             timeout: Timeout in seconds for large files (uses one-off mode if set).
+            
+        Returns:
+            True if successful.
         """
+        # Skip if no tags to write
+        if not tags:
+            return True
+            
         args = []
         
         if overwrite_original:
@@ -275,7 +310,7 @@ class Exifer:
         if timeout is not None:
             self._run_one_off(args, timeout=timeout)
         else:
-            self._run(args)
+            self._run(args) # Uses default timeout (EXIFTOOL_LARGE_FILE_TIMEOUT = 600s)
 
         # If no exception was raised, consider the write successful
         return True

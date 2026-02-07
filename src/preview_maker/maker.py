@@ -15,7 +15,7 @@ from PIL import Image
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename
-from common.constants import SUPPORTED_IMAGE_EXTENSIONS
+from common.constants import SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP
 from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, IDENTIFIER_TAGS, DATE_TAGS, TAG_XMP_DC_FORMAT
 from common.exifer import Exifer
 from common.router import Router
@@ -287,9 +287,11 @@ class PreviewMaker:
         prv_instance_id = uuid.uuid4().hex
         tags_to_write[TAG_XMP_XMPMM_INSTANCE_ID] = prv_instance_id
         
-        # 6. dc:Format based on PRV file extension
+        # 6. dc:Format based on PRV file extension (only if known MIME type)
         prv_extension = prv_path.suffix.lower().lstrip('.')
-        tags_to_write[TAG_XMP_DC_FORMAT] = f"image/{prv_extension}"
+        dc_format = MIME_TYPE_MAP.get(prv_extension)
+        if dc_format:
+            tags_to_write[TAG_XMP_DC_FORMAT] = dc_format
         
         # 6.1. xmpMM:DerivedFrom structure pointing to master
         master_instance_id = all_tags.get(TAG_XMP_XMPMM_INSTANCE_ID)

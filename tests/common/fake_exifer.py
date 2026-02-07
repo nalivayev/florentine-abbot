@@ -25,6 +25,7 @@ class FakeExifer(Exifer):
         tags: dict[str, Any],
         overwrite_original: bool = True,
         timeout: int | None = None,
-    ) -> None:
+    ) -> bool:
         # Record writes for assertions
         self.writes.append((file_path, dict(tags)))
+        return True

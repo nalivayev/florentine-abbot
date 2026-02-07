@@ -135,35 +135,67 @@ class FileOrganizer:
                 skipped += 1
                 continue
             
-            # Copy files to destination (always copy first)
+            # ATOMIC COPY STRATEGY:
+            # 1. Copy to temp file (.tmp extension)
+            # 2. Process metadata on temp file
+            # 3. Rename temp file to final destination (atomic move)
+            
+            temp_dest_path = dest_path.with_suffix(dest_path.suffix + ".tmp")
+            
+            # Copy files to temp destination
             try:
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(str(file_path), str(dest_path))
-                self._logger.info(f"  Copied to: {dest_path}")
+                shutil.copy2(str(file_path), str(temp_dest_path))
+                self._logger.info(f"  Copied to temp: {temp_dest_path}")
                 
+                # Handling log file (non-critical, direct copy is acceptable but let's be consistent)
                 if log_file_path and dest_log_path:
                     dest_log_path.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(str(log_file_path), str(dest_log_path))
                     self._logger.info(f"  Copied log to: {dest_log_path}")
             except Exception as e:
                 self._logger.error(f"Failed to copy file: {e}")
+                # Cleanup if copy failed half-way
+                if temp_dest_path.exists():
+                    try:
+                        temp_dest_path.unlink()
+                    except OSError:
+                        pass
                 skipped += 1
                 continue
             
-            # Write metadata to destination file
-            if not self._processor.process(dest_path, parsed):
-                # Metadata write failed - rollback by deleting destination
-                self._logger.warning(f"Metadata write failed, rolling back copy of {file_path.name}")
+            # Write metadata to TEMP destination file
+            if not self._processor.process(temp_dest_path, parsed):
+                # Metadata write failed - rollback by deleting temp file
+                self._logger.warning(f"Metadata write failed, deleting temp file {temp_dest_path}")
                 try:
-                    dest_path.unlink()
+                    temp_dest_path.unlink()
+                    # Also rollback the log file if we copied it
                     if dest_log_path and dest_log_path.exists():
                         dest_log_path.unlink()
                 except Exception as e:
-                    self._logger.error(f"Failed to rollback copy: {e}")
+                    self._logger.error(f"Failed to cleanup temp file: {e}")
                 skipped += 1
                 continue
             
-            # Success! If move mode, delete source files
+            # Success! Atomic rename to final name
+            try:
+                temp_dest_path.rename(dest_path)
+                self._logger.info(f"  Atomic rename: {temp_dest_path.name} -> {dest_path.name}")
+            except OSError as e:
+                self._logger.error(f"Failed to perform atomic rename to {dest_path}: {e}")
+                # Try cleanup
+                try:
+                    if temp_dest_path.exists():
+                         temp_dest_path.unlink()
+                    if dest_log_path and dest_log_path.exists():
+                        dest_log_path.unlink()
+                except OSError:
+                    pass
+                skipped += 1
+                continue
+
+            # If move mode, delete source files
             if not copy_mode:
                 try:
                     file_path.unlink()

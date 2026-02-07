@@ -6,7 +6,7 @@ import uuid
 from common.exifer import Exifer
 from common.logger import Logger
 from common.version import get_version
-from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
+from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, MIME_TYPE_MAP
 from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED
 from common.metadata import TAG_XMP_DC_FORMAT
 from scan_batcher.constants import EXIF_DATETIME_FORMAT
@@ -178,16 +178,19 @@ class MetadataWorkflow(Workflow):
             # Write DocumentID and InstanceID to file
             self._logger.debug(f"Writing DocumentID and InstanceID to {file_path.name}...")
             
-            # Get file extension for dc:Format (e.g., "tiff" -> "image/tiff")
+            # Get MIME type for dc:Format from extension map
             file_extension = file_path.suffix.lower().lstrip('.')
-            dc_format = f"image/{file_extension}"
+            dc_format = MIME_TYPE_MAP.get(file_extension)
             
-            self._exifer.write(file_path, {
+            tags_to_write = {
                 TAG_XMP_XMPMM_DOCUMENT_ID: document_id,
                 TAG_XMP_XMPMM_INSTANCE_ID: instance_id,
-                TAG_XMP_DC_FORMAT: dc_format,
-            }, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
-            self._logger.debug(f"Successfully wrote DocumentID, InstanceID, and dc:Format ({dc_format})")
+            }
+            if dc_format:
+                tags_to_write[TAG_XMP_DC_FORMAT] = dc_format
+            
+            self._exifer.write(file_path, tags_to_write, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
+            self._logger.debug(f"Successfully wrote DocumentID, InstanceID" + (f", and dc:Format ({dc_format})" if dc_format else ""))
 
             # Determine software agent for 'created' action
             if created_agent is None:
