@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+from textwrap import dedent
 
 import pytest
 from PIL import Image
@@ -116,16 +117,17 @@ class TestPipeline:
         
         # Create workflow.ini
         workflow_ini = workflow_dir / "workflow.ini"
-        workflow_ini.write_text(f"""[main]
-description = Test scan workflow
-output_path = {final_output_dir}
-output_file_name = 2024.01.15.14.30.00.E.FAM.ALB.0001.A.MSR
+        workflow_ini.write_text(dedent(f"""\
+            [main]
+            description = Test scan workflow
+            output_path = {final_output_dir}
+            output_file_name = 2024.01.15.14.30.00.E.FAM.ALB.0001.A.MSR
 
-[vuescan]
-output_path = {vuescan_output_dir}
-output_file_name = temp_scan
-output_extension_name = tif
-""", encoding="utf-8")
+            [vuescan]
+            output_path = {vuescan_output_dir}
+            output_file_name = temp_scan
+            output_extension_name = tif
+            """), encoding="utf-8")
         
         # Create minimal vuescan.ini (required by workflow)
         vuescan_ini_dir = Path(__file__).parent.parent / "src" / "scan_batcher" / "workflows" / "vuescan"
@@ -140,14 +142,15 @@ output_extension_name = tif
         vuescan_settings_dir = tmp_path / "vuescan_settings"
         vuescan_settings_dir.mkdir()
         
-        vuescan_ini_path.write_text(f"""[main]
-settings_path = {vuescan_settings_dir}
-settings_name = vuescan_settings.ini
-program_path = {tmp_path}
-program_name = vuescan_fake.exe
-logging_path = {tmp_path}
-logging_name = scan.log
-""", encoding="utf-8")
+        vuescan_ini_path.write_text(dedent(f"""\
+            [main]
+            settings_path = {vuescan_settings_dir}
+            settings_name = vuescan_settings.ini
+            program_path = {tmp_path}
+            program_name = vuescan_fake.exe
+            logging_path = {tmp_path}
+            logging_name = scan.log
+            """), encoding="utf-8")
         
         # === Step 1: Run scan-batcher with FakeVuescanWorkflow ===
         workflow = FakeVuescanWorkflow(logger, fake_scan_file)

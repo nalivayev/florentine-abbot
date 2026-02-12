@@ -18,8 +18,12 @@ class Workflow(ABC):
     All workflow classes must inherit from this class and implement the __call__ method.
     """
 
-    def __init__(self) -> None:
-        """Initialize the workflow."""
+    def __init__(self, logger: Logger | None = None) -> None:
+        """Initialize the workflow.
+        
+        Args:
+            logger: Optional logger instance for subclasses that need it.
+        """
         pass
 
     @abstractmethod
@@ -65,7 +69,7 @@ class MetadataWorkflow(Workflow):
         Args:
             logger: Logger instance for this workflow.
         """
-        super().__init__()
+        super().__init__(logger)
         self._logger = logger
         self._exifer = Exifer()
         self._historian = XMPHistorian(exifer=self._exifer)
@@ -238,8 +242,3 @@ class MetadataWorkflow(Workflow):
         except Exception as e:
             self._logger.warning(f"Failed to write XMP history: {e}")
             return False
-
-    @abstractmethod
-    def __call__(self, workflow_path: str, templates: dict[str, str]) -> None:
-        """Execute the workflow."""
-        pass
