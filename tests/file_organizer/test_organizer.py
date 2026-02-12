@@ -4,6 +4,7 @@ import json
 import shutil
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 
