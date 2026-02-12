@@ -50,7 +50,9 @@
 
       "source": [
         "Место хранения оригинального физического носителя."
-      ]
+      ],
+
+      "type": "StillImage"
     },
 
     "en-US": {
@@ -74,7 +76,9 @@
 
       "source": [
         "Original physical item location."
-      ]
+      ],
+
+      "type": "StillImage"
     }
   }
 }

@@ -34,8 +34,9 @@
 
   "description": "XMP-dc:Description",
   "creator": "XMP-dc:Creator",
-  "credit": "XMP-photoshop:Credit",
   "rights": "XMP-dc:Rights",
+  "source": "XMP-dc:Source",
+  "credit": "XMP-photoshop:Credit",
   "terms": "XMP-xmpRights:UsageTerms",
-  "source": "XMP-dc:Source"
+  "type": "XMP-dc:Type"
 }

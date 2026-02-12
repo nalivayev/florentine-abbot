@@ -29,9 +29,7 @@ class TestPreviewMakerBatch:
         self.temp_dir = Path(temp_dir)
         return self.temp_dir
 
-    def _create_tiff(self, path: Path, size=(4000, 3000)) -> None:
-        """Create a TIFF image with required DocumentID/InstanceID."""
-        create_test_image(path, size=size, color="white", format="TIFF")
+
 
     def _get_exiftool_json(self, file_path: Path) -> dict:
         cmd = ["exiftool", "-json", "-G", str(file_path)]
@@ -52,8 +50,8 @@ class TestPreviewMakerBatch:
         raw_path = sources_dir / raw_name
         msr_path = sources_dir / msr_name
 
-        self._create_tiff(raw_path)
-        self._create_tiff(msr_path)
+        create_test_image(raw_path, color="white", format="TIFF")
+        create_test_image(msr_path, color="white", format="TIFF")
 
         maker = PreviewMaker(Logger("test_preview_maker"))
         # Pass the archive base (where the year folders start)
@@ -78,11 +76,11 @@ class TestPreviewMakerBatch:
 
         msr_name = "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff"
         msr_path = sources_dir / msr_name
-        self._create_tiff(msr_path, size=(3000, 2000))
+        create_test_image(msr_path, size=(3000, 2000), color="white", format="TIFF")
 
         prv_path = date_dir / "1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
         # Create an initial PRV with a small size
-        self._create_tiff(prv_path, size=(500, 500))
+        create_test_image(prv_path, size=(500, 500), color="white", format="JPEG")
 
         maker = PreviewMaker(Logger("test_preview_maker"))
         archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
@@ -109,7 +107,7 @@ class TestPreviewMakerBatch:
 
         raw_name = "1951.07.20.13.30.00.E.FAM.POR.0002.A.RAW.tiff"
         raw_path = sources_dir / raw_name
-        self._create_tiff(raw_path, size=(3000, 2000))
+        create_test_image(raw_path, size=(3000, 2000), color="white", format="TIFF")
 
         maker = PreviewMaker(Logger("test_preview_maker"))
         archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
@@ -143,7 +141,7 @@ class TestPreviewMakerBatch:
 
         filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
         msr_path = input_dir / filename
-        self._create_tiff(msr_path)
+        create_test_image(msr_path, color="white", format="TIFF")
 
         logger = Logger("test_preview_maker_metadata")
 
@@ -249,9 +247,7 @@ class TestPreviewMakerCustomFormats:
         self.temp_dir = Path(temp_dir)
         return self.temp_dir
     
-    def _create_tiff(self, path: Path, size=(4000, 3000)) -> None:
-        """Create a TIFF image with required DocumentID/InstanceID."""
-        create_test_image(path, size=size, color="green", format="TIFF")
+
     
     def test_generate_prv_with_flat_path_structure(self):
         """Test preview generation with flat path structure (no year folder)."""
@@ -265,7 +261,7 @@ class TestPreviewMakerCustomFormats:
         
         msr_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.MSR.tiff"
         msr_path = sources_dir / msr_name
-        self._create_tiff(msr_path)
+        create_test_image(msr_path, color="green", format="TIFF")
         
         # Create custom formatter with flat structure
         from common.formatter import Formatter
@@ -302,7 +298,7 @@ class TestPreviewMakerCustomFormats:
         
         msr_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.MSR.tiff"
         msr_path = sources_dir / msr_name
-        self._create_tiff(msr_path)
+        create_test_image(msr_path, color="green", format="TIFF")
         
         from common.formatter import Formatter
         
@@ -335,7 +331,7 @@ class TestPreviewMakerCustomFormats:
         
         msr_name = "2024.03.15.10.30.00.E.FAM.POR.0001.A.MSR.tiff"
         msr_path = sources_dir / msr_name
-        self._create_tiff(msr_path)
+        create_test_image(msr_path, color="green", format="TIFF")
         
         from common.formatter import Formatter
         
@@ -369,7 +365,7 @@ class TestPreviewMakerCustomFormats:
         # Master has standard name
         msr_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.MSR.tiff"
         msr_path = sources_dir / msr_name
-        self._create_tiff(msr_path)
+        create_test_image(msr_path, color="green", format="TIFF")
         
         from common.formatter import Formatter
         

@@ -52,7 +52,6 @@ class MetadataWorkflow(Workflow):
     # EXIF tag names for reading date information
     _EXIF_DATE_TAGS = [
         "ExifIFD:DateTimeDigitized",
-        "ExifIFD:DateTimeOriginal",
         "ExifIFD:CreateDate",
         "IFD0:DateTime",
     ]
@@ -88,7 +87,7 @@ class MetadataWorkflow(Workflow):
             return f"{parts[0]}.{parts[1]}"
         return version
 
-    def _get_file_datetime(self, file_path: Path) -> datetime.datetime:
+    def _get_digitized_datetime(self, file_path: Path) -> datetime.datetime:
         """Extract datetime from file EXIF or use file modification time.
         
         Args:
