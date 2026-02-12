@@ -66,7 +66,7 @@ class PatchWorkflow(MetadataWorkflow):
         self._logger.info(f"Patching file: {file_path.name}")
 
         # Get datetime from file
-        file_datetime = self._get_file_datetime(file_path)
+        file_datetime = self._get_digitized_datetime(file_path)
 
         # Write XMP history
         success = self._write_xmp_history(file_path, file_datetime)

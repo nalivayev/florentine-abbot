@@ -1,12 +1,15 @@
 """Common test utilities for creating test fixtures."""
 
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from PIL import Image
 
+from common.constants import MIME_TYPE_MAP
 from common.exifer import Exifer
-from common.historian import TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID
+from common.historian import XMPHistorian, XMP_ACTION_CREATED, XMP_ACTION_EDITED, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID
+from common.metadata import TAG_XMP_DC_FORMAT, TAG_IFD0_MAKE, TAG_IFD0_MODEL
 
 
 def create_test_image(
@@ -15,6 +18,8 @@ def create_test_image(
     color: str | tuple = "red",
     format: str | None = None,
     add_ids: bool = True,
+    scanner_make: str = "Test Scanner",
+    scanner_model: str = "Test Model",
 ) -> None:
     """Create a test image with optional DocumentID/InstanceID.
     
@@ -24,6 +29,8 @@ def create_test_image(
         color: Fill color (name or RGB tuple).
         format: Image format (TIFF, JPEG, etc). If None, inferred from extension.
         add_ids: If True, add DocumentID/InstanceID required by FileProcessor/PreviewMaker.
+        scanner_make: Scanner manufacturer (default: "Test Scanner").
+        scanner_model: Scanner model (default: "Test Model").
     """
     img = Image.new("RGB", size, color=color)
     
@@ -34,17 +41,49 @@ def create_test_image(
     img.save(path, **save_kwargs)
     
     if add_ids:
-        add_required_ids(path)
+        add_scanner_metadata(path, scanner_make=scanner_make, scanner_model=scanner_model)
 
 
-def add_required_ids(path: Path) -> None:
-    """Add DocumentID and InstanceID to a file.
+def add_scanner_metadata(
+    path: Path,
+    scanner_make: str = "Test Scanner",
+    scanner_model: str = "Test Model",
+) -> None:
+    """Add comprehensive scanner metadata matching scan-batcher output.
     
-    These identifiers are normally set by scan-batcher and are required
-    by FileProcessor and PreviewMaker before processing.
+    Writes all metadata tags that scan-batcher normally adds:
+    - DocumentID and InstanceID (required by FileProcessor/PreviewMaker)
+    - dc:Format (MIME type from file extension)
+    - IFD0:Make and IFD0:Model (scanner metadata that batcher copies to TIFF tags)
+    - XMP History entries (created + edited actions)
+    
+    Args:
+        path: Path to the file to add metadata to.
+        scanner_make: Scanner manufacturer (default: "Test Scanner").
+        scanner_model: Scanner model (default: "Test Model").
     """
     exifer = Exifer()
-    exifer.write(path, {
-        TAG_XMP_XMPMM_DOCUMENT_ID: uuid.uuid4().hex,
-        TAG_XMP_XMPMM_INSTANCE_ID: uuid.uuid4().hex,
-    })
+    document_id = uuid.uuid4().hex
+    instance_id = uuid.uuid4().hex
+    
+    # Get MIME type from extension
+    extension = path.suffix.lower().lstrip('.')
+    dc_format = MIME_TYPE_MAP.get(extension)
+    
+    # Build tags dictionary
+    tags = {
+        TAG_XMP_XMPMM_DOCUMENT_ID: document_id,
+        TAG_XMP_XMPMM_INSTANCE_ID: instance_id,
+        TAG_IFD0_MAKE: scanner_make,
+        TAG_IFD0_MODEL: scanner_model,
+    }
+    if dc_format:
+        tags[TAG_XMP_DC_FORMAT] = dc_format
+    
+    exifer.write(path, tags)
+    
+    # Add XMP History
+    historian = XMPHistorian(exifer=exifer)
+    now = datetime.now(timezone.utc)
+    historian.append_entry(path, XMP_ACTION_CREATED, "scan-batcher", now, instance_id=instance_id)
+    historian.append_entry(path, XMP_ACTION_EDITED, "scan-batcher", now, changed="metadata", instance_id=instance_id)
