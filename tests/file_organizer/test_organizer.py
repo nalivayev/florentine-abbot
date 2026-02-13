@@ -14,7 +14,8 @@ from file_organizer.processor import FileProcessor
 from common.naming import FilenameParser
 from common.logger import Logger
 from common.exifer import Exifer
-from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED
+from common.constants import TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED
+from common.historian import XMPHistorian
 from tests.common.test_utils import create_test_image
 
 
