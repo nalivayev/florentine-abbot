@@ -15,11 +15,29 @@ from PIL import Image
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename
-from common.constants import SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP
-from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, IDENTIFIER_TAGS, DATE_TAGS, TAG_XMP_DC_FORMAT
+from common.constants import (
+    SUPPORTED_IMAGE_EXTENSIONS,
+    MIME_TYPE_MAP,
+    IDENTIFIER_TAGS,
+    DATE_TAGS,
+    TAG_XMP_DC_IDENTIFIER,
+    TAG_XMP_XMP_IDENTIFIER,
+    TAG_XMP_DC_RELATION,
+    TAG_XMP_EXIF_DATETIME_DIGITIZED,
+    TAG_EXIFIFD_DATETIME_DIGITIZED,
+    TAG_XMP_DC_FORMAT,
+    TAG_XMP_XMPMM_DOCUMENT_ID,
+    TAG_XMP_XMPMM_INSTANCE_ID,
+    TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID,
+    TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID,
+    TAG_XMP_XMPMM_HISTORY,
+    XMP_ACTION_CONVERTED,
+    XMP_ACTION_EDITED,
+)
+from common.metadata import ArchiveMetadata
 from common.exifer import Exifer
 from common.router import Router
-from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CONVERTED, XMP_ACTION_EDITED
+from common.historian import XMPHistorian
 from common.version import get_version
 
 
@@ -235,77 +253,65 @@ class PreviewMaker:
     def _write_derivative_metadata(self, master_path: Path, prv_path: Path) -> None:
         """Write EXIF/XMP metadata to PRV derivative based on master.
         
+        Copies ALL XMP and EXIF metadata from master to PRV (format-agnostic tags),
+        then overwrites derivative-specific tags (identifiers, DerivedFrom, Format).
+        
+        This ensures any new tags added by batcher or scanner automatically propagate
+        to PRV without manual duplication. IFD0/TIFF tags are excluded as they're
+        TIFF-specific and don't transfer reliably to JPEG format.
+        
         Args:
             master_path: Path to the master (MSR/RAW) file.
             prv_path: Path to the PRV file.
         """
-        # Build list of base tags to read from master
-        configurable_tags = self._metadata.get_configurable_tags()
-        tags_to_read = list(IDENTIFIER_TAGS) + list(DATE_TAGS) + configurable_tags + [TAG_EXIFIFD_DATETIME_DIGITIZED]
+        # Read all XMP and EXIF tags from master, excluding History
+        # XMP and EXIF tags are format-agnostic and work in JPEG
+        # IFD0/TIFF tags are excluded as they're TIFF-specific
+        tags_to_write = self._exifer.read(
+            master_path, 
+            [],
+            exclude_patterns=["XMP-xmpMM:History"],
+            include_patterns=["XMP-", "XMP:", "EXIF:", "ExifIFD:"]
+        )
         
-        # Read all XMP tags from master (including language variants)
-        # Use empty list to get ALL tags, then filter what we need
-        all_tags = self._exifer.read(master_path, [])
+        # Save master's identifiers before overwriting
+        master_id = tags_to_write.get(TAG_XMP_DC_IDENTIFIER) or tags_to_write.get(TAG_XMP_XMP_IDENTIFIER)
+        master_document_id = tags_to_write.get(TAG_XMP_XMPMM_DOCUMENT_ID)
+        master_instance_id = tags_to_write.get(TAG_XMP_XMPMM_INSTANCE_ID)
         
-        tags_to_write: dict[str, Any] = {}
+        # Now overwrite derivative-specific tags:
         
-        # 1. Fresh identifier for PRV
+        # 1. Fresh identifier for PRV (overwrite master's identifier)
         prv_uuid = uuid.uuid4().hex
         tags_to_write[TAG_XMP_DC_IDENTIFIER] = prv_uuid
         tags_to_write[TAG_XMP_XMP_IDENTIFIER] = prv_uuid
         
         # 2. Relation to master
-        master_id = all_tags.get(TAG_XMP_DC_IDENTIFIER) or all_tags.get(TAG_XMP_XMP_IDENTIFIER)
         if master_id:
             tags_to_write[TAG_XMP_DC_RELATION] = master_id
         
-        # 3. Copy dates (with fallback for DateTimeDigitized)
-        for tag in DATE_TAGS:
-            value = all_tags.get(tag)
-            if value is None and tag == TAG_XMP_EXIF_DATETIME_DIGITIZED:
-                value = all_tags.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
-            if value is not None:
-                tags_to_write[tag] = value
-        
-        # 4. Copy configurable tags and their language variants
-        for tag in configurable_tags:
-            # Copy base tag
-            value = all_tags.get(tag)
-            if value is not None:
-                tags_to_write[tag] = value
-            
-            # Copy language variants (TAG-langCode format)
-            for tag_name, tag_value in all_tags.items():
-                if tag_name.startswith(tag + "-") and tag_value is not None:
-                    tags_to_write[tag_name] = tag_value
-        
-        # 5. DocumentID from master, fresh InstanceID for derivative
-        master_document_id = all_tags.get(TAG_XMP_XMPMM_DOCUMENT_ID)
-        if master_document_id:
-            tags_to_write[TAG_XMP_XMPMM_DOCUMENT_ID] = master_document_id
-        
+        # 3. Fresh InstanceID for derivative (DocumentID stays same)
         prv_instance_id = uuid.uuid4().hex
         tags_to_write[TAG_XMP_XMPMM_INSTANCE_ID] = prv_instance_id
         
-        # 6. dc:Format based on PRV file extension (only if known MIME type)
+        # 4. dc:Format based on PRV file extension
         prv_extension = prv_path.suffix.lower().lstrip('.')
         dc_format = MIME_TYPE_MAP.get(prv_extension)
         if dc_format:
             tags_to_write[TAG_XMP_DC_FORMAT] = dc_format
         
-        # 6.1. xmpMM:DerivedFrom structure pointing to master
-        master_instance_id = all_tags.get(TAG_XMP_XMPMM_INSTANCE_ID)
+        # 5. xmpMM:DerivedFrom structure pointing to master
         if master_document_id:
             tags_to_write[TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID] = master_document_id
         if master_instance_id:
             tags_to_write[TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID] = master_instance_id
         
-        # 7. Write all tags to PRV
+        # 6. Write all tags to PRV
         if tags_to_write:
             self._logger.debug("Writing metadata to PRV %s based on master %s", prv_path, master_path)
             self._exifer.write(prv_path, tags_to_write)
         
-        # 8. Write XMP History entries for PRV creation (like VuescanWorkflow)
+        # 7. Write XMP History entries for PRV creation (like VuescanWorkflow)
         if master_document_id:
             version = get_version()
             major_version = "0.0" if version == "unknown" else ".".join(version.split(".")[:2])

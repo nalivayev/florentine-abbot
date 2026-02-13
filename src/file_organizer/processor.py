@@ -13,10 +13,19 @@ from datetime import datetime
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename, FilenameValidator
-from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
-from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED
+from common.constants import (
+    EXIFTOOL_LARGE_FILE_TIMEOUT,
+    TAG_XMP_DC_IDENTIFIER,
+    TAG_XMP_XMP_IDENTIFIER,
+    TAG_EXIF_DATETIME_ORIGINAL,
+    TAG_XMP_PHOTOSHOP_DATE_CREATED,
+    TAG_XMP_XMPMM_INSTANCE_ID,
+    TAG_XMP_XMPMM_DOCUMENT_ID,
+    XMP_ACTION_EDITED,
+)
+from common.metadata import ArchiveMetadata
 from common.exifer import Exifer
-from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, XMP_ACTION_EDITED
+from common.historian import XMPHistorian
 from common.version import get_version
 
 
