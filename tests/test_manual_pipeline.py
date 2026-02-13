@@ -7,14 +7,13 @@ Or: pytest tests/test_manual_pipeline.py::test_full_pipeline -v
 
 import pytest
 import tempfile
-import shutil
 from pathlib import Path
 
 from file_organizer.organizer import FileOrganizer
 from preview_maker.maker import PreviewMaker
 from common.logger import Logger
 from common.exifer import Exifer
-from scan_batcher.workflows.patch.workflow import PatchWorkflow
+from common.metadata import TAG_IFD0_MAKE, TAG_IFD0_MODEL
 
 
 @pytest.mark.manual
@@ -55,9 +54,9 @@ def test_full_pipeline():
         
         # Verify IFD0:Make/Model are present
         exifer = Exifer()
-        tags = exifer.read(input_file, ["IFD0:Make", "IFD0:Model"])
-        ifd0_make = tags.get("IFD0:Make")
-        ifd0_model = tags.get("IFD0:Model")
+        tags = exifer.read(input_file, [TAG_IFD0_MAKE, TAG_IFD0_MODEL])
+        ifd0_make = tags.get(TAG_IFD0_MAKE)
+        ifd0_model = tags.get(TAG_IFD0_MODEL)
         if ifd0_make and ifd0_model:
             print(f"✓ Verified scanner metadata: {ifd0_make} {ifd0_model}")
         else:

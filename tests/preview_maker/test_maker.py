@@ -10,6 +10,7 @@ from PIL import Image
 from preview_maker import PreviewMaker
 from file_organizer.organizer import FileOrganizer
 from common.logger import Logger
+from common.metadata import TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_DESCRIPTION, TAG_XMP_DC_CREATOR, TAG_XMP_DC_RIGHTS, TAG_XMP_PHOTOSHOP_CREDIT, TAG_XMP_XMPRIGHTS_USAGE_TERMS, TAG_XMP_DC_SOURCE
 from tests.common.test_utils import create_test_image
 
 
@@ -179,15 +180,15 @@ class TestPreviewMakerBatch:
 
         meta_master = self._get_exiftool_json(processed_msr)
 
-        master_id = meta_master.get("XMP:Identifier") or meta_master.get("XMP-dc:Identifier")
+        master_id = meta_master.get(TAG_XMP_XMP_IDENTIFIER) or meta_master.get(TAG_XMP_DC_IDENTIFIER) or meta_master.get("XMP:Identifier")
         assert master_id
 
-        master_desc = meta_master.get("XMP:Description") or meta_master.get("XMP-dc:Description")
-        master_creator = meta_master.get("XMP:Creator") or meta_master.get("XMP-dc:Creator")
-        master_rights = meta_master.get("XMP:Rights") or meta_master.get("XMP-dc:Rights")
-        master_credit = meta_master.get("XMP:Credit") or meta_master.get("XMP-photoshop:Credit")
-        master_usage = meta_master.get("XMP:UsageTerms") or meta_master.get("XMP-xmpRights:UsageTerms")
-        master_source = meta_master.get("XMP:Source") or meta_master.get("XMP-dc:Source")
+        master_desc = meta_master.get(TAG_XMP_DC_DESCRIPTION) or meta_master.get("XMP:Description")
+        master_creator = meta_master.get(TAG_XMP_DC_CREATOR) or meta_master.get("XMP:Creator")
+        master_rights = meta_master.get(TAG_XMP_DC_RIGHTS) or meta_master.get("XMP:Rights")
+        master_credit = meta_master.get(TAG_XMP_PHOTOSHOP_CREDIT) or meta_master.get("XMP:Credit")
+        master_usage = meta_master.get(TAG_XMP_XMPRIGHTS_USAGE_TERMS) or meta_master.get("XMP:UsageTerms")
+        master_source = meta_master.get(TAG_XMP_DC_SOURCE) or meta_master.get("XMP:Source")
 
         # Step 2: generate PRV via PreviewMaker
         maker = PreviewMaker(logger)
@@ -207,19 +208,19 @@ class TestPreviewMakerBatch:
 
         meta_prv = self._get_exiftool_json(prv_path)
 
-        prv_id = meta_prv.get("XMP:Identifier") or meta_prv.get("XMP-dc:Identifier")
+        prv_id = meta_prv.get(TAG_XMP_XMP_IDENTIFIER) or meta_prv.get(TAG_XMP_DC_IDENTIFIER) or meta_prv.get("XMP:Identifier")
         assert prv_id
         assert prv_id != master_id
 
-        relation = meta_prv.get("XMP:Relation") or meta_prv.get("XMP-dc:Relation")
+        relation = meta_prv.get(TAG_XMP_DC_RELATION) or meta_prv.get("XMP:Relation")
         assert relation == master_id
 
-        prv_desc = meta_prv.get("XMP:Description") or meta_prv.get("XMP-dc:Description")
-        prv_creator = meta_prv.get("XMP:Creator") or meta_prv.get("XMP-dc:Creator")
-        prv_rights = meta_prv.get("XMP:Rights") or meta_prv.get("XMP-dc:Rights")
-        prv_credit = meta_prv.get("XMP:Credit") or meta_prv.get("XMP-photoshop:Credit")
-        prv_usage = meta_prv.get("XMP:UsageTerms") or meta_prv.get("XMP-xmpRights:UsageTerms")
-        prv_source = meta_prv.get("XMP:Source") or meta_prv.get("XMP-dc:Source")
+        prv_desc = meta_prv.get(TAG_XMP_DC_DESCRIPTION) or meta_prv.get("XMP:Description")
+        prv_creator = meta_prv.get(TAG_XMP_DC_CREATOR) or meta_prv.get("XMP:Creator")
+        prv_rights = meta_prv.get(TAG_XMP_DC_RIGHTS) or meta_prv.get("XMP:Rights")
+        prv_credit = meta_prv.get(TAG_XMP_PHOTOSHOP_CREDIT) or meta_prv.get("XMP:Credit")
+        prv_usage = meta_prv.get(TAG_XMP_XMPRIGHTS_USAGE_TERMS) or meta_prv.get("XMP:UsageTerms")
+        prv_source = meta_prv.get(TAG_XMP_DC_SOURCE) or meta_prv.get("XMP:Source")
 
         assert prv_desc == master_desc
         assert prv_creator == master_creator

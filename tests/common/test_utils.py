@@ -1,7 +1,7 @@
 """Common test utilities for creating test fixtures."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 from PIL import Image
@@ -9,7 +9,7 @@ from PIL import Image
 from common.constants import MIME_TYPE_MAP
 from common.exifer import Exifer
 from common.historian import XMPHistorian, XMP_ACTION_CREATED, XMP_ACTION_EDITED, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID
-from common.metadata import TAG_XMP_DC_FORMAT, TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_IFD0_SOFTWARE, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIF_OFFSET_TIME_DIGITIZED
+from common.metadata import TAG_XMP_DC_FORMAT, TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_XMP_TIFF_MAKE, TAG_XMP_TIFF_MODEL, TAG_IFD0_SOFTWARE, TAG_EXIFIFD_CREATE_DATE, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIF_OFFSET_TIME_DIGITIZED
 
 
 def create_test_image(
@@ -55,7 +55,10 @@ def add_scanner_metadata(
     - DocumentID and InstanceID (required by FileProcessor/PreviewMaker)
     - dc:Format (MIME type from file extension)
     - DateTimeDigitized and OffsetTimeDigitized (scan timestamp)
-    - IFD0:Make and IFD0:Model (scanner metadata that batcher copies to TIFF tags)
+    - IFD0:Software (scanner software name, e.g., VueScan)
+    - ExifIFD:CreateDate (scan date in EXIF format, shows as "Дата съемки" in Windows)
+    - IFD0:Make and IFD0:Model (scanner metadata)
+    - XMP-tiff:Make and XMP-tiff:Model (XMP versions visible in Windows Properties)
     - XMP History entries (created + edited actions)
     
     Args:
@@ -77,12 +80,19 @@ def add_scanner_metadata(
     offset_digitized = now.strftime("%z")
     offset_digitized = f"{offset_digitized[:3]}:{offset_digitized[3:]}"  # Format: +03:00
     
+    # Format CreateDate in EXIF format (without timezone)
+    create_date = now.strftime("%Y:%m:%d %H:%M:%S")  # Format: 2026:02:13 12:34:56
+    
     # Build tags dictionary
     tags = {
         TAG_XMP_XMPMM_DOCUMENT_ID: document_id,
         TAG_XMP_XMPMM_INSTANCE_ID: instance_id,
         TAG_IFD0_MAKE: scanner_make,
         TAG_IFD0_MODEL: scanner_model,
+        TAG_XMP_TIFF_MAKE: scanner_make,
+        TAG_XMP_TIFF_MODEL: scanner_model,
+        TAG_IFD0_SOFTWARE: "VueScan 9 x64 (9.8.50)",
+        TAG_EXIFIFD_CREATE_DATE: create_date,
         TAG_XMP_EXIF_DATETIME_DIGITIZED: dt_digitized,
         TAG_EXIF_OFFSET_TIME_DIGITIZED: offset_digitized,
     }
@@ -93,6 +103,6 @@ def add_scanner_metadata(
     
     # Add XMP History
     historian = XMPHistorian(exifer=exifer)
-    now_utc = datetime.now(timezone.utc)
-    historian.append_entry(path, XMP_ACTION_CREATED, "scan-batcher", now_utc, instance_id=instance_id)
-    historian.append_entry(path, XMP_ACTION_EDITED, "scan-batcher", now_utc, changed="metadata", instance_id=instance_id)
+    now_local = datetime.now().astimezone()
+    historian.append_entry(path, XMP_ACTION_CREATED, "scan-batcher", now_local, instance_id=instance_id)
+    historian.append_entry(path, XMP_ACTION_EDITED, "scan-batcher", now_local, changed="metadata", instance_id=instance_id)

@@ -94,7 +94,7 @@ class MetadataWorkflow(Workflow):
             file_path: Path to the file.
             
         Returns:
-            Datetime extracted from EXIF or file modification time (with local timezone).
+            Datetime extracted from EXIF or file modification time (in local timezone).
         """
         from os.path import getmtime
         
@@ -108,9 +108,9 @@ class MetadataWorkflow(Workflow):
                     value = tags.get(tag_name)
                     if value:
                         try:
-                            # Parse as naive datetime, then localize to system timezone
+                            # Parse as naive datetime, then localize to local timezone
                             naive_moment = datetime.datetime.strptime(value, EXIF_DATETIME_FORMAT)
-                            moment = naive_moment.astimezone()
+                            moment = naive_moment.replace(tzinfo=datetime.datetime.now().astimezone().tzinfo)
                             break
                         except ValueError:
                             pass
@@ -118,7 +118,7 @@ class MetadataWorkflow(Workflow):
                 self._logger.warning(f"Unable to extract EXIF from file '{file_path.name}': {e}")
 
         if moment is None:
-            # Get file modification time with local timezone
+            # Get file modification time in local timezone
             moment = datetime.datetime.fromtimestamp(getmtime(file_path)).astimezone()
 
         return moment
@@ -157,7 +157,7 @@ class MetadataWorkflow(Workflow):
             )
 
         try:
-            # Read existing DocumentID, InstanceID, Software, and DateTimeDigitized
+            # Read existing DocumentID, InstanceID, Software, DateTimeDigitized, and Make/Model
             self._logger.debug(f"Reading existing XMP tags from {file_path.name}...")
             existing_tags = self._exifer.read(file_path, [
                 TAG_XMP_XMPMM_DOCUMENT_ID,
@@ -166,6 +166,8 @@ class MetadataWorkflow(Workflow):
                 TAG_XMP_EXIF_DATETIME_DIGITIZED,
                 TAG_EXIFIFD_DATETIME_DIGITIZED,
                 TAG_EXIF_OFFSET_TIME_DIGITIZED,
+                # TAG_IFD0_MAKE,
+                # TAG_IFD0_MODEL,
             ])
 
             # Get or generate DocumentID (without dashes)
@@ -205,7 +207,7 @@ class MetadataWorkflow(Workflow):
             )
             
             if not date_digitized:
-                # Format with timezone: 2026-02-12T23:03:26.00+03:00
+                # Format with timezone: 2026-02-12T23:03:26.000+03:00
                 dt_str = file_datetime.isoformat(timespec='milliseconds')
                 tags_to_write[TAG_XMP_EXIF_DATETIME_DIGITIZED] = dt_str
                 self._logger.debug(f"Writing DateTimeDigitized: {dt_str}")
@@ -226,6 +228,18 @@ class MetadataWorkflow(Workflow):
             elif offset_time_digitized:
                 self._logger.debug(f"OffsetTimeDigitized already set: {offset_time_digitized}")
             
+            # # Copy IFD0:Make/Model to XMP-tiff:Make/Model if they exist
+            # ifd0_make = existing_tags.get(TAG_IFD0_MAKE)
+            # ifd0_model = existing_tags.get(TAG_IFD0_MODEL)
+            
+            # if ifd0_make:
+            #     tags_to_write[TAG_XMP_TIFF_MAKE] = ifd0_make
+            #     self._logger.debug(f"Copying Make to XMP: {ifd0_make}")
+            
+            # if ifd0_model:
+            #     tags_to_write[TAG_XMP_TIFF_MODEL] = ifd0_model
+            #     self._logger.debug(f"Copying Model to XMP: {ifd0_model}")
+
             self._exifer.write(file_path, tags_to_write, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
             self._logger.debug(f"Successfully wrote DocumentID, InstanceID" + (f", and dc:Format ({dc_format})" if dc_format else ""))
 

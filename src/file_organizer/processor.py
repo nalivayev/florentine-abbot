@@ -9,21 +9,12 @@ and moving files into the ``processed/`` tree. Higher-level orchestration
 import uuid
 from pathlib import Path
 from typing import Any
-from datetime import datetime, timezone
+from datetime import datetime
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename, FilenameValidator
-from common.constants import SUPPORTED_IMAGE_EXTENSIONS, EXIFTOOL_LARGE_FILE_TIMEOUT
-from common.metadata import (
-    ArchiveMetadata,
-    TAG_XMP_DC_IDENTIFIER,
-    TAG_XMP_XMP_IDENTIFIER,
-    TAG_EXIF_DATETIME_ORIGINAL,
-    TAG_XMP_PHOTOSHOP_DATE_CREATED,
-    TAG_XMP_EXIF_DATETIME_DIGITIZED,
-    TAG_EXIFIFD_DATETIME_DIGITIZED,
-    TAG_EXIFIFD_CREATE_DATE,
-)
+from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
+from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED
 from common.exifer import Exifer
 from common.historian import XMPHistorian, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, XMP_ACTION_EDITED
 from common.version import get_version
@@ -197,17 +188,19 @@ class FileProcessor:
     def _write_history_entry(self, file_path: Path) -> None:
         """Write XMP History entry for file-organizer metadata changes.
         
+        Generates a new InstanceID for this version and writes it to the file
+        along with a history entry documenting the metadata changes.
+        
         Args:
             file_path: Path to the file.
         """
         try:
-            # Read InstanceID from file
-            tags = self._exifer.read(file_path, [TAG_XMP_XMPMM_INSTANCE_ID])
-            instance_id = tags.get(TAG_XMP_XMPMM_INSTANCE_ID)
+            # Generate new InstanceID for this version
+            new_instance_id = uuid.uuid4().hex
             
-            if not instance_id:
-                self._logger.warning(f"No InstanceID found for {file_path.name}, skipping history entry")
-                return
+            # Write new InstanceID to file
+            self._exifer.write(file_path, {TAG_XMP_XMPMM_INSTANCE_ID: new_instance_id})
+            self._logger.debug(f"Generated new InstanceID: {new_instance_id}")
             
             # Get version for software agent
             version = get_version()
@@ -220,14 +213,14 @@ class FileProcessor:
             
             software_agent = f"file-organizer {version}"
             
-            # Write history entry with current time
+            # Write history entry with current time and new InstanceID
             success = self._historian.append_entry(
                 file_path=file_path,
                 action=XMP_ACTION_EDITED,
                 software_agent=software_agent,
-                when=datetime.now(timezone.utc),
+                when=datetime.now().astimezone(),
                 changed="metadata",
-                instance_id=instance_id,
+                instance_id=new_instance_id,
                 logger=self._logger,
             )
             
