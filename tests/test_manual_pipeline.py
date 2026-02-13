@@ -40,7 +40,7 @@ def test_full_pipeline():
         print("\n[Step 0] Creating test TIFF file with scanner metadata...")
         from tests.common.test_utils import create_test_image
         
-        # Create image with scanner metadata
+        # Create image with scanner metadata (includes DocumentID/InstanceID/XMP History)
         create_test_image(
             path=input_file,
             size=(4000, 3000),
@@ -52,18 +52,8 @@ def test_full_pipeline():
         print(f"✓ Created test TIFF: {input_file.name}")
         print(f"  Size: {input_file.stat().st_size / (1024*1024):.1f} MB")
         print(f"✓ Embedded scanner metadata: Epson Perfection V600")
-        print("="*60)
         
-        # Step 1: Patch file with DocumentID/InstanceID (scan-batcher)
-        print("\n[Step 1] Patching file with scan-batcher...")
-        patch_workflow = PatchWorkflow(logger)
-        patch_workflow(
-            workflow_path="",  # Not used by PatchWorkflow
-            templates={"path": str(input_file)}
-        )
-        print(f"✓ File patched with DocumentID/InstanceID")
-        
-        # Verify IFD0:Make/Model are present (TIFF:Make/Model are aliases for IFD0 tags)
+        # Verify IFD0:Make/Model are present
         exifer = Exifer()
         tags = exifer.read(input_file, ["IFD0:Make", "IFD0:Model"])
         ifd0_make = tags.get("IFD0:Make")
@@ -74,8 +64,8 @@ def test_full_pipeline():
             print(f"⚠ Warning: Scanner metadata not found (Make: {ifd0_make}, Model: {ifd0_model})")
         print("="*60)
         
-        # Step 2: Run FileOrganizer
-        print("\n[Step 2] Running FileOrganizer...")
+        # Step 1: Run FileOrganizer
+        print("\n[Step 1] Running FileOrganizer...")
         organizer = FileOrganizer(logger)
         
         processed_count = organizer(
@@ -112,8 +102,8 @@ def test_full_pipeline():
             print(f"⚠ Warning: XMP-dc:Type not found")
         print("="*60)
         
-        # Step 3: Run PreviewMaker
-        print("\n[Step 3] Running PreviewMaker...")
+        # Step 2: Run PreviewMaker
+        print("\n[Step 2] Running PreviewMaker...")
         maker = PreviewMaker(logger)
         
         # Find the archive base (where year folders are)
@@ -155,6 +145,8 @@ def test_full_pipeline():
         
     finally:
         # Cleanup temp directory
-        if temp_dir.exists():
-            shutil.rmtree(temp_dir)
-            print(f"\n✓ Cleaned up temp directory: {temp_dir}")
+        # if temp_dir.exists():
+        #     shutil.rmtree(temp_dir)
+        #     print(f"\n✓ Cleaned up temp directory: {temp_dir}")
+        print(f"\n📁 Files preserved in: {temp_dir}")
+

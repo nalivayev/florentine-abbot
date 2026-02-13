@@ -8,7 +8,7 @@ from common.logger import Logger
 from common.version import get_version
 from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, MIME_TYPE_MAP
 from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED
-from common.metadata import TAG_XMP_DC_FORMAT
+from common.metadata import TAG_XMP_DC_FORMAT, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIF_OFFSET_TIME_DIGITIZED
 from scan_batcher.constants import EXIF_DATETIME_FORMAT
 
 
@@ -94,7 +94,7 @@ class MetadataWorkflow(Workflow):
             file_path: Path to the file.
             
         Returns:
-            Datetime extracted from EXIF or file modification time.
+            Datetime extracted from EXIF or file modification time (with local timezone).
         """
         from os.path import getmtime
         
@@ -108,7 +108,9 @@ class MetadataWorkflow(Workflow):
                     value = tags.get(tag_name)
                     if value:
                         try:
-                            moment = datetime.datetime.strptime(value, EXIF_DATETIME_FORMAT)
+                            # Parse as naive datetime, then localize to system timezone
+                            naive_moment = datetime.datetime.strptime(value, EXIF_DATETIME_FORMAT)
+                            moment = naive_moment.astimezone()
                             break
                         except ValueError:
                             pass
@@ -116,7 +118,8 @@ class MetadataWorkflow(Workflow):
                 self._logger.warning(f"Unable to extract EXIF from file '{file_path.name}': {e}")
 
         if moment is None:
-            moment = datetime.datetime.fromtimestamp(getmtime(file_path))
+            # Get file modification time with local timezone
+            moment = datetime.datetime.fromtimestamp(getmtime(file_path)).astimezone()
 
         return moment
 
@@ -154,12 +157,15 @@ class MetadataWorkflow(Workflow):
             )
 
         try:
-            # Read existing DocumentID, InstanceID, and Software
+            # Read existing DocumentID, InstanceID, Software, and DateTimeDigitized
             self._logger.debug(f"Reading existing XMP tags from {file_path.name}...")
             existing_tags = self._exifer.read(file_path, [
                 TAG_XMP_XMPMM_DOCUMENT_ID,
                 TAG_XMP_XMPMM_INSTANCE_ID,
                 self._EXIF_SOFTWARE_TAG,
+                TAG_XMP_EXIF_DATETIME_DIGITIZED,
+                TAG_EXIFIFD_DATETIME_DIGITIZED,
+                TAG_EXIF_OFFSET_TIME_DIGITIZED,
             ])
 
             # Get or generate DocumentID (without dashes)
@@ -191,6 +197,34 @@ class MetadataWorkflow(Workflow):
             }
             if dc_format:
                 tags_to_write[TAG_XMP_DC_FORMAT] = dc_format
+            
+            # Write DateTimeDigitized if not already set
+            date_digitized = (
+                existing_tags.get(TAG_XMP_EXIF_DATETIME_DIGITIZED)
+                or existing_tags.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
+            )
+            
+            if not date_digitized:
+                # Format with timezone: 2026-02-12T23:03:26.00+03:00
+                dt_str = file_datetime.isoformat(timespec='milliseconds')
+                tags_to_write[TAG_XMP_EXIF_DATETIME_DIGITIZED] = dt_str
+                self._logger.debug(f"Writing DateTimeDigitized: {dt_str}")
+            else:
+                self._logger.debug(f"DateTimeDigitized already set: {date_digitized}")
+            
+            # Write OffsetTimeDigitized if not already set and timezone info is available
+            offset_time_digitized = existing_tags.get(TAG_EXIF_OFFSET_TIME_DIGITIZED)
+            
+            if not offset_time_digitized and file_datetime.tzinfo is not None:
+                # Format: ±HH:MM (e.g., "+03:00" or "-05:00")
+                offset = file_datetime.strftime("%z")
+                if offset:
+                    # Insert colon: "+0300" -> "+03:00"
+                    offset_formatted = f"{offset[:3]}:{offset[3:]}"
+                    tags_to_write[TAG_EXIF_OFFSET_TIME_DIGITIZED] = offset_formatted
+                    self._logger.debug(f"Writing OffsetTimeDigitized: {offset_formatted}")
+            elif offset_time_digitized:
+                self._logger.debug(f"OffsetTimeDigitized already set: {offset_time_digitized}")
             
             self._exifer.write(file_path, tags_to_write, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
             self._logger.debug(f"Successfully wrote DocumentID, InstanceID" + (f", and dc:Format ({dc_format})" if dc_format else ""))
