@@ -16,10 +16,10 @@ from PIL import Image
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename
 from common.constants import SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP
-from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, IDENTIFIER_TAGS, DATE_TAGS, TAG_XMP_DC_FORMAT
+from common.metadata import ArchiveMetadata, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, IDENTIFIER_TAGS, DATE_TAGS, TAG_XMP_DC_FORMAT
 from common.exifer import Exifer
 from common.router import Router
-from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED
+from common.historian import XMPHistorian, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CONVERTED, XMP_ACTION_EDITED
 from common.version import get_version
 
 
@@ -309,12 +309,12 @@ class PreviewMaker:
         if master_document_id:
             version = get_version()
             major_version = "0.0" if version == "unknown" else ".".join(version.split(".")[:2])
-            now = datetime.datetime.now()
+            now = datetime.datetime.now().astimezone()
             
-            # First entry: 'created' - PRV file creation
+            # First entry: 'converted' - PRV file created from master via format conversion
             self._historian.append_entry(
                 file_path=prv_path,
-                action=XMP_ACTION_CREATED,
+                action=XMP_ACTION_CONVERTED,
                 software_agent=f"preview-maker {major_version}",
                 when=now,
                 instance_id=prv_instance_id,
@@ -331,4 +331,3 @@ class PreviewMaker:
                 instance_id=prv_instance_id,
                 logger=self._logger,
             )
-

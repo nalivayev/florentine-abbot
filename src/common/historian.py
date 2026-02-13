@@ -1,55 +1,11 @@
 """XMP Historian for tracking file operations in xmpMM:History."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from .exifer import Exifer
-from .constants import EXIFTOOL_LARGE_FILE_TIMEOUT
-
-# XMP-xmpMM namespace tags
-TAG_XMP_XMPMM_HISTORY = "XMP-xmpMM:History"
-TAG_XMP_XMPMM_INSTANCE_ID = "XMP-xmpMM:InstanceID"
-TAG_XMP_XMPMM_DOCUMENT_ID = "XMP-xmpMM:DocumentID"
-TAG_XMP_XMP_CREATOR_TOOL = "XMP-xmp:CreatorTool"
-
-# XMP-xmpMM DerivedFrom structure tags
-TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID = "XMP-xmpMM:DerivedFromDocumentID"
-TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID = "XMP-xmpMM:DerivedFromInstanceID"
-
-# XMP History flattened tags (exiftool expands structures)
-TAG_XMP_XMPMM_HISTORY_ACTION = "XMP-xmpMM:HistoryAction"
-TAG_XMP_XMPMM_HISTORY_WHEN = "XMP-xmpMM:HistoryWhen"
-TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT = "XMP-xmpMM:HistorySoftwareAgent"
-TAG_XMP_XMPMM_HISTORY_CHANGED = "XMP-xmpMM:HistoryChanged"
-TAG_XMP_XMPMM_HISTORY_PARAMETERS = "XMP-xmpMM:HistoryParameters"
-TAG_XMP_XMPMM_HISTORY_INSTANCE_ID = "XMP-xmpMM:HistoryInstanceID"
-
-# XMP History event fields (stEvt namespace)
-XMP_FIELD_ACTION = "action"
-XMP_FIELD_WHEN = "when"
-XMP_FIELD_SOFTWARE_AGENT = "softwareAgent"
-XMP_FIELD_CHANGED = "changed"
-XMP_FIELD_PARAMETERS = "parameters"
-XMP_FIELD_INSTANCE_ID = "instanceID"
-
-# Standard XMP History action types per XMP Specification Part 2 (xmpMM namespace)
-# Table 8 — ResourceEvent fields: stEvt:action Open Choice of Text
-# https://www.adobe.com/devnet/xmp/library/XMPSpecificationPart2.pdf
-XMP_ACTION_CONVERTED = "converted"          # Format conversion
-XMP_ACTION_COPIED = "copied"                # File copied
-XMP_ACTION_CREATED = "created"              # File created from scratch
-XMP_ACTION_CROPPED = "cropped"              # Image cropped
-XMP_ACTION_EDITED = "edited"                # Content modification
-XMP_ACTION_FILTERED = "filtered"            # Filter applied
-XMP_ACTION_FORMATTED = "formatted"          # Format/layout changed
-XMP_ACTION_VERSION_UPDATED = "version_updated"  # Version updated
-XMP_ACTION_PRINTED = "printed"              # File printed
-XMP_ACTION_PUBLISHED = "published"          # File published
-XMP_ACTION_MANAGED = "managed"              # Metadata management without content change
-XMP_ACTION_PRODUCED = "produced"            # File produced/rendered
-XMP_ACTION_RESIZED = "resized"              # Image resized
-XMP_ACTION_SAVED = "saved"                  # File saved
+from .constants import EXIFTOOL_LARGE_FILE_TIMEOUT, TAG_XMP_XMPMM_HISTORY, TAG_XMP_XMPMM_HISTORY_ACTION, TAG_XMP_XMPMM_HISTORY_WHEN, TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT, TAG_XMP_XMPMM_HISTORY_CHANGED, TAG_XMP_XMPMM_HISTORY_PARAMETERS, TAG_XMP_XMPMM_HISTORY_INSTANCE_ID, XMP_FIELD_ACTION, XMP_FIELD_WHEN, XMP_FIELD_SOFTWARE_AGENT, XMP_FIELD_CHANGED, XMP_FIELD_PARAMETERS, XMP_FIELD_INSTANCE_ID
 
 
 class XMPHistorian:

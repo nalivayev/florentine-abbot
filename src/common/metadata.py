@@ -12,42 +12,37 @@ from typing import Any, Optional
 from pathlib import Path
 import json
 
-from common.constants import DEFAULT_METADATA_TAGS, DEFAULT_METADATA
+from common.constants import (
+    DEFAULT_METADATA_TAGS,
+    DEFAULT_METADATA,
+    # Tag names
+    TAG_EXIF_DATETIME_ORIGINAL,
+    TAG_EXIF_OFFSET_TIME_DIGITIZED,
+    TAG_EXIFIFD_DATETIME_DIGITIZED,
+    TAG_EXIFIFD_CREATE_DATE,
+    TAG_IFD0_SOFTWARE,
+    TAG_IFD0_MAKE,
+    TAG_IFD0_MODEL,
+    TAG_XMP_XMP_IDENTIFIER,
+    TAG_XMP_DC_IDENTIFIER,
+    TAG_XMP_DC_DESCRIPTION,
+    TAG_XMP_DC_TITLE,
+    TAG_XMP_DC_CREATOR,
+    TAG_XMP_DC_RIGHTS,
+    TAG_XMP_DC_SOURCE,
+    TAG_XMP_DC_RELATION,
+    TAG_XMP_DC_FORMAT,
+    TAG_XMP_EXIF_DATETIME_DIGITIZED,
+    TAG_XMP_PHOTOSHOP_DATE_CREATED,
+    TAG_XMP_PHOTOSHOP_CREDIT,
+    TAG_XMP_XMPRIGHTS_USAGE_TERMS,
+    TAG_XMP_TIFF_MAKE,
+    TAG_XMP_TIFF_MODEL,
+    IDENTIFIER_TAGS,
+    DATE_TAGS,
+)
 from common.logger import Logger
 from common.config_utils import get_config_dir, load_optional_config, ensure_config_exists, get_template_path
-
-
-# Tag names (shared across organizer and preview maker)
-TAG_XMP_EXIF_DATETIME_DIGITIZED = "XMP-exif:DateTimeDigitized"
-TAG_EXIFIFD_DATETIME_DIGITIZED = "ExifIFD:DateTimeDigitized"
-TAG_EXIFIFD_CREATE_DATE = "ExifIFD:CreateDate"
-TAG_EXIF_DATETIME_ORIGINAL = "Exif:DateTimeOriginal"
-TAG_XMP_PHOTOSHOP_DATE_CREATED = "XMP-photoshop:DateCreated"
-TAG_EXIF_OFFSET_TIME_DIGITIZED = "Exif:OffsetTimeDigitized"
-TAG_XMP_XMP_IDENTIFIER = "XMP-xmp:Identifier"
-TAG_XMP_DC_IDENTIFIER = "XMP-dc:Identifier"
-TAG_XMP_DC_DESCRIPTION = "XMP-dc:Description"
-TAG_XMP_DC_TITLE = "XMP-dc:Title"
-TAG_XMP_DC_CREATOR = "XMP-dc:Creator"
-TAG_XMP_PHOTOSHOP_CREDIT = "XMP-photoshop:Credit"
-TAG_XMP_DC_RIGHTS = "XMP-dc:Rights"
-TAG_XMP_XMPRIGHTS_USAGE_TERMS = "XMP-xmpRights:UsageTerms"
-TAG_XMP_DC_SOURCE = "XMP-dc:Source"
-TAG_XMP_DC_RELATION = "XMP-dc:Relation"
-TAG_XMP_DC_FORMAT = "XMP-dc:Format"
-
-# Scanner/camera metadata tags
-TAG_IFD0_SOFTWARE = "IFD0:Software"
-TAG_IFD0_MAKE = "IFD0:Make"
-TAG_IFD0_MODEL = "IFD0:Model"
-
-# Groupings for easier reuse
-IDENTIFIER_TAGS = (TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER)
-DATE_TAGS = (
-    TAG_EXIF_DATETIME_ORIGINAL,
-    TAG_XMP_PHOTOSHOP_DATE_CREATED,
-    TAG_XMP_EXIF_DATETIME_DIGITIZED,
-)
 
 
 class ArchiveMetadata:
