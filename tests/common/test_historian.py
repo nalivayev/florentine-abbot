@@ -5,7 +5,8 @@ import pytest
 from PIL import Image
 
 from common.exifer import Exifer
-from common.historian import XMPHistorian, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED
+from common.constants import TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED
+from common.historian import XMPHistorian
 
 
 def test_append_and_read_history(tmp_path):

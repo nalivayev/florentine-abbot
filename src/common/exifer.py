@@ -242,12 +242,18 @@ class Exifer:
         except json.JSONDecodeError as e:
             raise ValueError(f"Failed to parse exiftool output: {e}") from e
 
-    def read(self, file_path: Path, tag_names: list[str]) -> dict[str, Any]:
+    def read(self, file_path: Path, tag_names: list[str], exclude_patterns: list[str] | None = None, include_patterns: list[str] | None = None) -> dict[str, Any]:
         """Read specific metadata tags.
         
         Args:
             file_path: Path to the image file.
             tag_names: List of tag names to read (e.g., ['XMP-exif:DateTimeDigitized', 'ExifIFD:CreateDate']).
+                      Empty list means read all tags.
+            exclude_patterns: Optional list of tag name patterns to exclude (prefix or substring match).
+                             E.g., ['XMP-xmpMM:History'] will exclude tags starting with this prefix.
+            include_patterns: Optional list of tag name prefixes to include.
+                             E.g., ['XMP-', 'EXIF:', 'ExifIFD:'] will only include tags starting with these prefixes.
+                             If not provided, all tags are included (subject to exclusions).
             
         Returns:
             Dictionary with tag names as keys and their values.
@@ -264,6 +270,17 @@ class Exifer:
             # Skip non-tag fields
             if key in ["SourceFile", "ExifTool"]:
                 continue
+            
+            # Apply inclusion filter if provided (prefix match)
+            if include_patterns:
+                if not any(key.startswith(pattern) for pattern in include_patterns):
+                    continue
+            
+            # Apply exclusion filters if provided (prefix match)
+            if exclude_patterns:
+                if any(key.startswith(pattern) for pattern in exclude_patterns):
+                    continue
+            
             # Normalize line endings: exiftool on Windows returns \r\n, but we write \n
             if isinstance(value, str):
                 value = value.replace('\r\n', '\n')
