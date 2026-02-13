@@ -780,45 +780,6 @@ class TestExiftoolCompliance:
                 break
         assert found_date, f"Could not find partial date 1950 in metadata: {meta}"
 
-    def test_datetimedigitized_from_createdate(self, logger):
-        """Verify that DateTimeDigitized is copied from CreateDate if not already set."""
-        temp_dir = self.create_temp_dir()
-
-        filename = "2025.11.29.14.00.00.C.001.001.0001.A.RAW.tiff"
-        file_path = temp_dir / filename
-        self.create_dummy_image(file_path)
-
-        # Simulate VueScan behavior
-        subprocess.run([
-            "exiftool",
-            "-EXIF:CreateDate=2025:11:29 14:00:00",
-            "-overwrite_original",
-            str(file_path)
-        ], check=True)
-        
-        # Process the file
-        organizer = FileOrganizer(logger)
-
-        config_path = self._write_config(temp_dir, self._minimal_config())
-        processed_count = organizer(
-            input_path=temp_dir,
-            config_path=config_path,
-            recursive=False,
-            copy_mode=False,
-        )
-        assert processed_count == 1
-
-        # Check processed file
-        processed_path = temp_dir / "processed" / "2025" / "2025.11.29" / "SOURCES" / filename
-        assert processed_path.exists()
-        
-        meta_after = self.get_exiftool_json(processed_path)
-        
-        # DateTimeDigitized should now be set from CreateDate
-        assert "XMP-exif:DateTimeDigitized" in meta_after or "XMP:DateTimeDigitized" in meta_after
-        dt_digitized = meta_after.get("XMP-exif:DateTimeDigitized") or meta_after.get("XMP:DateTimeDigitized")       
-        assert dt_digitized == "2025:11:29 14:00:00"
-        
     def test_datetimedigitized_not_overwritten(self, logger):
         """Verify that existing DateTimeDigitized is not overwritten."""
         temp_dir = self.create_temp_dir()

@@ -142,29 +142,7 @@ class FileProcessor:
             tags[TAG_XMP_XMP_IDENTIFIER] = file_uuid
 
             # 2. Dates
-            # 2.1 DateTimeDigitized - preserve scanning date from CreateDate
-            try:
-                existing_tags = self._exifer.read(
-                    file_path,
-                    [TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIFIFD_CREATE_DATE],
-                )
-
-                date_digitized = (
-                    existing_tags.get(TAG_XMP_EXIF_DATETIME_DIGITIZED)
-                    or existing_tags.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
-                )
-
-                if not date_digitized:
-                    create_date = existing_tags.get(TAG_EXIFIFD_CREATE_DATE)
-                    if create_date:
-                        tags[TAG_XMP_EXIF_DATETIME_DIGITIZED] = create_date
-                        self._logger.debug("Set DateTimeDigitized from CreateDate: %s", create_date)
-                else:
-                    self._logger.debug("DateTimeDigitized already set: %s", date_digitized)
-            except Exception as exc:  # pragma: no cover - defensive
-                self._logger.warning("Could not process DateTimeDigitized: %s", exc)
-
-            # 2.2 DateTimeOriginal - date from filename (original photo date)
+            # 2.1 DateTimeOriginal - date from filename (original photo date)
             if parsed.modifier == "E":
                 dt_str = (
                     f"{parsed.year:04d}:{parsed.month:02d}:{parsed.day:02d} "
