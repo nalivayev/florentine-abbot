@@ -1,7 +1,8 @@
-"""Project-wide shared constants.
+"""
+Project-wide shared constants.
 
-These define canonical directory names and other cross-package conventions so
-that tools stay in sync.
+Defines canonical directory names, tag names, and cross-package conventions
+so that tools stay in sync.
 """
 
 # Common set of supported image file extensions (lowercase).
@@ -24,8 +25,7 @@ MIME_TYPE_MAP = {
 # Large files (>100MB) use one-off mode with timeout to prevent hanging
 EXIFTOOL_LARGE_FILE_TIMEOUT = 600  # 10 minutes
 
-# EXIF/XMP tag names
-# Used across all components for consistent metadata handling
+# EXIF/XMP tag names (used across all components for consistent metadata handling)
 # Organized by namespace: EXIF, ExifIFD, IFD0, XMP-xmp, XMP-dc, XMP-exif,
 # XMP-photoshop, XMP-xmpRights, XMP-tiff, XMP-xmpMM
 
