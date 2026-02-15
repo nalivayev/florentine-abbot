@@ -1,5 +1,6 @@
 {
-  "_comment": [
+
+  "help": [
     "Metadata field to XMP tag mapping.",
     "This file defines which XMP tags are used for metadata fields in the archive.",
     "Each key is a field name used in config.json languages section.",
@@ -36,7 +37,9 @@
   "creator": "XMP-dc:Creator",
   "rights": "XMP-dc:Rights",
   "source": "XMP-dc:Source",
+  "type": "XMP-dc:Type",
   "credit": "XMP-photoshop:Credit",
   "terms": "XMP-xmpRights:UsageTerms",
-  "type": "XMP-dc:Type"
+  "marked": "XMP-xmpRights:Marked"
+
 }

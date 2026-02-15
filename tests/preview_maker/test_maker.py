@@ -10,7 +10,7 @@ from PIL import Image
 from preview_maker import PreviewMaker
 from file_organizer.organizer import FileOrganizer
 from common.logger import Logger
-from common.metadata import TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_DESCRIPTION, TAG_XMP_DC_CREATOR, TAG_XMP_DC_RIGHTS, TAG_XMP_PHOTOSHOP_CREDIT, TAG_XMP_XMPRIGHTS_USAGE_TERMS, TAG_XMP_DC_SOURCE
+from common.constants import TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_DESCRIPTION, TAG_XMP_DC_CREATOR, TAG_XMP_DC_RIGHTS, TAG_XMP_PHOTOSHOP_CREDIT, TAG_XMP_XMPRIGHTS_USAGE_TERMS, TAG_XMP_DC_SOURCE
 from tests.common.test_utils import create_test_image
 
 

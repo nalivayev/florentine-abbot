@@ -15,41 +15,41 @@ from common.config_utils import get_config_dir, load_optional_config
 
 
 class Router:
-    """Determines target folders for files based on routing rules.
-    
-    The Router uses suffix-based routing rules and configurable path templates
-    to determine where files should be placed in the archive structure.
-    
+    """
+    Determines target folders for files based on routing rules.
+
+    Uses suffix-based routing rules and configurable path templates to determine where files should be placed in the archive structure.
+
     Archive structure (configurable via Formatter):
         Default: archive_root/{year:04d}/{year:04d}.{month:02d}.{day:02d}/
             ├── SOURCES/      - Raw scans and master files
             ├── DERIVATIVES/  - Processed derivatives
             └── (date folder)  - Preview files stored directly here
-    
+
     Path structure can be customized via formats.json:
         - Flat: {year:04d}.{month:02d}.{day:02d}/
         - By month: {year:04d}/{year:04d}.{month:02d}/
         - By group: {group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}/
-    
+
     Routing is configured via a suffix mapping (suffix -> subfolder):
         - "SOURCES": File goes to SOURCES/ subfolder
         - "DERIVATIVES": File goes to DERIVATIVES/ subfolder
         - ".": File goes directly to date folder root
     """
     
-    def __init__(self, suffix_routing: Optional[dict[str, str]] = None, logger = None):
-        """Initialize Router.
-        
+    def __init__(self, suffix_routing: Optional[dict[str, str]] = None, logger = None) -> None:
+        """
+        Initialize Router.
+
         Args:
-            suffix_routing: Optional suffix routing rules (suffix -> 'SOURCES'/'DERIVATIVES'/'.').  
-                           If None, loads from routes.json or uses DEFAULT_SUFFIX_ROUTING.
+            suffix_routing (dict[str, str]|None): Optional suffix routing rules (suffix -> 'SOURCES'/'DERIVATIVES'/'.').
+                If None, loads from routes.json or uses DEFAULT_SUFFIX_ROUTING.
             logger: Optional logger for diagnostic messages.
         """
         self._logger = logger
         self._formatter = Formatter(logger=logger)
-        
-        if suffix_routing is not None:
 
+        if suffix_routing is not None:
             self._suffix_routing = suffix_routing
         else:
             # Load from routes.json if available
@@ -58,59 +58,50 @@ class Router:
             self._suffix_routing = load_optional_config(logger, routes_path, DEFAULT_SUFFIX_ROUTING)
     
     def get_target_folder(self, parsed: ParsedFilename, base_path: Path) -> Path:
-        """Determine target folder for a file based on parsed filename.
-        
-        Uses Formatter to build path from template, then applies suffix routing
-        to determine subfolder (SOURCES/DERIVATIVES/date root).
-        
-        Args:
-            parsed: Parsed filename data
-            base_path: Base path (e.g., archive root or processed root)
-        
-        Returns:
-            Full path to target folder where file should be placed
-            (e.g., base_path/2024/2024.03.15/SOURCES or custom structure)
         """
-        # Use formatter to build path from template
+        Determine target folder for a file based on parsed filename.
+
+        Uses Formatter to build path from template, then applies suffix routing to determine subfolder (SOURCES/DERIVATIVES/date root).
+
+        Args:
+            parsed (ParsedFilename): Parsed filename data.
+            base_path (Path): Base path (e.g., archive root or processed root).
+
+        Returns:
+            Path: Full path to target folder where file should be placed (e.g., base_path/2024/2024.03.15/SOURCES or custom structure).
+        """
         formatted_path = self._formatter.format_path(parsed)
-        
         suffix_upper = parsed.suffix.upper()
-        
         date_root_dir = base_path / formatted_path
-        
-        # Get subfolder name from routing rules
-        # Use "*" as default if suffix not found
         subfolder = self._suffix_routing.get(suffix_upper, self._suffix_routing.get("*", "DERIVATIVES"))
-        
-        # "." means store directly in date folder root (e.g., preview files)
         if subfolder == ".":
             return date_root_dir
         else:
             return date_root_dir / subfolder
     
     def get_normalized_filename(self, parsed: ParsedFilename) -> str:
-        """Format filename according to configured template.
-        
-        Uses Formatter to apply filename template with format specifiers
-        (e.g., {year:04d}.{month:02d}.{day:02d}... or custom format).
-        
+        """
+        Format filename according to configured template.
+
+        Uses Formatter to apply filename template with format specifiers (e.g., {year:04d}.{month:02d}.{day:02d}... or custom format).
+
         Args:
-            parsed: Parsed filename data
-        
+            parsed (ParsedFilename): Parsed filename data.
+
         Returns:
-            Formatted filename (without extension)
+            str: Formatted filename (without extension).
         """
         return self._formatter.format_filename(parsed)
     
     def get_folders_for_suffixes(self, suffixes: list[str]) -> set[str]:
-        """Get unique folder names where files with given suffixes are stored.
-        
+        """
+        Get unique folder names where files with given suffixes are stored.
+
         Args:
-            suffixes: List of file suffixes (e.g., ['RAW', 'MSR'])
-        
+            suffixes (list[str]): List of file suffixes (e.g., ['RAW', 'MSR']).
+
         Returns:
-            Set of folder names (e.g., {'SOURCES', 'MASTERS'}). 
-            '.' is excluded as it represents date root, not a subfolder.
+            set[str]: Set of folder names (e.g., {'SOURCES', 'MASTERS'}). '.' is excluded as it represents date root, not a subfolder.
         """
         folders = set()
         for suffix in suffixes:

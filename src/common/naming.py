@@ -13,7 +13,8 @@ from typing import Pattern
 
 @dataclass
 class ParsedFilename:
-    """Parsed filename data for structured photo filenames.
+    """
+    Parsed filename data for structured photo filenames.
 
     Represents a structured photo filename broken down into its components:
     date, time, modifier, group/subgroup, sequence, side, suffix, and extension.
@@ -60,13 +61,14 @@ class FilenameParser:
     )
 
     def parse(self, filename: str) -> ParsedFilename | None:
-        """Parse a filename into components.
+        """
+        Parse a filename into components.
 
         Args:
-            filename: Filename to parse.
+            filename (str): Filename to parse.
 
         Returns:
-            ParsedFilename object if parsing successful, None otherwise.
+            ParsedFilename: Parsed filename object if parsing successful, None otherwise.
         """
         match = self.PATTERN.match(filename)
         if not match:
@@ -102,7 +104,6 @@ class FilenameParser:
                 suffix=suffix,
                 extension=extension.lower(),  # Normalize to lowercase
             )
-
         except (ValueError, IndexError):
             return None
 
@@ -135,15 +136,15 @@ class FilenameValidator:
         """Initialize the validator."""
 
     def validate(self, parsed: ParsedFilename) -> list[str]:
-        """Validate parsed filename data.
+        """
+        Validate parsed filename data.
 
         Args:
-            parsed: Parsed filename data.
+            parsed (ParsedFilename): Parsed filename data.
 
         Returns:
-            List of validation error messages (empty if valid).
+            list[str]: List of validation error messages (empty if valid).
         """
-
         errors: list[str] = []
 
         # Validate modifier
@@ -178,7 +179,6 @@ class FilenameValidator:
         except ValueError:
             # Should be caught by parser regex, but safe to ignore here if not a number
             pass
-
         return errors
 
     def _validate_date(self, parsed: ParsedFilename) -> list[str]:

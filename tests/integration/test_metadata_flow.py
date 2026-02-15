@@ -2,8 +2,7 @@ from pathlib import Path
 import uuid
 from typing import Any
 
-from common.metadata import (
-    ArchiveMetadata,
+from common.constants import (
     DATE_TAGS,
     IDENTIFIER_TAGS,
     TAG_XMP_DC_IDENTIFIER,

@@ -1,4 +1,9 @@
-"""Configuration utilities for florentine-abbot tools."""
+"""
+Configuration utilities for florentine-abbot tools.
+
+Provides helpers for config file discovery, loading, creation from templates,
+and fallback to defaults. Used by all major modules.
+"""
 
 import importlib.resources as resources
 import json
@@ -12,9 +17,9 @@ from typing import Any
 def get_config_dir() -> Path:
     """
     Get the standard configuration directory for florentine-abbot.
-    
+
     Returns:
-        Path to the configuration directory.
+        Path: Path to the configuration directory.
     """
     if sys.platform == 'win32':
         # Windows: %APPDATA%\florentine-abbot
@@ -29,13 +34,12 @@ def get_config_dir() -> Path:
 def get_config_path(tool_name: str, custom_path: str | Path | None = None) -> Path:
     """
     Get the path to a tool's configuration file.
-    
+
     Args:
-        tool_name: Name of the tool (e.g., 'file-organizer', 'archive-keeper').
-        custom_path: Optional custom path to config file.
-        
+        tool_name (str): Name of the tool (e.g., 'file-organizer', 'archive-keeper').
+        custom_path (str|Path|None): Optional custom path to config file.
     Returns:
-        Path object for the config file.
+        Path: Path object for the config file.
     """
     if custom_path:
         return Path(custom_path)
@@ -52,15 +56,14 @@ def ensure_config_exists(
 ) -> bool:
     """
     Ensure configuration file exists, creating it from template if needed.
-    
+
     Args:
-        logger: Logger instance for logging operations.
-        config_path: Path where config should exist.
-        template_content: Dictionary with default config (if no template file).
-        template_path: Path to template file to copy from.
-        
+        logger (Any): Logger instance for logging operations.
+        config_path (Path): Path where config should exist.
+        template_content (dict[str, Any]|None): Default config if no template file.
+        template_path (Path|None): Path to template file to copy from.
     Returns:
-        True if config was created, False if it already existed.
+        bool: True if config was created, False if it already existed.
     """
     if config_path.exists():
         return False
@@ -102,13 +105,12 @@ def ensure_config_exists(
 def load_config(logger: Any, config_path: Path) -> dict[str, Any]:
     """
     Load configuration from JSON file.
-    
+
     Args:
-        logger: Logger instance for logging operations.
-        config_path: Path to config file.
-        
+        logger (Any): Logger instance for logging operations.
+        config_path (Path): Path to config file.
     Returns:
-        Configuration dictionary, or empty dict if loading fails.
+        dict[str, Any]: Configuration dictionary, or empty dict if loading fails.
     """
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
@@ -137,17 +139,16 @@ def load_optional_config(
 ) -> dict[str, Any]:
     """
     Load optional configuration from JSON file with fallback to defaults.
-    
+
     If file doesn't exist or fails to load, returns default_dict.
     Useful for optional configuration files like tags.json, routes.json.
-    
+
     Args:
-        logger: Logger instance for logging operations.
-        config_path: Path to config file (may not exist).
-        default_dict: Default configuration to use if file not found.
-        
+        logger (Any): Logger instance for logging operations.
+        config_path (Path): Path to config file (may not exist).
+        default_dict (dict[str, Any]): Default configuration to use if file not found.
     Returns:
-        Configuration dictionary from file, or default_dict if unavailable.
+        dict[str, Any]: Configuration dictionary from file, or default_dict if unavailable.
     """
     if not config_path.exists():
         if logger:
@@ -172,14 +173,13 @@ def load_optional_config(
 
 def get_template_path(module_name: str, filename: str = "config.template.json") -> Path | None:
     """
-    Get path to template file from installed package.
-    
+    Get path to template file from installed package or source tree.
+
     Args:
-        module_name: Name of the module (e.g., 'file_organizer').
-        filename: Template filename.
-        
+        module_name (str): Name of the module (e.g., 'file_organizer').
+        filename (str): Template filename.
     Returns:
-        Path to template file, or None if not found.
+        Path|None: Path to template file, or None if not found.
     """
     try:
         # Python 3.9+ approach

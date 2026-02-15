@@ -9,31 +9,11 @@ configured with parameters and then executed via :meth:`__call__`.
 import uuid
 import datetime
 from pathlib import Path
-from typing import Any
-
 from PIL import Image
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename
-from common.constants import (
-    SUPPORTED_IMAGE_EXTENSIONS,
-    MIME_TYPE_MAP,
-    IDENTIFIER_TAGS,
-    DATE_TAGS,
-    TAG_XMP_DC_IDENTIFIER,
-    TAG_XMP_XMP_IDENTIFIER,
-    TAG_XMP_DC_RELATION,
-    TAG_XMP_EXIF_DATETIME_DIGITIZED,
-    TAG_EXIFIFD_DATETIME_DIGITIZED,
-    TAG_XMP_DC_FORMAT,
-    TAG_XMP_XMPMM_DOCUMENT_ID,
-    TAG_XMP_XMPMM_INSTANCE_ID,
-    TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID,
-    TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID,
-    TAG_XMP_XMPMM_HISTORY,
-    XMP_ACTION_CONVERTED,
-    XMP_ACTION_EDITED,
-)
+from common.constants import SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_FORMAT, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CONVERTED, XMP_ACTION_EDITED
 from common.metadata import ArchiveMetadata
 from common.exifer import Exifer
 from common.router import Router
