@@ -3,7 +3,7 @@
 from typing import Any, Optional
 
 from common.metadata import ArchiveMetadata
-from common.constants import DEFAULT_METADATA_TAGS, DEFAULT_METADATA
+from common.constants import DEFAULT_TAGS, DEFAULT_METADATA
 from common.logger import Logger
 
 
@@ -30,5 +30,5 @@ class FakeArchiveMetadata(ArchiveMetadata):
         """
         # Don't call super().__init__() - it would load real configs
         self._logger = logger
-        self._metadata_tags = metadata_tags if metadata_tags is not None else DEFAULT_METADATA_TAGS
+        self._metadata_tags = metadata_tags if metadata_tags is not None else DEFAULT_TAGS
         self._metadata_config = metadata_config if metadata_config is not None else DEFAULT_METADATA

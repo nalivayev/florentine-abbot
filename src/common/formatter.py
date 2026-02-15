@@ -5,7 +5,6 @@ to format archive paths and filenames from parsed filename components.
 """
 
 import json
-from pathlib import Path
 from typing import Optional
 
 from common.config_utils import get_config_dir
@@ -116,13 +115,13 @@ class Formatter:
             raise
     
     def format_filename(self, parsed: ParsedFilename) -> str:
-        """Format the filename (without extension) from parsed components.
-        
+        """
+        Format the filename (without extension) from parsed components.
+
         Args:
-            parsed: Parsed filename components
-            
+            parsed (ParsedFilename): Parsed filename components.
         Returns:
-            Formatted filename without extension (e.g., "2024.01.15.10.30.45.E.FAM.POR.0001.A.RAW")
+            str: Formatted filename without extension (e.g., "2024.01.15.10.30.45.E.FAM.POR.0001.A.RAW").
         """
         try:
             return self.filename_template.format(

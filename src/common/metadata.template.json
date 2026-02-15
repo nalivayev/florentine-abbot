@@ -1,5 +1,6 @@
 {
-  "_comment": [
+
+  "help": [
     "Archival metadata configuration (shared across all tools).",
     "This file defines multi-language metadata texts for the archive.",
     "",
@@ -27,58 +28,50 @@
   ],
 
   "languages": {
+
     "ru-RU": {
       "default": true,
-
       "creator": ["Имя Фамилия", "Соавтор"],
-
       "credit": [
         "Ваш семейный архив"
       ],
-
       "description": [
-        "Краткое описание этого архива (по-русски)."
+        "Краткое описание этого архива."
       ],
-
       "rights": [
-        "Скан © 2025 Ваше имя"
+        "Сканирование © 2025 Ваше имя"
       ],
-
       "terms": [
         "Только для личного использования."
       ],
-
       "source": [
         "Место хранения оригинального физического носителя."
       ],
-
-      "type": "StillImage"
+      "type": "StillImage",
+      "marked": "True"
     },
 
     "en-US": {
       "creator": ["Name Surname", "Co-author"],
-
       "credit": [
         "Your Family Archive"
       ],
-
       "description": [
-        "Short description of this archive (in English)."
+        "Short description of this archive."
       ],
-
       "rights": [
-        "Scan © 2025 Your Name"
+        "Scanning © 2025 Your Name"
       ],
-
       "terms": [
         "Personal use only."
       ],
-
       "source": [
         "Original physical item location."
       ],
-
-      "type": "StillImage"
+      "type": "StillImage",
+      "marked": "True"
     }
+
   }
+
 }

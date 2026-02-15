@@ -1,5 +1,6 @@
 {
-  "_comment": [
+
+  "help": [
     "Suffix routing rules for file organization.",
     "This file defines where files with different suffixes are stored in the archive structure.",
     "",
@@ -27,4 +28,5 @@
   "MSR": "SOURCES",
   "PRV": ".",
   "*": "DERIVATIVES"
+
 }

@@ -13,8 +13,8 @@ class Exifer:
     """
     Utility class for extracting and converting EXIF metadata from images.
 
-    Provides methods for reading specific tags and writing metadata using exiftool.
-    Optimized to use a shared persistent exiftool process (via -stay_open) to avoid
+    Provides methods for reading and writing specific tags using exiftool.
+    Uses a shared persistent exiftool process (via -stay_open) to avoid
     process creation overhead for each operation.
     """
     
@@ -23,14 +23,29 @@ class Exifer:
     _locks: dict[str, threading.Lock] = {}
     _global_lock = threading.Lock()
 
-    def __init__(self, executable: str = "exiftool"):
-        self.executable = executable
+    def __init__(self, executable: str = "exiftool") -> None:
+        """
+        Initialize Exifer with the given exiftool executable.
+
+        Args:
+            executable (str): Path or name of the exiftool binary.
+        Raises:
+            FileNotFoundError: If exiftool is not found in PATH.
+        """
+        self.executable: str = executable
         if not shutil.which(self.executable):
-             raise FileNotFoundError(f"Exiftool executable '{self.executable}' not found in PATH.")
+            raise FileNotFoundError(f"Exiftool executable '{self.executable}' not found in PATH.")
 
     @classmethod
     def _get_process(cls, executable: str) -> subprocess.Popen:
-        """Get or create a persistent exiftool process for the given executable."""
+        """
+        Get or create a persistent exiftool process for the given executable.
+
+        Args:
+            executable (str): Path or name of the exiftool binary.
+        Returns:
+            subprocess.Popen: The persistent exiftool process.
+        """
         with cls._global_lock:
             if executable not in cls._locks:
                 cls._locks[executable] = threading.Lock()
@@ -44,7 +59,12 @@ class Exifer:
 
     @classmethod
     def _start_process(cls, executable: str) -> None:
-        """Start a new exiftool process in stay_open mode."""
+        """
+        Start a new exiftool process in stay_open mode.
+
+        Args:
+            executable (str): Path or name of the exiftool binary.
+        """
         # Add -charset utf8 to properly handle UTF-8 encoded arguments
         # IMPORTANT: -charset utf8 must appear BEFORE -@ - so that exiftool knows
         # the input stream (stdin) is UTF-8 encoded.
@@ -66,7 +86,9 @@ class Exifer:
 
     @classmethod
     def _stop_all(cls) -> None:
-        """Stop all running exiftool processes."""
+        """
+        Stop all running exiftool processes.
+        """
         for executable, process in cls._processes.items():
             if process.poll() is None:
                 try:
@@ -80,7 +102,13 @@ class Exifer:
         cls._processes.clear()
 
     def _kill_process_and_signal(self, process: subprocess.Popen, event: threading.Event) -> None:
-        """Kill process and set event flag. Used as Timer callback."""
+        """
+        Kill process and set event flag. Used as Timer callback.
+
+        Args:
+            process (subprocess.Popen): The process to kill.
+            event (threading.Event): Event to set after killing.
+        """
         event.set()
         try:
             process.kill()
@@ -88,7 +116,15 @@ class Exifer:
             pass
 
     def _run(self, args: Sequence[str], timeout: float = EXIFTOOL_LARGE_FILE_TIMEOUT) -> str:
-        """Run exiftool with arguments using the shared persistent process."""
+        """
+        Run exiftool with arguments using the shared persistent process.
+
+        Args:
+            args (Sequence[str]): Arguments for exiftool.
+            timeout (float): Timeout in seconds.
+        Returns:
+            str: Output from exiftool.
+        """
         # Check for newlines in args which break -stay_open protocol
         if any("\n" in str(arg) for arg in args):
              return self._run_one_off(args, timeout=timeout)
@@ -150,16 +186,27 @@ class Exifer:
             return self._run_one_off(args, timeout=timeout)
 
     def _run_one_off(self, args: Sequence[str], timeout: float | int | None = None) -> str:
+        """
+        Run exiftool in one-off mode (not persistent) for the given arguments.
+
+        Handles multiline values by writing them to temporary files if needed.
+
+        Args:
+            args (Sequence[str]): Arguments for exiftool.
+            timeout (float|int|None): Timeout in seconds.
+        Returns:
+            str: Output from exiftool.
+        """
         import tempfile
-        
+
         # Check if any args contain newlines (multiline values)
         has_multiline = any("\n" in str(arg) for arg in args if str(arg).startswith("-") and "=" in str(arg))
-        
+
         if not has_multiline:
             # Simple case: no multiline values, use standard argfile approach
             cmd = [self.executable, "-charset", "utf8", "-@", "-"]
             input_str = "\n".join(str(arg) for arg in args)
-            
+
             try:
                 result = subprocess.run(
                     cmd,
@@ -174,12 +221,12 @@ class Exifer:
                 return result.stdout
             except subprocess.CalledProcessError as exc:
                 raise RuntimeError(f"Exiftool failed: {exc.stderr}") from exc
-        
+
         # Complex case: has multiline values
         # Use temporary files for multiline tag values with -TAG<=file syntax
         temp_files = []
         processed_args = []
-        
+
         try:
             for arg in args:
                 arg_str = str(arg)
@@ -195,11 +242,11 @@ class Exifer:
                     processed_args.append(f"{tag_part}<={temp_file.name}")
                 else:
                     processed_args.append(arg_str)
-            
+
             # Now use argfile with the processed args
             cmd = [self.executable, "-charset", "utf8", "-@", "-"]
             input_str = "\n".join(processed_args)
-            
+
             try:
                 result = subprocess.run(
                     cmd,
@@ -223,10 +270,17 @@ class Exifer:
                     pass
 
     def _read_json(self, file_path: Path, args: Sequence[str] | None = None) -> dict[str, Any]:
-        """Read metadata as JSON.
+        """
+        Read metadata as JSON.
 
         Internal helper used by :meth:`read` to fetch raw JSON output
         from exiftool and decode it into a Python dictionary.
+
+        Args:
+            file_path (Path): Path to the file.
+            args (Sequence[str]|None): Additional exiftool arguments.
+        Returns:
+            dict[str, Any]: Parsed metadata dictionary.
         """
         cmd_args = ["-json"]
         if args:
@@ -243,20 +297,16 @@ class Exifer:
             raise ValueError(f"Failed to parse exiftool output: {e}") from e
 
     def read(self, file_path: Path, tag_names: list[str], exclude_patterns: list[str] | None = None, include_patterns: list[str] | None = None) -> dict[str, Any]:
-        """Read specific metadata tags.
-        
+        """
+        Read specific metadata tags from a file.
+
         Args:
-            file_path: Path to the image file.
-            tag_names: List of tag names to read (e.g., ['XMP-exif:DateTimeDigitized', 'ExifIFD:CreateDate']).
-                      Empty list means read all tags.
-            exclude_patterns: Optional list of tag name patterns to exclude (prefix or substring match).
-                             E.g., ['XMP-xmpMM:History'] will exclude tags starting with this prefix.
-            include_patterns: Optional list of tag name prefixes to include.
-                             E.g., ['XMP-', 'EXIF:', 'ExifIFD:'] will only include tags starting with these prefixes.
-                             If not provided, all tags are included (subject to exclusions).
-            
+            file_path (Path): Path to the image file.
+            tag_names (list[str]): List of tag names to read (empty for all tags).
+            exclude_patterns (list[str]|None): Tag name patterns to exclude.
+            include_patterns (list[str]|None): Tag name prefixes to include.
         Returns:
-            Dictionary with tag names as keys and their values.
+            dict[str, Any]: Dictionary with tag names as keys and their values.
         """
         args = ["-G1"]  # Use -G1 to get group prefixes in output
         for tag_name in tag_names:
@@ -289,16 +339,16 @@ class Exifer:
         return result
 
     def write(self, file_path: Path, tags: dict[str, Any], overwrite_original: bool = True, timeout: int | None = None) -> bool:
-        """Write metadata tags.
-        
+        """
+        Write metadata tags to a file.
+
         Args:
-            file_path: Path to the file.
-            tags: Dictionary of tag names and values to write.
-            overwrite_original: Whether to overwrite the original file.
-            timeout: Timeout in seconds for large files (uses one-off mode if set).
-            
+            file_path (Path): Path to the file.
+            tags (dict[str, Any]): Tag names and values to write.
+            overwrite_original (bool): Overwrite the original file if True.
+            timeout (int|None): Timeout in seconds for large files.
         Returns:
-            True if successful.
+            bool: True if successful.
         """
         # Skip if no tags to write
         if not tags:

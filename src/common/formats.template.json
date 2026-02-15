@@ -1,5 +1,6 @@
 {
-  "_comment": [
+
+  "help": [
     "Archive file path and filename formatting templates.",
     "These templates define how files are organized in the archive structure.",
     "",
@@ -28,4 +29,5 @@
 
   "path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
   "filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+
 }

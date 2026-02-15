@@ -13,7 +13,7 @@ from file_organizer.organizer import FileOrganizer
 from preview_maker.maker import PreviewMaker
 from common.logger import Logger
 from common.exifer import Exifer
-from common.metadata import TAG_IFD0_MAKE, TAG_IFD0_MODEL
+from common.constants import TAG_IFD0_MAKE, TAG_IFD0_MODEL
 
 
 @pytest.mark.manual

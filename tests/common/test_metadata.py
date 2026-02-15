@@ -1,9 +1,7 @@
 """Tests for ArchiveMetadata configuration provider."""
 
-from typing import Any
 
-from common.metadata import ArchiveMetadata
-from common.constants import DEFAULT_METADATA_TAGS
+from common.constants import DEFAULT_TAGS
 from common.logger import Logger
 
 from tests.common.fake_archive_metadata import FakeArchiveMetadata
@@ -18,7 +16,7 @@ class TestGetConfigurableTags:
         
         tags = am.get_configurable_tags()
         
-        assert tags == list(DEFAULT_METADATA_TAGS.values())
+        assert tags == list(DEFAULT_TAGS.values())
 
     def test_returns_custom_tags_from_config(self) -> None:
         """Returns tags from custom configuration."""
