@@ -48,3 +48,9 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 version_scheme = "post-release"
 local_scheme = "node-and-date"
+
+[tool.pytest.ini_options]
+markers = [
+    "manual: manual tests excluded from regular runs (run with: pytest -m manual)",
+]
+addopts = "-m 'not manual'"

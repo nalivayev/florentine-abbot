@@ -1,5 +1,5 @@
 from configparser import ConfigParser, ExtendedInterpolation
-from shutil import SameFileError, move
+from shutil import SameFileError, copy2
 from os.path import getmtime
 from getpass import getuser
 from subprocess import run
@@ -11,7 +11,7 @@ import datetime
 from common.logger import Logger
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import MetadataWorkflow
-from scan_batcher.constants import EXIF_DATETIME_FORMAT
+from scan_batcher.constants import EXIF_DATETIME_FORMAT, EXIF_DATETIME_FORMAT_MS
 
 
 @register_workflow("vuescan")
@@ -236,6 +236,12 @@ class VuescanWorkflow(MetadataWorkflow):
         if moment is None:
             moment = datetime.datetime.fromtimestamp(getmtime(path))
 
+        # Ensure timezone is set (VueScan writes naive datetimes without TZ)
+        if moment.tzinfo is None:
+            local_offset = datetime.datetime.now(datetime.timezone.utc).astimezone().utcoffset()
+            if local_offset is not None:
+                moment = moment.replace(tzinfo=datetime.timezone(local_offset))
+
         # Store for use by _write_xmp_history
         self._scan_datetime = moment
 
@@ -245,7 +251,10 @@ class VuescanWorkflow(MetadataWorkflow):
 
     @staticmethod
     def _parse_exif_datetime(value: str) -> datetime.datetime:
-        """Parse EXIF datetime string (YYYY:MM:DD HH:MM:SS) to datetime object.
+        """Parse EXIF datetime string to datetime object.
+        
+        Supports both standard EXIF format (YYYY:MM:DD HH:MM:SS)
+        and format with fractional seconds (YYYY:MM:DD HH:MM:SS.fff).
         
         Args:
             value: EXIF datetime string.
@@ -256,88 +265,127 @@ class VuescanWorkflow(MetadataWorkflow):
         Raises:
             ValueError: If the value cannot be parsed.
         """
-        try:
-            return datetime.datetime.strptime(value, EXIF_DATETIME_FORMAT)
-        except ValueError as e:
-            raise ValueError(f"Invalid EXIF datetime format: {value}") from e
+        for fmt in (EXIF_DATETIME_FORMAT_MS, EXIF_DATETIME_FORMAT):
+            try:
+                return datetime.datetime.strptime(value, fmt)
+            except ValueError:
+                continue
+        raise ValueError(f"Invalid EXIF datetime format: {value}")
 
-    def _move_output_file(self) -> None:
+    def _prepare_output_file(self) -> Path:
         """
-        Move the scanned file from VueScan output to final destination.
+        Locate the VueScan output file and extract EXIF templates from it.
         
-        Also stores the output path in self._output_file_path for use by other methods.
-
+        Finds the scanned file in VueScan's output directory, reads its EXIF
+        data to populate datetime templates, and stores scan_datetime.
+        
+        Returns:
+            Path to the VueScan output file (in its original location).
+        
         Raises:
-            FileNotFoundError: If output file not found.
-            RuntimeError: If file move fails.
+            FileNotFoundError: If output file not found after scanning.
         """
         input_path = Path(
             self._get_workflow_value("vuescan", "output_path"),
             f"{self._get_workflow_value('vuescan', 'output_file_name')}.{self._get_workflow_value('vuescan', 'output_extension_name')}"
         )
-        if input_path.exists():
-            self._add_output_file_templates(input_path)
-            output_path_name = self._get_workflow_value("main", "output_path")
-            if not Path(output_path_name).exists():
-                makedirs(output_path_name, True)
-            output_path = Path(
-                output_path_name,
-                f"{self._get_workflow_value('main', 'output_file_name')}{input_path.suffix}"
-            )
-            try:
-                move(input_path, output_path)
-                # Store for use by _write_xmp_history
-                self._output_file_path = output_path
-                self._logger.info(
-                    f"Scanned file '{input_path.name}' moved from '{input_path.parent}' to '{output_path.parent}', "
-                    f"final name: '{output_path.name}'"
-                )
-            except OSError as e:
-                raise RuntimeError(
-                    f"Error moving resulting file from '{input_path}' to '{output_path}'"
-                ) from e
-        else:
+        if not input_path.exists():
             raise FileNotFoundError(f"Output file '{input_path}' not found after scanning")
-
-    def _move_logging_file(self) -> None:
-        """
-        Move VueScan log file to the output directory.
-        """
-        input_path = Path(
-            self._get_script_value("main", "logging_path"), self._get_script_value("main", "logging_name")
-        )
-        if input_path.exists():
-            output_path = Path(
-                self._get_workflow_value("main", "output_path"),
-                f"{self._get_workflow_value('main', 'output_file_name')}{input_path.suffix}"
-            )
-            try:
-                move(input_path, output_path)
-                self._logger.info(
-                    f"Logging file '{input_path.name}' moved from '{input_path.parent}' to '{output_path.parent}', "
-                    f"final name: '{output_path.name}'"
-                )
-            except OSError as e:
-                raise RuntimeError(
-                    f"Error moving resulting file from '{input_path}' to '{output_path}'"
-                ) from e
-        else:
-            self._logger.warning("VueScan logging file not found")
-
-    def _write_xmp_history_for_scan(self) -> None:
-        """
-        Write XMP history for the scanned file using parent's implementation.
-        """
-        if self._output_file_path is None or not self._output_file_path.exists():
-            self._logger.warning("Cannot write XMP history: output file path not set or file doesn't exist")
-            return
         
+        self._add_output_file_templates(input_path)
+        return input_path
+
+    def _write_xmp_history_for_scan(self, file_path: Path) -> None:
+        """
+        Write XMP history to the scanned file before it is moved.
+        
+        Args:
+            file_path: Path to the scanned file (in its original location).
+        """
         if self._scan_datetime is None:
             self._logger.warning("Cannot write XMP history: scan datetime not set")
             return
         
-        # Use parent's _write_xmp_history with file path and datetime
-        self._write_xmp_history(self._output_file_path, self._scan_datetime)
+        self._write_xmp_history(file_path, self._scan_datetime)
+
+    def _move_files(self, scan_file: Path) -> None:
+        """
+        Atomically move scanned file and its log to the final destination.
+
+        Strategy (same as FileOrganizer):
+        1. Copy scan file to ``<dest>.tmp``
+        2. Copy log file (if exists) to destination
+        3. Rename ``<dest>.tmp`` → ``<dest>`` (atomic on same volume)
+        4. Delete originals
+
+        If any step fails the partial copies are cleaned up and
+        both originals are left untouched.
+
+        Args:
+            scan_file: Path to the scanned image (with XMP already written).
+        """
+        output_dir = self._get_workflow_value("main", "output_path")
+        output_name = self._get_workflow_value("main", "output_file_name")
+
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+        dest_scan = Path(output_dir, f"{output_name}{scan_file.suffix}")
+        temp_scan = dest_scan.with_suffix(dest_scan.suffix + ".tmp")
+
+        # Locate log file (optional)
+        log_input = Path(
+            self._get_script_value("main", "logging_path"),
+            self._get_script_value("main", "logging_name"),
+        )
+        log_exists = log_input.exists()
+        dest_log = Path(output_dir, f"{output_name}{log_input.suffix}") if log_exists else None
+
+        try:
+            # 1. Copy scan file to temp
+            copy2(str(scan_file), str(temp_scan))
+            self._logger.info(
+                f"Scanned file '{scan_file.name}' copied to temp '{temp_scan.name}'"
+            )
+
+            # 2. Copy log file (if exists)
+            if log_exists and dest_log is not None:
+                copy2(str(log_input), str(dest_log))
+                self._logger.info(
+                    f"Logging file '{log_input.name}' copied to '{dest_log.name}'"
+                )
+
+            # 3. Atomic rename temp → final
+            temp_scan.rename(dest_scan)
+            self._output_file_path = dest_scan
+            self._logger.info(
+                f"Scanned file '{scan_file.name}' moved from '{scan_file.parent}' "
+                f"to '{dest_scan.parent}', final name: '{dest_scan.name}'"
+            )
+
+            # 4. Delete originals
+            scan_file.unlink()
+            self._logger.info(f"Deleted source: {scan_file}")
+
+            if log_exists:
+                try:
+                    log_input.unlink()
+                    self._logger.info(f"Deleted source log: {log_input}")
+                except OSError as e:
+                    self._logger.warning(f"Failed to delete source log '{log_input}': {e}")
+
+        except Exception as e:
+            # Rollback: remove any partial copies
+            self._logger.error(f"Failed to move files: {e}")
+            for leftover in (temp_scan, dest_log):
+                if leftover and leftover.exists():
+                    try:
+                        leftover.unlink()
+                        self._logger.info(f"Cleaned up partial copy: {leftover}")
+                    except OSError:
+                        pass
+            raise RuntimeError(
+                f"Error moving scan files to '{output_dir}'"
+            ) from e
 
     def __call__(self, workflow_path: str, templates: dict[str, str]) -> None:
         """
@@ -354,7 +402,7 @@ class VuescanWorkflow(MetadataWorkflow):
         self._read_settings()
         self._overwrite_vuescan_settings_file()
         self._run_vuescan()
-        self._move_output_file()
-        self._move_logging_file()
-        self._write_xmp_history_for_scan()
+        output_file = self._prepare_output_file()
+        self._write_xmp_history_for_scan(output_file)
+        self._move_files(output_file)
         self._logger.info("Workflow completed successfully")
