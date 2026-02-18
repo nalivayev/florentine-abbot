@@ -1,4 +1,5 @@
-"""File path and filename formatting based on templates.
+"""
+File path and filename formatting based on templates.
 
 This module provides the Formatter class which applies configurable templates
 to format archive paths and filenames from parsed filename components.
@@ -19,7 +20,8 @@ DEFAULT_PATH_TEMPLATE = "{year:04d}/{year:04d}.{month:02d}.{day:02d}"
 DEFAULT_FILENAME_TEMPLATE = "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
     
 class Formatter:
-    """Formats file paths and names using configurable templates.
+    """
+    Formats file paths and names using configurable templates.
     
     Templates use Python string formatting with fields from ParsedFilename:
     - {year}, {month}, {day}, {hour}, {minute}, {second}
@@ -37,7 +39,8 @@ class Formatter:
         filename_template: Optional[str] = None,
         logger: Optional[Logger] = None
     ):
-        """Initialize Formatter with templates.
+        """
+        Initialize Formatter with templates.
         
         Args:
             path_template: Template for folder path (e.g., "{year}/{year}.{month:02d}.{day:02d}")
@@ -61,7 +64,8 @@ class Formatter:
         self.logger.debug(f"Formatter initialized with filename_template: {self.filename_template}")
     
     def _load_formats_config(self) -> dict:
-        """Load formats.json from user config directory.
+        """
+        Load formats.json from user config directory.
         
         Returns:
             Dictionary with path_template and filename_template, or empty dict if not found
@@ -83,7 +87,8 @@ class Formatter:
             return {}
     
     def format_path(self, parsed: ParsedFilename) -> str:
-        """Format the folder path from parsed filename components.
+        """
+        Format the folder path from parsed filename components.
         
         Args:
             parsed: Parsed filename components

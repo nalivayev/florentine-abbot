@@ -10,11 +10,7 @@ Actual reading/writing of metadata is done by individual components
 
 from typing import Any, Optional
 
-from common.constants import (
-    DEFAULT_TAGS,
-    DEFAULT_METADATA
-    # Tag names,
-)
+from common.constants import DEFAULT_TAGS, DEFAULT_METADATA
 from common.logger import Logger
 from common.config_utils import get_config_dir, load_optional_config, ensure_config_exists, get_template_path
 
