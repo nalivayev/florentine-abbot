@@ -8,11 +8,9 @@ from file_organizer.organizer import FileOrganizer
 from preview_maker import PreviewMaker
 from common.exifer import Exifer
 from common.logger import Logger
-from common.constants import TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED, TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIFIFD_CREATE_DATE, TAG_IFD0_SOFTWARE, TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION
+from common.constants import TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED, TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIFIFD_CREATE_DATE, TAG_IFD0_SOFTWARE, TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION
 from common.historian import XMPHistorian
 from tests.scan_batcher.fake_workflow import FakeVuescanWorkflow
-from datetime import datetime, timezone
-import uuid
 
 
 class TestPipeline:
