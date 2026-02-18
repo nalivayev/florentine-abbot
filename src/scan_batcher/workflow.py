@@ -70,9 +70,6 @@ class MetadataWorkflow(Workflow):
         "IFD0:DateTime",
     ]
 
-    # EXIF tag for software/creator tool
-    _EXIF_SOFTWARE_TAG = "IFD0:Software"
-
     # Image extensions that support EXIF metadata (lowercase).
     _EXIF_SUPPORTED_EXTENSIONS = {".tif", ".tiff", ".jpg", ".jpeg"}
 
@@ -149,7 +146,6 @@ class MetadataWorkflow(Workflow):
         self,
         file_path: Path,
         file_datetime: datetime.datetime,
-        created_agent: str | None = None,
     ) -> bool:
         """
         Write XMP metadata: DocumentID/InstanceID, DateTimeDigitized, and History entries.
@@ -165,11 +161,13 @@ class MetadataWorkflow(Workflow):
         timezone information, it is enriched with the timezone from file_datetime.
         This ensures consistent ISO 8601 format across all files.
         
+        Both History entries use "scan-batcher X.Y" as the software agent,
+        since scan-batcher is the tool that writes all XMP tags. Scanner
+        software info (e.g. VueScan) is already preserved in IFD0:Software.
+        
         Args:
             file_path: Path to the file to write metadata to.
             file_datetime: Datetime for the history entries (with timezone).
-            created_agent: Software agent for 'created' action. If None, reads from
-                          IFD0:Software tag or uses scan-batcher version.
         
         Returns:
             True if successful, False otherwise.
@@ -191,7 +189,6 @@ class MetadataWorkflow(Workflow):
             existing_tags = self._exifer.read(file_path, [
                 TAG_XMP_XMPMM_DOCUMENT_ID,
                 TAG_XMP_XMPMM_INSTANCE_ID,
-                self._EXIF_SOFTWARE_TAG,
                 TAG_XMP_EXIF_DATETIME_DIGITIZED,
                 TAG_EXIFIFD_DATETIME_DIGITIZED,
                 TAG_EXIF_OFFSET_TIME_DIGITIZED,
@@ -279,20 +276,14 @@ class MetadataWorkflow(Workflow):
             self._exifer.write(file_path, tags_to_write, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
             self._logger.debug(f"Successfully wrote DocumentID, InstanceID" + (f", and dc:Format ({dc_format})" if dc_format else ""))
 
-            # Determine software agent for 'created' action
-            if created_agent is None:
-                software_tag = existing_tags.get(self._EXIF_SOFTWARE_TAG)
-                if software_tag:
-                    created_agent = software_tag
-                else:
-                    created_agent = f"scan-batcher {self._get_major_version()}"
+            agent = f"scan-batcher {self._get_major_version()}"
 
             # Write first history entry: 'created'
             self._logger.debug(f"Writing 'created' history entry for {file_path.name}...")
             success = self._historian.append_entry(
                 file_path=file_path,
                 action=XMP_ACTION_CREATED,
-                software_agent=created_agent,
+                software_agent=agent,
                 when=file_datetime,
                 instance_id=instance_id,
                 logger=self._logger,
@@ -303,12 +294,11 @@ class MetadataWorkflow(Workflow):
                 self._logger.debug("Successfully wrote 'created' history entry")
 
             # Write second history entry: 'edited'
-            edited_agent = f"scan-batcher {self._get_major_version()}"
             self._logger.debug(f"Writing 'edited' history entry for {file_path.name}...")
             success = self._historian.append_entry(
                 file_path=file_path,
                 action=XMP_ACTION_EDITED,
-                software_agent=edited_agent,
+                software_agent=agent,
                 when=file_datetime,
                 changed="metadata",
                 instance_id=instance_id,

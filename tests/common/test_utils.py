@@ -107,4 +107,4 @@ def add_scanner_metadata(
     logger = Logger("test", console=False)
     workflow = FakeMetadataWorkflow(logger)
     file_datetime = workflow.get_digitized_datetime(path)
-    workflow.write_xmp_metadata(path, file_datetime, created_agent=scanner_software)
+    workflow.write_xmp_metadata(path, file_datetime)
