@@ -55,6 +55,7 @@ CM_TO_INCH = 2.54  # Conversion factor from centimeters to inches
 # EXIF date/time formats
 EXIF_DATE_FORMAT = "%Y:%m:%d"
 EXIF_DATETIME_FORMAT = "%Y:%m:%d %H:%M:%S"
+EXIF_DATETIME_FORMAT_MS = "%Y:%m:%d %H:%M:%S.%f"  # With fractional seconds
 
 # Default workflow engine
 DEFAULT_ENGINE = "vuescan"

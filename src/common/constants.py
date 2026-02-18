@@ -65,6 +65,7 @@ TAG_XMP_PHOTOSHOP_CREDIT = "XMP-photoshop:Credit"
 
 # XMP-xmpRights tags
 TAG_XMP_XMPRIGHTS_USAGE_TERMS = "XMP-xmpRights:UsageTerms"
+TAG_XMP_XMPRIGHTS_MARKED = "XMP-xmpRights:Marked"
 
 # XMP-tiff tags
 TAG_XMP_TIFF_MAKE = "XMP-tiff:Make"
