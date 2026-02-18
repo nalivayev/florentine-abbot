@@ -76,8 +76,8 @@ class XMPHistorian:
                 logger.error(f"File not found: {file_path}")
             return False
 
-        # Convert datetime to ISO 8601 format with timezone
-        when_iso = when.isoformat()
+        # Convert datetime to ISO 8601 format with timezone and milliseconds
+        when_iso = when.isoformat(timespec='milliseconds')
 
         # Build history entry
         history_entry = {

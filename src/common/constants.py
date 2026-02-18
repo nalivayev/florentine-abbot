@@ -65,6 +65,7 @@ TAG_XMP_PHOTOSHOP_CREDIT = "XMP-photoshop:Credit"
 
 # XMP-xmpRights tags
 TAG_XMP_XMPRIGHTS_USAGE_TERMS = "XMP-xmpRights:UsageTerms"
+TAG_XMP_XMPRIGHTS_MARKED = "XMP-xmpRights:Marked"
 
 # XMP-tiff tags
 TAG_XMP_TIFF_MAKE = "XMP-tiff:Make"
@@ -128,6 +129,7 @@ DEFAULT_TAGS = {
     "credit": TAG_XMP_PHOTOSHOP_CREDIT,
     "rights": TAG_XMP_DC_RIGHTS,
     "terms": TAG_XMP_XMPRIGHTS_USAGE_TERMS,
+    "marked": TAG_XMP_XMPRIGHTS_MARKED,
     "source": TAG_XMP_DC_SOURCE,
 }
 
