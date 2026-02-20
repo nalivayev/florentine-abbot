@@ -1,4 +1,6 @@
-"""Configuration management for archive keeper."""
+"""
+Configuration management for archive keeper.
+"""
 
 from pathlib import Path
 from typing import Any
@@ -8,7 +10,9 @@ from common.config_utils import get_config_path, ensure_config_exists, load_conf
 
 
 class Config:
-    """Configuration manager for archive keeper."""
+    """
+    Configuration manager for archive keeper.
+    """
     
     def __init__(self, logger: Logger, config_path: str | Path | None = None):
         """
@@ -18,9 +22,9 @@ class Config:
             logger: Logger instance for this config.
             config_path: Path to JSON config file. If None, uses standard location.
         """
-        self.logger = logger
+        self._logger = logger
         # Get config path (custom or standard location)
-        self.config_path = get_config_path('archive-keeper', config_path)
+        self._config_path = get_config_path('archive-keeper', config_path)
         
         # Ensure config exists, create from template if needed
         template_path = get_template_path('archive_keeper', 'config.template.json')
@@ -31,21 +35,23 @@ class Config:
             "log_progress_threshold": 104857600  # 100MB
         }
         
-        if ensure_config_exists(self.logger, self.config_path, default_config, template_path):
-            self.logger.info(f"Created new config at {self.config_path}")
+        if ensure_config_exists(self._logger, self._config_path, default_config, template_path):
+            self._logger.info(f"Created new config at {self._config_path}")
         
         # Load configuration
-        self.data: dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
         self._load()
     
     def _load(self) -> None:
-        """Load configuration from file."""
-        self.data = load_config(self.logger, self.config_path)
-        if self.data:
-            self.logger.info(f"Loaded configuration from {self.config_path}")
+        """
+        Load configuration from file.
+        """
+        self._data = load_config(self._logger, self._config_path)
+        if self._data:
+            self._logger.info(f"Loaded configuration from {self._config_path}")
         else:
-            self.logger.warning("Using default configuration")
-            self.data = {
+            self._logger.warning("Using default configuration")
+            self._data = {
                 "database": "archive.db",
                 "chunk_size": 67108864,
                 "log_progress_threshold": 104857600
@@ -58,14 +64,14 @@ class Config:
         Returns:
             True if reload was successful, False otherwise.
         """
-        old_data = self.data.copy()
+        old_data = self._data.copy()
         self._load()
         
-        if self.data != old_data:
-            self.logger.info("Configuration reloaded successfully")
+        if self._data != old_data:
+            self._logger.info("Configuration reloaded successfully")
             return True
         else:
-            self.logger.debug("Configuration unchanged")
+            self._logger.debug("Configuration unchanged")
             return False
     
     def get(self, key: str, default: Any = None) -> Any:
@@ -79,19 +85,32 @@ class Config:
         Returns:
             Configuration value or default.
         """
-        return self.data.get(key, default)
-    
+        return self._data.get(key, default)
+
+    @property
+    def config_path(self) -> Path:
+        """
+        Path to the loaded configuration file.
+        """
+        return self._config_path
+
     @property
     def database(self) -> str:
-        """Get database path."""
+        """
+        Get database path.
+        """
         return self.get('database', 'archive.db')
     
     @property
     def chunk_size(self) -> int:
-        """Get chunk size for file hashing."""
+        """
+        Get chunk size for file hashing.
+        """
         return self.get('chunk_size', 67108864)
     
     @property
     def log_progress_threshold(self) -> int:
-        """Get threshold for logging progress on large files."""
+        """
+        Get threshold for logging progress on large files.
+        """
         return self.get('log_progress_threshold', 104857600)

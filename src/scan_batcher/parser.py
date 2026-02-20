@@ -14,7 +14,9 @@ class _KeyValueAction(Action):
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
-        """Initialize the KeyValueAction."""
+        """
+        Initialize the KeyValueAction.
+        """
         super().__init__(*args, **kwargs)
 
     def __call__(self, parser: ArgumentParser, namespace: Any, values: str | Sequence[Any] | None, option_string: str | None = None) -> None:

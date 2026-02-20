@@ -1,11 +1,9 @@
 """Preview Maker package.
 
 Public API for the Preview Maker.
-
-The core implementation lives in :mod:`preview_maker.maker` as the
-class :class:`PreviewMaker`.
 """
 
 from preview_maker.maker import PreviewMaker
+from preview_maker.watcher import PreviewWatcher
 
-__all__ = ["PreviewMaker"]
+__all__ = ["PreviewMaker", "PreviewWatcher"]

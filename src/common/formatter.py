@@ -49,19 +49,19 @@ class Formatter:
                               If None, loads from formats.json or uses DEFAULT_FILENAME_TEMPLATE
             logger: Optional logger instance
         """
-        self.logger = logger or Logger("formatter")
+        self._logger = logger or Logger("formatter")
         
         # Load templates from config or use provided/defaults
         if path_template is None or filename_template is None:
             config_templates = self._load_formats_config()
-            self.path_template = path_template or config_templates.get("path_template", DEFAULT_PATH_TEMPLATE)
-            self.filename_template = filename_template or config_templates.get("filename_template", DEFAULT_FILENAME_TEMPLATE)
+            self._path_template = path_template or config_templates.get("path_template", DEFAULT_PATH_TEMPLATE)
+            self._filename_template = filename_template or config_templates.get("filename_template", DEFAULT_FILENAME_TEMPLATE)
         else:
-            self.path_template = path_template
-            self.filename_template = filename_template
+            self._path_template = path_template
+            self._filename_template = filename_template
             
-        self.logger.debug(f"Formatter initialized with path_template: {self.path_template}")
-        self.logger.debug(f"Formatter initialized with filename_template: {self.filename_template}")
+        self._logger.debug(f"Formatter initialized with path_template: {self._path_template}")
+        self._logger.debug(f"Formatter initialized with filename_template: {self._filename_template}")
     
     def _load_formats_config(self) -> dict:
         """
@@ -74,16 +74,16 @@ class Formatter:
         formats_path = config_dir / "formats.json"
         
         if not formats_path.exists():
-            self.logger.debug(f"formats.json not found at {formats_path}, using defaults")
+            self._logger.debug(f"formats.json not found at {formats_path}, using defaults")
             return {}
         
         try:
             with open(formats_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
-                self.logger.info(f"Loaded formats.json from {formats_path}")
+                self._logger.info(f"Loaded formats.json from {formats_path}")
                 return config
         except Exception as e:
-            self.logger.warning(f"Failed to load formats.json: {e}, using defaults")
+            self._logger.warning(f"Failed to load formats.json: {e}, using defaults")
             return {}
     
     def format_path(self, parsed: ParsedFilename) -> str:
@@ -97,7 +97,7 @@ class Formatter:
             Formatted path string (e.g., "2024/2024.01.15")
         """
         try:
-            return self.path_template.format(
+            return self._path_template.format(
                 year=parsed.year,
                 month=parsed.month,
                 day=parsed.day,
@@ -113,10 +113,10 @@ class Formatter:
                 extension=parsed.extension
             )
         except KeyError as e:
-            self.logger.error(f"Missing field in path_template: {e}")
+            self._logger.error(f"Missing field in path_template: {e}")
             raise ValueError(f"Invalid path_template: missing field {e}")
         except Exception as e:
-            self.logger.error(f"Failed to format path: {e}")
+            self._logger.error(f"Failed to format path: {e}")
             raise
     
     def format_filename(self, parsed: ParsedFilename) -> str:
@@ -129,7 +129,7 @@ class Formatter:
             str: Formatted filename without extension (e.g., "2024.01.15.10.30.45.E.FAM.POR.0001.A.RAW").
         """
         try:
-            return self.filename_template.format(
+            return self._filename_template.format(
                 year=parsed.year,
                 month=parsed.month,
                 day=parsed.day,
@@ -145,8 +145,8 @@ class Formatter:
                 extension=parsed.extension
             )
         except KeyError as e:
-            self.logger.error(f"Missing field in filename_template: {e}")
+            self._logger.error(f"Missing field in filename_template: {e}")
             raise ValueError(f"Invalid filename_template: missing field {e}")
         except Exception as e:
-            self.logger.error(f"Failed to format filename: {e}")
+            self._logger.error(f"Failed to format filename: {e}")
             raise

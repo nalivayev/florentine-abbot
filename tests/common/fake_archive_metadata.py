@@ -1,4 +1,6 @@
-"""Fake ArchiveMetadata for testing."""
+"""
+Fake ArchiveMetadata for testing.
+"""
 
 from typing import Any, Optional
 
@@ -8,7 +10,8 @@ from common.logger import Logger
 
 
 class FakeArchiveMetadata(ArchiveMetadata):
-    """Fake ArchiveMetadata that accepts custom config for testing.
+    """
+    Fake ArchiveMetadata that accepts custom config for testing.
     
     Since ArchiveMetadata is now a thin configuration provider (no Exifer),
     this fake just allows injecting custom metadata_config and metadata_tags
@@ -21,7 +24,8 @@ class FakeArchiveMetadata(ArchiveMetadata):
         metadata_tags: Optional[dict[str, str]] = None,
         logger: Optional[Logger] = None,
     ):
-        """Initialize FakeArchiveMetadata with custom config.
+        """
+        Initialize FakeArchiveMetadata with custom config.
         
         Args:
             metadata_config: Custom metadata configuration for testing.

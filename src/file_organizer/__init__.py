@@ -1,6 +1,8 @@
-"""File Organizer - Metadata Extraction and Organization Tool."""
+"""
+File Organizer - Metadata Extraction and Organization Tool.
+"""
 
 from file_organizer.organizer import FileOrganizer
-from file_organizer.monitor import FileMonitor
+from file_organizer.watcher import FileWatcher
 
-__all__ = ["FileOrganizer", "FileMonitor"]
+__all__ = ["FileOrganizer", "FileWatcher"]

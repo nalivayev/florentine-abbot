@@ -1,4 +1,6 @@
-"""Common test utilities for creating test fixtures."""
+"""
+Common test utilities for creating test fixtures.
+"""
 
 from datetime import datetime
 from pathlib import Path
@@ -17,7 +19,9 @@ from tests.scan_batcher.fake_metadata_workflow import FakeMetadataWorkflow
 
 
 def exiftool_available() -> bool:
-    """Return True if exiftool is installed and runnable."""
+    """
+    Return True if exiftool is installed and runnable.
+    """
     try:
         Exifer()._run(["-ver"])
         return True

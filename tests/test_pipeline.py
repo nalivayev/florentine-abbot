@@ -37,7 +37,8 @@ from tests.common.test_utils import create_test_image
 
 @pytest.mark.usefixtures("require_exiftool")
 class TestPipeline:
-    """End-to-end pipeline test: create_test_image -> file-organizer -> preview-maker.
+    """
+    End-to-end pipeline test: create_test_image -> file-organizer -> preview-maker.
 
     Verifies the complete archival workflow produces correct file structure
     and metadata at each stage.  Component-specific tests live under
@@ -51,16 +52,17 @@ class TestPipeline:
     @pytest.fixture(autouse=True)
     def setup(self, tmp_path):
         self.root = tmp_path
+        self.input_dir = tmp_path / "inbox"
+        self.input_dir.mkdir()
+        self.output_dir = tmp_path / "archive"
         self.logger = Logger("test-pipeline")
         self.exifer = Exifer()
 
-    # ------------------------------------------------------------------
-    # helpers
-    # ------------------------------------------------------------------
-
     def _create_scan(self):
-        """Create a test TIFF that mirrors real scan-batcher output."""
-        scan_file = self.root / f"{self.FILENAME_STEM}.RAW.tif"
+        """
+        Create a test TIFF that mirrors real scan-batcher output.
+        """
+        scan_file = self.input_dir / f"{self.FILENAME_STEM}.RAW.tif"
         create_test_image(
             path=scan_file,
             size=(600, 400),
@@ -72,18 +74,17 @@ class TestPipeline:
         return scan_file
 
     def _find_file(self, root, pattern):
-        """Find a single file matching *pattern* under *root*."""
+        """
+        Find a single file matching *pattern* under *root*.
+        """
         found = list(root.rglob(pattern))
         assert found, f"No file matching '{pattern}' found under {root}"
         return found[0]
 
-    # ------------------------------------------------------------------
-    # main test
-    # ------------------------------------------------------------------
-
     def test_full_pipeline(self):
-        """create_test_image -> FileOrganizer -> PreviewMaker with full metadata checks."""
-
+        """
+        create_test_image -> FileOrganizer -> PreviewMaker with full metadata checks.
+        """
         # === Step 0: create fake scan ===
         scan_file = self._create_scan()
         assert scan_file.exists()
@@ -127,15 +128,15 @@ class TestPipeline:
         # === Step 1: FileOrganizer ===
         organizer = FileOrganizer(self.logger)
         processed = organizer(
-            input_path=self.root,
+            input_path=self.input_dir,
+            output_path=self.output_dir,
             recursive=False,
             copy_mode=False,
         )
         assert processed == 1, "FileOrganizer should process 1 file"
 
         # Find organized master
-        processed_root = self.root / "processed"
-        master = self._find_file(processed_root, "*.RAW.tif")
+        master = self._find_file(self.output_dir, "*.RAW.tif")
         assert "SOURCES" in str(master), "Master must be in SOURCES folder"
 
         # DocumentID preserved, InstanceID refreshed
@@ -162,10 +163,10 @@ class TestPipeline:
 
         # === Step 2: PreviewMaker ===
         maker = PreviewMaker(self.logger)
-        prv_count = maker(path=processed_root, overwrite=False, max_size=800, quality=75)
+        prv_count = maker(path=self.output_dir, overwrite=False, max_size=800, quality=75)
         assert prv_count == 1, "PreviewMaker should generate 1 PRV"
 
-        prv = self._find_file(processed_root, "*.PRV.jpg")
+        prv = self._find_file(self.output_dir, "*.PRV.jpg")
         assert prv.exists()
 
         prv_tags = self.exifer.read(prv, [

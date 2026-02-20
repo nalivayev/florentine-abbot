@@ -55,13 +55,13 @@ class Calculate(Batch):
             dpis (Sequence[int] | None, optional): List of available DPI values.
             rounding (RoundingStrategy | str, optional): Rounding strategy (default: NEAREST).
         """
-        self.logger = logger
-        self.calculator = Calculator()
-        self.min_dpi = min_dpi
-        self.max_dpi = max_dpi
-        self.dpis = list(dpis) if dpis is not None else []
+        self._logger = logger
+        self._calculator = Calculator()
+        self._min_dpi = min_dpi
+        self._max_dpi = max_dpi
+        self._dpis = list(dpis) if dpis is not None else []
         # Convert string to enum if needed
-        self.rounding = RoundingStrategy.from_string(rounding) if isinstance(rounding, str) else rounding
+        self._rounding = RoundingStrategy.from_string(rounding) if isinstance(rounding, str) else rounding
 
     def _get_user_input(self) -> tuple[float, int]:
         """
@@ -70,12 +70,12 @@ class Calculate(Batch):
         Returns:
             tuple[float, int]: The photo minimum side (cm) and image minimum side (px).
         """
-        self.logger.info("Requesting user input for scan parameters")
+        self._logger.info("Requesting user input for scan parameters")
         print("\nEnter scan parameters")
         photo_min_side = self._get_float_input("Minimum photo side length in centimeters: ")
         image_min_side = self._get_int_input("Minimum image side length in pixels: ")
 
-        self.logger.debug(f"User input: photo_min_side={photo_min_side}, image_min_side={image_min_side}")
+        self._logger.debug(f"User input: photo_min_side={photo_min_side}, image_min_side={image_min_side}")
         return photo_min_side, image_min_side
 
     def _get_float_input(self, prompt: str) -> float:
@@ -91,11 +91,11 @@ class Calculate(Batch):
         while True:
             try:
                 value = float(input(prompt))
-                self.logger.debug(f"Float input received: {value}")
+                self._logger.debug(f"Float input received: {value}")
                 return value
             except ValueError:
                 print("Error: Enter a number")
-                self.logger.debug("Invalid float input")
+                self._logger.debug("Invalid float input")
 
     def _get_int_input(self, prompt: str, default: int | None = None) -> int:
         """
@@ -112,14 +112,14 @@ class Calculate(Batch):
             try:
                 value = input(prompt)
                 if default is not None and value == "":
-                    self.logger.debug(f"Default integer input used: {default}")
+                    self._logger.debug(f"Default integer input used: {default}")
                     return default
                 int_value = int(value)
-                self.logger.debug(f"Integer input received: {int_value}")
+                self._logger.debug(f"Integer input received: {int_value}")
                 return int_value
             except ValueError:
                 print("Error: Enter an integer")
-                self.logger.debug("Invalid integer input")
+                self._logger.debug("Invalid integer input")
 
     def _print_row(self, num: str, dpi: str, px: str, note: str = "") -> None:
         """
@@ -142,7 +142,7 @@ class Calculate(Batch):
             rec_dpi (float | None, optional): Recommended DPI value.
             calc_dpi (float | None, optional): Calculated DPI value.
         """
-        self.logger.info("Printing calculation results table")
+        self._logger.info("Printing calculation results table")
         print("\nCalculation results:")
         self._print_row("", "DPI", "pixels", "Note")
         for index, item in enumerate(dpis, start=1):
@@ -163,19 +163,19 @@ class Calculate(Batch):
         Returns:
             dict[str, Any]: Dictionary with calculation or file data.
         """
-        self.logger.info("Starting calculation step")
+        self._logger.info("Starting calculation step")
         photo_min_side, image_min_side = self._get_user_input()
 
         # Calculate DPI using internal calculator
-        calc_dpi, rec_dpi, dpis = self.calculator(
+        calc_dpi, rec_dpi, dpis = self._calculator(
             float(photo_min_side),
             int(image_min_side),
-            int(self.min_dpi) if self.min_dpi is not None else None,
-            int(self.max_dpi) if self.max_dpi is not None else None,
-            self.dpis,
-            self.rounding
+            int(self._min_dpi) if self._min_dpi is not None else None,
+            int(self._max_dpi) if self._max_dpi is not None else None,
+            self._dpis,
+            self._rounding
         )
-        self.logger.debug(f"Calculator returned: calc_dpi={calc_dpi}, rec_dpi={rec_dpi}, dpis={dpis}")
+        self._logger.debug(f"Calculator returned: calc_dpi={calc_dpi}, rec_dpi={rec_dpi}, dpis={dpis}")
 
         # Convert dpis to set for uniqueness
         dpis = set(dpis)
@@ -205,21 +205,21 @@ class Calculate(Batch):
                     )
                 if index == 0:  # Default case
                     dpi = rec_dpi
-                    self.logger.info(f"User selected recommended DPI: {dpi}")
+                    self._logger.info(f"User selected recommended DPI: {dpi}")
                     print("\nUsing recommended DPI:", dpi)
                     break
                 elif 1 <= index <= len(dpis):
                     dpi = dpis[index - 1][0]  # Get DPI from the selected index
-                    self.logger.info(f"User selected DPI: {dpi}")
+                    self._logger.info(f"User selected DPI: {dpi}")
                     print("\nSelected DPI:", dpi)
                     break
                 else:
                     print("Error: Invalid selection. Please try again.")
-                    self.logger.debug("Invalid DPI selection")
+                    self._logger.debug("Invalid DPI selection")
             except ValueError:
                 print("Error: Invalid number entered.")
-                self.logger.debug("Invalid number entered for DPI selection")
-        self.logger.info(f"Calculation finished, returning scan_dpi={dpi}")
+                self._logger.debug("Invalid number entered for DPI selection")
+        self._logger.info(f"Calculation finished, returning scan_dpi={dpi}")
         return {"scan_dpi": dpi}
 
     def __iter__(self) -> "Calculate":
@@ -273,9 +273,9 @@ class Process(Batch):
             path (str | Path): Path to the folder.
             file_filter (str, optional): File filter pattern (default: "*.*").
         """
-        self.logger = logger
-        self.path = Path(path)
-        self.file_filter = file_filter
+        self._logger = logger
+        self._path = Path(path)
+        self._file_filter = file_filter
         self._validate_path()
         self._files = self._get_matching_files()
         self._index = 0  # Current index for iteration
@@ -287,8 +287,8 @@ class Process(Batch):
         Raises:
             ValueError: If the folder does not exist.
         """
-        if not self.path.is_dir():
-            raise ValueError(f"Folder doesn't exist: {self.path}")
+        if not self._path.is_dir():
+            raise ValueError(f"Folder doesn't exist: {self._path}")
 
     def _get_matching_files(self) -> list[str]:
         """
@@ -298,7 +298,7 @@ class Process(Batch):
             list[str]: List of matching file names.
         """
         return [
-            f.name for f in self.path.iterdir()
+            f.name for f in self._path.iterdir()
             if self._matches_filter(f.name) and f.is_file()
         ]
 
@@ -312,10 +312,10 @@ class Process(Batch):
         Returns:
             bool: True if the file matches the filter, False otherwise.
         """
-        if self.file_filter == "*.*":
+        if self._file_filter == "*.*":
             return True
         ext = Path(filename).suffix.lower()
-        filter_ext = self.file_filter.lower()
+        filter_ext = self._file_filter.lower()
         if filter_ext.startswith("*"):
             return ext == filter_ext[1:] or ext == filter_ext[2:]
         return ext == filter_ext if filter_ext.startswith(".") else filename.lower().endswith(filter_ext.lower())
@@ -344,7 +344,7 @@ class Process(Batch):
             filename = self._files[self._index]
             self._index += 1
             return {
-                "path": str(self.path / filename),
+                "path": str(self._path / filename),
                 "filename": filename
             }
         raise StopIteration

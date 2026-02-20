@@ -62,12 +62,12 @@ class Logger:
             rotation_size (int|None): Maximum log file size in bytes before rotation. Default: 10 MB.
             backup_count (int|None): Number of rotated backup files to keep. Default: 5.
         """
-        self.module_name = module_name
-        self.custom_dir = custom_dir
+        self._module_name = module_name
+        self._custom_dir = custom_dir
 
         # Resolve log directory once during initialization
         self._log_directory = self._resolve_log_directory()
-        self._log_file = self._log_directory / f"{self.module_name}.log"
+        self._log_file = self._log_directory / f"{self._module_name}.log"
 
         # Setup logging immediately
         handlers = []
@@ -101,7 +101,7 @@ class Logger:
         )
         
         # Store logger instance
-        self._logger = logging.getLogger(self.module_name)
+        self._logger = logging.getLogger(self._module_name)
     
     def _resolve_log_directory(self) -> Path:
         """
@@ -115,8 +115,8 @@ class Logger:
         Returns:
             Path: Absolute path to the log directory.
         """
-        if self.custom_dir:
-            log_dir = Path(self.custom_dir)
+        if self._custom_dir:
+            log_dir = Path(self._custom_dir)
         elif env_log_dir := os.getenv("FLORENTINE_LOG_DIR"):
             log_dir = Path(env_log_dir)
         else:
@@ -126,27 +126,39 @@ class Logger:
     
     # Delegate logging methods to internal logger
     def debug(self, msg: str, *args, **kwargs) -> None:
-        """Log a debug message."""
+        """
+        Log a debug message.
+        """
         self._logger.debug(msg, *args, **kwargs)
 
     def info(self, msg: str, *args, **kwargs) -> None:
-        """Log an info message."""
+        """
+        Log an info message.
+        """
         self._logger.info(msg, *args, **kwargs)
 
     def warning(self, msg: str, *args, **kwargs) -> None:
-        """Log a warning message."""
+        """
+        Log a warning message.
+        """
         self._logger.warning(msg, *args, **kwargs)
 
     def error(self, msg: str, *args, **kwargs) -> None:
-        """Log an error message."""
+        """
+        Log an error message.
+        """
         self._logger.error(msg, *args, **kwargs)
 
     def critical(self, msg: str, *args, **kwargs) -> None:
-        """Log a critical message."""
+        """
+        Log a critical message.
+        """
         self._logger.critical(msg, *args, **kwargs)
 
     def exception(self, msg: str, *args, **kwargs) -> None:
-        """Log an exception with traceback."""
+        """
+        Log an exception with traceback.
+        """
         self._logger.exception(msg, *args, **kwargs)
     
     @property

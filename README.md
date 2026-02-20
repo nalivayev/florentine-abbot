@@ -148,12 +148,12 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 
 > **⚠️ Status**: In development. Not yet fully tested or documented.
 
-A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers, role suffix) and moves each file into a working `processed/` tree with the default layout:
+A tool to automatically organize scanned files based on their filenames. It extracts metadata from the filename (date, modifiers, role suffix) and moves each file into an archive tree with the default layout:
 
-- `processed/{year}/{year}.{month}.{day}/` — per-date folder (configurable via `formats.json`)
-- `processed/{year}/{year}.{month}.{day}/SOURCES/` — RAW, master (`MSR`) and related technical files
-- `processed/{year}/{year}.{month}.{day}/DERIVATIVES/` — derivatives such as WEB, PRT and other outputs
-- `processed/{year}/{year}.{month}.{day}/` — `*.PRV.jpg` files for quick browsing (preview/access copies) stored directly in the date folder
+- `{output}/{year}/{year}.{month}.{day}/` — per-date folder (configurable via `formats.json`)
+- `{output}/{year}/{year}.{month}.{day}/SOURCES/` — RAW, master (`MSR`) and related technical files
+- `{output}/{year}/{year}.{month}.{day}/DERIVATIVES/` — derivatives such as WEB, PRT and other outputs
+- `{output}/{year}/{year}.{month}.{day}/` — `*.PRV.jpg` files for quick browsing (preview/access copies) stored directly in the date folder
 
 The archive structure is fully customizable through `formats.json` (see [Customizing Path and Filename Formats](#customizing-path-and-filename-formats-formatsjson) below).
 
@@ -161,14 +161,28 @@ The same date information is also written into the file's EXIF/XMP tags. For det
 
 ### Usage
 
+File Organizer provides two subcommands: `batch` (one-shot) and `watch` (daemon).
+
+Both require `--input` (source/inbox folder) and `--output` (archive root). Input and output must not overlap.
+
 **Batch Mode (process existing files):**
 ```sh
-file-organizer "D:\Scans\Inbox"
+file-organizer batch --input "D:\Scans\Inbox" --output "D:\Archive"
 ```
 
-**Daemon Mode (continuous monitoring):**
+**Batch Mode with recursive scan:**
 ```sh
-file-organizer "D:\Scans\Inbox" --daemon
+file-organizer batch --input "D:\Scans\Inbox" --output "D:\Archive" -r
+```
+
+**Daemon Mode (watch for new files):**
+```sh
+file-organizer watch --input "D:\Scans\Inbox" --output "D:\Archive"
+```
+
+**Copy mode (keep source files):**
+```sh
+file-organizer batch --input "D:\Scans\Inbox" --output "D:\Archive" --copy
 ```
 
 **With Metadata (using JSON config):**
@@ -307,14 +321,21 @@ Metadata for previews is derived from the corresponding master files:
 - each `PRV` receives its own identifier;
 - an explicit relation tag links the `PRV` back to its master.
 
+Preview Maker provides two subcommands: `batch` (one-shot) and `watch` (daemon).
+
 **Batch Mode (generate previews for archive):**
 ```sh
-preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
 ```
 
-**With Overwrite:**
+**Batch Mode with overwrite:**
 ```sh
-preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --overwrite
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --overwrite
+```
+
+**Daemon Mode (watch for new master files):**
+```sh
+preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
 ```
 
 Logging follows the same convention as other tools:
@@ -348,19 +369,26 @@ This will create `archive.db` and populate it with the current state of the arch
 
 - `scan_batcher/cli.py` — main CLI entry point (used for the `scan-batcher` command).
 - `archive_keeper/cli.py` — CLI for the `archive-keeper` tool.
-- `file_organizer/cli.py` — CLI for the `file-organizer` tool.
-- `preview_maker/cli.py` — CLI for the `preview-maker` tool.
+- `file_organizer/cli.py` — CLI for the `file-organizer` tool (subcommands: `batch`, `watch`).
+- `file_organizer/organizer.py` — core batch workflow and per-file processing.
+- `file_organizer/watcher.py` — daemon mode via watchdog, delegates to `FileOrganizer`.
+- `preview_maker/cli.py` — CLI for the `preview-maker` tool (subcommands: `batch`, `watch`).
 - `preview_maker/maker.py` — core implementation for Preview Maker (PRV generation logic).
+- `preview_maker/watcher.py` — daemon mode via watchdog, delegates to `PreviewMaker`.
 - `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
 - `scan_batcher/calculator.py` — DPI calculation algorithms.
 - `scan_batcher/parser.py` — command-line argument parsing and validation.
 - `common/logger.py` — unified logging subsystem used by all tools.
+- `common/naming.py` — shared filename parser and validator.
+- `common/router.py` — configurable file routing (suffix → folder mapping).
+- `common/formatter.py` — customizable path and filename formatting.
+- `common/tagger.py` — batch XMP/EXIF read/write abstraction over exiftool.
+- `common/metadata.py` — archival metadata policy (multilingual fields, tags mapping).
 - `scan_batcher/constants.py` — centralized constants and enumerations (e.g., `RoundingStrategy`).
 - `scan_batcher/workflow.py` — base class for all workflow plugins.
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
 - `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
 - `common/exifer.py` — EXIF metadata extraction and processing, shared across all tools.
-- `common/archive_metadata.py` — centralized archival metadata policy for master and derivative files.
 
 ### Installation
 

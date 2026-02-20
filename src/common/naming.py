@@ -133,7 +133,9 @@ class FilenameValidator:
     }
 
     def __init__(self) -> None:
-        """Initialize the validator."""
+        """
+        Initialize the validator.
+        """
 
     def validate(self, parsed: ParsedFilename) -> list[str]:
         """
@@ -182,7 +184,9 @@ class FilenameValidator:
         return errors
 
     def _validate_date(self, parsed: ParsedFilename) -> list[str]:
-        """Validate date components."""
+        """
+        Validate date components.
+        """
 
         errors: list[str] = []
 
@@ -210,7 +214,9 @@ class FilenameValidator:
         return errors
 
     def _validate_time(self, parsed: ParsedFilename) -> list[str]:
-        """Validate time components."""
+        """
+        Validate time components.
+        """
 
         errors: list[str] = []
 
@@ -226,7 +232,9 @@ class FilenameValidator:
         return errors
 
     def _validate_zero_sequence(self, parsed: ParsedFilename) -> list[str]:
-        """Validate that if a component is 00, all more precise components are also 00."""
+        """
+        Validate that if a component is 00, all more precise components are also 00.
+        """
 
         errors: list[str] = []
 

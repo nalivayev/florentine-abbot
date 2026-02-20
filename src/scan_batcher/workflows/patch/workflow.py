@@ -1,4 +1,6 @@
-"""Patch workflow for adding XMP metadata to existing files."""
+"""
+Patch workflow for adding XMP metadata to existing files.
+"""
 
 from pathlib import Path
 

@@ -1,4 +1,6 @@
-"""Tests for common.formatter module."""
+"""
+Tests for common.formatter module.
+"""
 
 import pytest
 from pathlib import Path
@@ -8,7 +10,9 @@ from common.naming import ParsedFilename
 
 
 class TestFormatter:
-    """Tests for Formatter class."""
+    """
+    Tests for Formatter class.
+    """
     
     def _create_parsed(
         self,
@@ -26,7 +30,9 @@ class TestFormatter:
         suffix="RAW",
         extension="tif"
     ) -> ParsedFilename:
-        """Create a ParsedFilename for testing."""
+        """
+        Create a ParsedFilename for testing.
+        """
         return ParsedFilename(
             year=year,
             month=month,
@@ -44,7 +50,9 @@ class TestFormatter:
         )
     
     def test_default_path_template(self):
-        """Default path template should format as YYYY/YYYY.MM.DD."""
+        """
+        Default path template should format as YYYY/YYYY.MM.DD.
+        """
         formatter = Formatter()
         parsed = self._create_parsed()
         
@@ -53,7 +61,9 @@ class TestFormatter:
         assert path == "2024/2024.01.15"
     
     def test_default_filename_template(self):
-        """Default filename template should format with all components."""
+        """
+        Default filename template should format with all components.
+        """
         formatter = Formatter()
         parsed = self._create_parsed()
         
@@ -62,7 +72,9 @@ class TestFormatter:
         assert filename == "2024.01.15.10.30.45.E.FAM.POR.0001.A.RAW"
     
     def test_custom_path_template_flat(self):
-        """Custom path template can create flat structure."""
+        """
+        Custom path template can create flat structure.
+        """
         formatter = Formatter(path_template="{year}.{month:02d}.{day:02d}")
         parsed = self._create_parsed()
         
@@ -71,7 +83,9 @@ class TestFormatter:
         assert path == "2024.01.15"
     
     def test_custom_path_template_by_month(self):
-        """Custom path template can group by year and month."""
+        """
+        Custom path template can group by year and month.
+        """
         formatter = Formatter(path_template="{year}/{year}.{month:02d}")
         parsed = self._create_parsed()
         
@@ -80,7 +94,9 @@ class TestFormatter:
         assert path == "2024/2024.01"
     
     def test_custom_path_template_by_group(self):
-        """Custom path template can include group component."""
+        """
+        Custom path template can include group component.
+        """
         formatter = Formatter(path_template="{group}/{year}/{year}.{month:02d}.{day:02d}")
         parsed = self._create_parsed()
         
@@ -89,7 +105,9 @@ class TestFormatter:
         assert path == "FAM/2024/2024.01.15"
     
     def test_custom_filename_template_compact(self):
-        """Custom filename template can be compact."""
+        """
+        Custom filename template can be compact.
+        """
         formatter = Formatter(
             filename_template="{year}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"
         )
@@ -100,7 +118,9 @@ class TestFormatter:
         assert filename == "20240115_103045_FAM_RAW"
     
     def test_custom_filename_template_iso_style(self):
-        """Custom filename template can use ISO-style separators."""
+        """
+        Custom filename template can use ISO-style separators.
+        """
         formatter = Formatter(
             filename_template="{year}-{month:02d}-{day:02d}_{hour:02d}-{minute:02d}-{second:02d}_{modifier}_{group}_{subgroup}_{sequence:04d}_{side}_{suffix}"
         )
@@ -111,7 +131,9 @@ class TestFormatter:
         assert filename == "2024-01-15_10-30-45_E_FAM_POR_0001_A_RAW"
     
     def test_sequence_formatting(self):
-        """Sequence should be formatted as integer with leading zeros."""
+        """
+        Sequence should be formatted as integer with leading zeros.
+        """
         formatter = Formatter()
         parsed = self._create_parsed(sequence="42")
         
@@ -120,7 +142,9 @@ class TestFormatter:
         assert "0042" in filename
     
     def test_different_dates(self):
-        """Formatter should handle different date values correctly."""
+        """
+        Formatter should handle different date values correctly.
+        """
         formatter = Formatter()
         
         # Test December 31
@@ -134,7 +158,9 @@ class TestFormatter:
         assert path_feb == "2024/2024.02.01"
     
     def test_all_components_available(self):
-        """All ParsedFilename components should be available in templates."""
+        """
+        All ParsedFilename components should be available in templates.
+        """
         template = "{year}.{month}.{day}.{hour}.{minute}.{second}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}"
         formatter = Formatter(filename_template=template)
         parsed = self._create_parsed()
@@ -157,7 +183,9 @@ class TestFormatter:
         assert "tif" in filename
     
     def test_path_template_without_year_folder(self):
-        """Path template can omit year folder for flat structure."""
+        """
+        Path template can omit year folder for flat structure.
+        """
         formatter = Formatter(path_template="{year}.{month:02d}.{day:02d}")
         parsed = self._create_parsed()
         
@@ -167,7 +195,9 @@ class TestFormatter:
         assert path == "2024.01.15"
     
     def test_filename_template_suffix_first(self):
-        """Filename template can put suffix first."""
+        """
+        Filename template can put suffix first.
+        """
         formatter = Formatter(
             filename_template="{suffix}_{year}.{month:02d}.{day:02d}_{group}_{sequence:04d}"
         )
