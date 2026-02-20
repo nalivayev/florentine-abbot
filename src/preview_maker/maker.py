@@ -1,4 +1,5 @@
-"""Core implementation for Preview Maker.
+"""
+Core implementation for Preview Maker.
 
 Provides utilities to generate PRV (preview) JPEGs from RAW/MSR sources.
 
@@ -13,20 +14,7 @@ from PIL import Image
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename
-from common.constants import (
-    SUPPORTED_IMAGE_EXTENSIONS,
-    MIME_TYPE_MAP,
-    TAG_XMP_DC_IDENTIFIER,
-    TAG_XMP_XMP_IDENTIFIER,
-    TAG_XMP_DC_RELATION,
-    TAG_XMP_DC_FORMAT,
-    TAG_XMP_XMPMM_DOCUMENT_ID,
-    TAG_XMP_XMPMM_INSTANCE_ID,
-    TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID,
-    TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID,
-    XMP_ACTION_CONVERTED,
-    XMP_ACTION_EDITED,
-)
+from common.constants import SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_FORMAT, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CONVERTED, XMP_ACTION_EDITED
 from common.metadata import ArchiveMetadata
 from common.exifer import Exifer
 from common.tagger import Tagger
@@ -36,7 +24,8 @@ from common.version import get_version
 
 
 class PreviewMaker:
-    """Preview generator that can be executed like a function.
+    """
+    Preview generator that can be executed like a function.
 
     In line with other workflow-like classes (such as :class:`VuescanWorkflow`),
     a :class:`Logger` instance is provided at construction time, while
@@ -57,7 +46,8 @@ class PreviewMaker:
         max_size: int = 2000,
         quality: int = 80,
     ) -> int:
-        """Run batch preview generation under ``path``.
+        """
+        Run batch preview generation under ``path``.
 
         This is the primary workflow-style entry point and mirrors how other
         workflow classes are executed.
@@ -78,7 +68,9 @@ class PreviewMaker:
         max_size: int,
         quality: int,
     ) -> int:
-        """Walk under ``path`` and generate PRV JPEGs for master files (RAW/MSR)."""
+        """
+        Walk under ``path`` and generate PRV JPEGs for master files (RAW/MSR).
+        """
 
         parser = FilenameParser()
         written = 0
@@ -197,7 +189,9 @@ class PreviewMaker:
         max_size: int,
         quality: int,
     ) -> None:
-        """Convert a single source image to a PRV JPEG."""
+        """
+        Convert a single source image to a PRV JPEG.
+        """
 
         if not input_path.exists():
             self._logger.error("Input file does not exist: %s", input_path)
@@ -248,7 +242,8 @@ class PreviewMaker:
         self._logger.info("Saved PRV: %s", output_path)
 
     def _write_derivative_metadata(self, master_path: Path, prv_path: Path) -> None:
-        """Write EXIF/XMP metadata to PRV derivative based on master.
+        """
+        Write EXIF/XMP metadata to PRV derivative based on master.
         
         Copies ALL XMP and EXIF metadata from master to PRV (format-agnostic tags),
         then overwrites derivative-specific tags (identifiers, DerivedFrom, Format)

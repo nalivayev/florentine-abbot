@@ -1,4 +1,5 @@
-"""Tagger — unified metadata read/write interface.
+"""
+Tagger — unified metadata read/write interface.
 
 Wraps :class:`Exifer` and provides a file-centric API with optional
 batch mode (``begin`` / ``end``) so that multiple writes are flushed
@@ -34,8 +35,6 @@ Usage — batch read::
     history = result[TAG_XMP_XMPMM_HISTORY]
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any, Optional
 
@@ -44,7 +43,8 @@ from .tags import Tag
 
 
 class Tagger:
-    """File-centric metadata reader/writer with optional batching.
+    """
+    File-centric metadata reader/writer with optional batching.
 
     Each ``Tagger`` instance is bound to a single *file_path*.
 
@@ -76,11 +76,14 @@ class Tagger:
 
     @property
     def file_path(self) -> Path:
-        """The file this tagger is bound to."""
+        """
+        The file this tagger is bound to.
+        """
         return self._file_path
 
     def begin(self) -> None:
-        """Enter batch mode.
+        """
+        Enter batch mode.
 
         Subsequent ``read`` / ``write`` calls are buffered until ``end``.
         Mixing reads and writes in the same batch is not allowed.
@@ -96,7 +99,8 @@ class Tagger:
         self._write_buffer.clear()
 
     def end(self) -> dict[str, Any] | None:
-        """Flush the batch and leave batch mode.
+        """
+        Flush the batch and leave batch mode.
 
         For a **read** batch the accumulated tags are read in a single
         exiftool call and the result dict is returned.
@@ -131,7 +135,8 @@ class Tagger:
             self._write_buffer.clear()
 
     def read(self, tag: Tag) -> Any:
-        """Read a tag value.
+        """
+        Read a tag value.
 
         In immediate mode the value is returned directly.
         In batch mode the tag is buffered; call ``end()`` to get results.
@@ -152,7 +157,8 @@ class Tagger:
         return tag.parse(raw)
 
     def write(self, tag: Tag) -> None:
-        """Write a tag value.
+        """
+        Write a tag value.
 
         In immediate mode the tag is written to disk immediately.
         In batch mode the tag is buffered; call ``end()`` to flush.
@@ -174,12 +180,10 @@ class Tagger:
             timeout=self._timeout,
         )
 
-    # ------------------------------------------------------------------
-    # internals
-    # ------------------------------------------------------------------
-
     def _set_batch_mode(self, mode: str) -> None:
-        """Lock the batch to *mode* or raise if mixed."""
+        """
+        Lock the batch to *mode* or raise if mixed.
+        """
         if self._batch_mode is None:
             self._batch_mode = mode
         elif self._batch_mode != mode:
@@ -189,7 +193,9 @@ class Tagger:
             )
 
     def _flush_read(self) -> dict[str, Any]:
-        """Execute a batched read — one exiftool call."""
+        """
+        Execute a batched read — one exiftool call.
+        """
         # Collect all exiftool tag names, de-duplicating
         all_tags: list[str] = []
         seen: set[str] = set()
@@ -209,7 +215,9 @@ class Tagger:
         return result
 
     def _flush_write(self) -> None:
-        """Execute a batched write — one exiftool call."""
+        """
+        Execute a batched write — one exiftool call.
+        """
         tags_dict = self._collect_write_args(self._write_buffer)
         self._exifer.write(
             self._file_path,
@@ -219,7 +227,8 @@ class Tagger:
 
     @staticmethod
     def _collect_write_args(tags: list[Tag]) -> dict[str, Any]:
-        """Merge ``write_args()`` from all tags into a single dict.
+        """
+        Merge ``write_args()`` from all tags into a single dict.
 
         When multiple tags produce the same key (e.g. History append),
         values are collected into a list so that Exifer emits multiple

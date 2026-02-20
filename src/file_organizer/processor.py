@@ -1,4 +1,5 @@
-"""Per-file processing logic for the File Organizer.
+"""
+Per-file processing logic for the File Organizer.
 
 This module contains :class:`FileProcessor`, which is responsible for
 parsing structured filenames, validating them, writing EXIF/XMP metadata,
@@ -13,16 +14,7 @@ from datetime import datetime
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename, FilenameValidator
-from common.constants import (
-    EXIFTOOL_LARGE_FILE_TIMEOUT,
-    TAG_XMP_DC_IDENTIFIER,
-    TAG_XMP_XMP_IDENTIFIER,
-    TAG_EXIF_DATETIME_ORIGINAL,
-    TAG_XMP_PHOTOSHOP_DATE_CREATED,
-    TAG_XMP_XMPMM_INSTANCE_ID,
-    TAG_XMP_XMPMM_DOCUMENT_ID,
-    XMP_ACTION_EDITED,
-)
+from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, XMP_ACTION_EDITED
 from common.metadata import ArchiveMetadata
 from common.exifer import Exifer
 from common.tagger import Tagger
@@ -31,7 +23,8 @@ from common.version import get_version
 
 
 class FileProcessor:
-    """Processor that extracts metadata and writes it to files.
+    """
+    Processor that extracts metadata and writes it to files.
     
     This class is responsible ONLY for:
     - Parsing and validating filenames
@@ -43,7 +36,8 @@ class FileProcessor:
     """
 
     def __init__(self, logger: Logger) -> None:
-        """Initialize FileProcessor.
+        """
+        Initialize FileProcessor.
         
         Args:
             logger: Logger instance.
@@ -55,7 +49,8 @@ class FileProcessor:
         self._exifer = Exifer()
 
     def validate(self, file_path: Path) -> ParsedFilename | None:
-        """Validate source file before processing.
+        """
+        Validate source file before processing.
         
         Checks:
         - DocumentID/InstanceID exist (must be set by scan-batcher)
@@ -90,7 +85,8 @@ class FileProcessor:
         return parsed
 
     def process(self, dest_path: Path, parsed: ParsedFilename) -> bool:
-        """Write EXIF/XMP metadata to destination file.
+        """
+        Write EXIF/XMP metadata to destination file.
 
         Args:
             dest_path: Path to the destination file (already copied).
@@ -109,7 +105,8 @@ class FileProcessor:
         return True
 
     def _parse_and_validate(self, filename: str) -> ParsedFilename | None:
-        """Parse and validate a filename.
+        """
+        Parse and validate a filename.
 
         Args:
             filename: The filename to parse and validate.
@@ -128,7 +125,8 @@ class FileProcessor:
         return parsed
 
     def _write_metadata(self, file_path: Path, parsed: ParsedFilename) -> bool:
-        """Write metadata to EXIF/XMP fields using exiftool.
+        """
+        Write metadata to EXIF/XMP fields using exiftool.
 
         All tags, the new InstanceID, and the XMP History entry are written
         in a single exiftool call via :class:`Tagger` batch mode.
