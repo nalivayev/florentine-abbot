@@ -25,3 +25,12 @@ from common.logger import Logger
 def logger():
     """Create a logger for testing."""
     return Logger("test")
+
+
+@pytest.fixture
+def require_exiftool():
+    """Skip the test if exiftool is not installed or not runnable."""
+    from tests.common.test_utils import exiftool_available
+
+    if not exiftool_available():
+        pytest.skip("ExifTool not found")

@@ -25,7 +25,8 @@ from common.constants import (
 )
 from common.metadata import ArchiveMetadata
 from common.exifer import Exifer
-from common.historian import XMPHistorian
+from common.tagger import Tagger
+from common.tags import KeyValueTag, HistoryTag
 from common.version import get_version
 
 
@@ -52,7 +53,6 @@ class FileProcessor:
         self._validator = FilenameValidator()
         self._metadata = ArchiveMetadata(logger=logger)
         self._exifer = Exifer()
-        self._historian = XMPHistorian()
 
     def validate(self, file_path: Path) -> ParsedFilename | None:
         """Validate source file before processing.
@@ -69,7 +69,11 @@ class FileProcessor:
             ParsedFilename if validation successful, None otherwise.
         """
         # Check for DocumentID/InstanceID (must be set by scan-batcher)
-        existing_ids = self._exifer.read(file_path, [TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID])
+        tagger = Tagger(file_path, exifer=self._exifer)
+        tagger.begin()
+        tagger.read(KeyValueTag(TAG_XMP_XMPMM_DOCUMENT_ID))
+        tagger.read(KeyValueTag(TAG_XMP_XMPMM_INSTANCE_ID))
+        existing_ids = tagger.end() or {}
         if not existing_ids.get(TAG_XMP_XMPMM_DOCUMENT_ID) or not existing_ids.get(TAG_XMP_XMPMM_INSTANCE_ID):
             self._logger.error(
                 f"File {file_path.name} is missing DocumentID or InstanceID. "
@@ -126,6 +130,9 @@ class FileProcessor:
     def _write_metadata(self, file_path: Path, parsed: ParsedFilename) -> bool:
         """Write metadata to EXIF/XMP fields using exiftool.
 
+        All tags, the new InstanceID, and the XMP History entry are written
+        in a single exiftool call via :class:`Tagger` batch mode.
+
         Args:
             file_path: Path to the file.
             parsed: Parsed filename data.
@@ -134,12 +141,25 @@ class FileProcessor:
             True if all metadata written successfully, False otherwise.
         """
         try:
-            tags: dict[str, Any] = {}
+            # Determine timeout for large files
+            file_size = file_path.stat().st_size
+            timeout = EXIFTOOL_LARGE_FILE_TIMEOUT if file_size > 100 * 1024 * 1024 else None
+            if timeout:
+                self._logger.info(
+                    "Running exiftool on large file (%.1f MB): %s",
+                    file_size / (1024**2),
+                    file_path.name,
+                )
+            else:
+                self._logger.info("Running exiftool on %s...", file_path.name)
+
+            tagger = Tagger(file_path, exifer=self._exifer, timeout=timeout)
+            tagger.begin()
 
             # 1. Identifiers (XMP) - generate unique UUID
             file_uuid = uuid.uuid4().hex
-            tags[TAG_XMP_DC_IDENTIFIER] = file_uuid
-            tags[TAG_XMP_XMP_IDENTIFIER] = file_uuid
+            tagger.write(KeyValueTag(TAG_XMP_DC_IDENTIFIER, file_uuid))
+            tagger.write(KeyValueTag(TAG_XMP_XMP_IDENTIFIER, file_uuid))
 
             # 2. Dates
             # 2.1 DateTimeOriginal - date from filename (original photo date)
@@ -148,12 +168,15 @@ class FileProcessor:
                     f"{parsed.year:04d}:{parsed.month:02d}:{parsed.day:02d} "
                     f"{parsed.hour:02d}:{parsed.minute:02d}:{parsed.second:02d}"
                 )
-                tags[TAG_EXIF_DATETIME_ORIGINAL] = dt_str
-                tags[TAG_XMP_PHOTOSHOP_DATE_CREATED] = dt_str.replace(":", "-", 2).replace(" ", "T")
+                tagger.write(KeyValueTag(TAG_EXIF_DATETIME_ORIGINAL, dt_str))
+                tagger.write(KeyValueTag(
+                    TAG_XMP_PHOTOSHOP_DATE_CREATED,
+                    dt_str.replace(":", "-", 2).replace(" ", "T"),
+                ))
             else:
                 # Partial date: clear EXIF DateTimeOriginal and encode partial
                 # date in XMP-photoshop:DateCreated.
-                tags[TAG_EXIF_DATETIME_ORIGINAL] = ""
+                tagger.write(KeyValueTag(TAG_EXIF_DATETIME_ORIGINAL, ""))
 
                 if parsed.year > 0:
                     date_val = f"{parsed.year:04d}"
@@ -162,56 +185,21 @@ class FileProcessor:
                         if parsed.day > 0:
                             date_val += f"-{parsed.day:02d}"
 
-                    tags[TAG_XMP_PHOTOSHOP_DATE_CREATED] = date_val
+                    tagger.write(KeyValueTag(TAG_XMP_PHOTOSHOP_DATE_CREATED, date_val))
 
             # 3. Configurable fields from metadata.json
             metadata_values = self._metadata.get_metadata_values(logger=self._logger)
-            tags.update(metadata_values)
+            for tag, value in metadata_values.items():
+                tagger.write(KeyValueTag(tag, value))
 
-            # 4. Write all tags using Exifer
-            file_size = file_path.stat().st_size
-            if file_size > 100 * 1024 * 1024:  # > 100MB
-                self._logger.info(
-                    "Running exiftool on large file (%.1f MB): %s",
-                    file_size / (1024**2),
-                    file_path.name,
-                )
-                self._exifer.write(file_path, tags, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
-            else:
-                self._logger.info("Running exiftool on %s...", file_path.name)
-                self._exifer.write(file_path, tags)
-            
-            self._logger.info("  Metadata written successfully.")
-            
-            # Write XMP History entry for file-organizer
-            self._write_history_entry(file_path)
-            
-            return True
-        except (FileNotFoundError, RuntimeError, ValueError) as e:
-            self._logger.error(f"Exiftool failed: {e}")
-            return False
-        except Exception as e:  # pragma: no cover - defensive
-            self._logger.error(f"Failed to write metadata to {file_path}: {e}")
-            return False
-
-    def _write_history_entry(self, file_path: Path) -> None:
-        """Write XMP History entry for file-organizer metadata changes.
-        
-        Generates a new InstanceID for this version and writes it to the file
-        along with a history entry documenting the metadata changes.
-        
-        Args:
-            file_path: Path to the file.
-        """
-        try:
-            # Generate new InstanceID for this version
+            # 4. New InstanceID for this version
+            # One modification: metadata write (this exiftool call).
+            # File copy is a filesystem operation, not a content modification.
             new_instance_id = uuid.uuid4().hex
-            
-            # Write new InstanceID to file
-            self._exifer.write(file_path, {TAG_XMP_XMPMM_INSTANCE_ID: new_instance_id})
+            tagger.write(KeyValueTag(TAG_XMP_XMPMM_INSTANCE_ID, new_instance_id))
             self._logger.debug(f"Generated new InstanceID: {new_instance_id}")
-            
-            # Get version for software agent
+
+            # 5. XMP History entry
             version = get_version()
             if version == "unknown":
                 version = "0.0"
@@ -219,21 +207,22 @@ class FileProcessor:
                 parts = version.split(".")
                 if len(parts) >= 2:
                     version = f"{parts[0]}.{parts[1]}"
-            
-            software_agent = f"file-organizer {version}"
-            
-            # Write history entry with current time and new InstanceID
-            success = self._historian.append_entry(
-                file_path=file_path,
+
+            tagger.write(HistoryTag(
                 action=XMP_ACTION_EDITED,
-                software_agent=software_agent,
                 when=datetime.now().astimezone(),
+                software_agent=f"file-organizer {version}",
                 changed="metadata",
                 instance_id=new_instance_id,
-                logger=self._logger,
-            )
-            
-            if not success:
-                self._logger.warning(f"Failed to write history entry for {file_path.name}")
-        except Exception as e:
-            self._logger.warning(f"Failed to write XMP history for {file_path.name}: {e}")
+            ))
+
+            tagger.end()  # single exiftool call
+
+            self._logger.info("  Metadata written successfully.")
+            return True
+        except (FileNotFoundError, RuntimeError, ValueError) as e:
+            self._logger.error(f"Exiftool failed: {e}")
+            return False
+        except Exception as e:  # pragma: no cover - defensive
+            self._logger.error(f"Failed to write metadata to {file_path}: {e}")
+            return False
