@@ -50,8 +50,7 @@ class Exifer:
             if executable not in cls._locks:
                 cls._locks[executable] = threading.Lock()
                 
-        # Double-checked locking optimization not strictly needed here due to GIL, 
-        # but good practice. We just use the lock for the specific executable.
+        # Use per-executable lock to ensure exclusive access.
         with cls._locks[executable]:
             if executable not in cls._processes or cls._processes[executable].poll() is not None:
                 cls._start_process(executable)

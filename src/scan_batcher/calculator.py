@@ -19,7 +19,9 @@ class Calculator:
     """
 
     def __init__(self) -> None:
-        """Initialize the calculator."""
+        """
+        Initialize the calculator.
+        """
         pass
 
     def __call__(

@@ -1,4 +1,6 @@
-"""Common pytest fixtures for all tests."""
+"""
+Common pytest fixtures for all tests.
+"""
 
 from pathlib import Path
 import sys
@@ -23,13 +25,17 @@ from common.logger import Logger
 
 @pytest.fixture
 def logger():
-    """Create a logger for testing."""
+    """
+    Create a logger for testing.
+    """
     return Logger("test")
 
 
 @pytest.fixture
 def require_exiftool():
-    """Skip the test if exiftool is not installed or not runnable."""
+    """
+    Skip the test if exiftool is not installed or not runnable.
+    """
     from tests.common.test_utils import exiftool_available
 
     if not exiftool_available():

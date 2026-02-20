@@ -5,7 +5,9 @@ from common.exifer import Exifer
 
 
 class FakeExifer(Exifer):
-    """Test double for Exifer to avoid external exiftool dependency."""
+    """
+    Test double for Exifer to avoid external exiftool dependency.
+    """
 
     def __init__(self, read_map: dict[Path, dict[str, Any]] | None = None) -> None:
         # Bypass Exifer.__init__ (no real exiftool needed in tests)

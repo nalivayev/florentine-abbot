@@ -1,4 +1,6 @@
-"""Version utilities for scan-batcher package."""
+"""
+Version utilities for scan-batcher package.
+"""
 
 import importlib.metadata
 

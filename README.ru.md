@@ -149,6 +149,7 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 - `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
 - `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
 - `common/logger.py` — единая подсистема логирования.
+- `common/tagger.py` — абстракция пакетного XMP/EXIF чтения/записи поверх exiftool.
 - `scan_batcher/constants.py` — централизованные константы и перечисления (например, `RoundingStrategy`).
 - `scan_batcher/workflow.py` — базовый класс для всех workflow-плагинов.
 - `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.

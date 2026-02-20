@@ -29,7 +29,9 @@ class TestExifer:
 
     @patch.object(Exifer, '_read_json')
     def test_read_scanned_file(self, mock_read_json):
-        """Test reading specific tags from a simulated scanned file (e.g. VueScan output)."""
+        """
+        Test reading specific tags from a simulated scanned file (e.g. VueScan output).
+        """
         mock_read_json.return_value = {
             "SourceFile": "scanned.tif",
             "IFD0:Make": "Epson",
@@ -49,7 +51,9 @@ class TestExifer:
 
     @patch.object(Exifer, '_run')
     def test_write(self, mock_run):
-        """Test writing tags using exiftool."""
+        """
+        Test writing tags using exiftool.
+        """
         tool = Exifer()
         tags = {
             "XMP-exif:DateTimeDigitized": "2023:10:27 14:30:00",

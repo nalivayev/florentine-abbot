@@ -149,6 +149,7 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 - `scan_batcher/calculator.py` — DPI calculation algorithms.
 - `scan_batcher/parser.py` — command-line argument parsing and validation.
 - `common/logger.py` — unified logging subsystem.
+- `common/tagger.py` — batch XMP/EXIF read/write abstraction over exiftool.
 - `scan_batcher/constants.py` — centralized constants and enumerations (e.g., `RoundingStrategy`).
 - `scan_batcher/workflow.py` — base class for all workflow plugins.
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
