@@ -9,7 +9,13 @@ from PIL import Image
 from preview_maker import PreviewMaker
 from file_organizer.organizer import FileOrganizer
 from common.logger import Logger
-from common.constants import TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_DESCRIPTION, TAG_XMP_DC_CREATOR, TAG_XMP_DC_RIGHTS, TAG_XMP_PHOTOSHOP_CREDIT, TAG_XMP_XMPRIGHTS_USAGE_TERMS, TAG_XMP_DC_SOURCE
+from common.constants import (
+    TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION,
+    TAG_XMP_DC_DESCRIPTION, TAG_XMP_DC_CREATOR, TAG_XMP_DC_RIGHTS,
+    TAG_XMP_PHOTOSHOP_CREDIT, TAG_XMP_XMPRIGHTS_USAGE_TERMS, TAG_XMP_DC_SOURCE,
+    TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID,
+)
+from common.exifer import Exifer
 from tests.common.test_utils import create_test_image
 
 
@@ -34,8 +40,6 @@ class TestPreviewMakerBatch:
         temp_dir = tempfile.mkdtemp()
         self.temp_dir = Path(temp_dir)
         return self.temp_dir
-
-
 
     def _get_exiftool_json(self, file_path: Path) -> dict:
         cmd = ["exiftool", "-json", "-G", str(file_path)]
@@ -103,6 +107,115 @@ class TestPreviewMakerBatch:
         with Image.open(prv_path) as img:
             assert max(img.size) <= 800
 
+    def test_msr_upgrade_regenerates_prv_from_raw(self, require_exiftool):
+        """
+        When MSR appears after PRV was already generated from RAW,
+        process_single_file should regenerate the PRV from MSR even
+        without overwrite=True.
+
+        The upgrade is detected by comparing DerivedFromDocumentID in the
+        existing PRV against the MSR's DocumentID.
+        """
+        temp_dir = self.create_temp_dir()
+
+        date_dir = temp_dir / "PHOTO_ARCHIVES" / "0001.Family" / "1952" / "1952.01.10"
+        sources_dir = date_dir / "SOURCES"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+
+        raw_name = "1952.01.10.08.00.00.E.FAM.POR.0001.A.RAW.tiff"
+        raw_path = sources_dir / raw_name
+        create_test_image(raw_path, size=(2000, 1500), color="blue", format="TIFF")
+
+        logger = Logger("test_msr_upgrade")
+        maker = PreviewMaker(logger)
+        archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
+
+        # Step 1: generate PRV from RAW
+        result = maker.process_single_file(
+            raw_path,
+            archive_path=archive_base,
+            overwrite=False,
+            max_size=800,
+            quality=70,
+        )
+        assert result is True
+
+        prv_path = date_dir / "1952.01.10.08.00.00.E.FAM.POR.0001.A.PRV.jpg"
+        assert prv_path.exists()
+
+        # Read the PRV's DerivedFromDocumentID — should point to RAW's DocumentID
+        exifer = Exifer()
+        prv_meta_before = exifer.read(prv_path, [TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID])
+        raw_meta = exifer.read(raw_path, [TAG_XMP_XMPMM_DOCUMENT_ID])
+        assert prv_meta_before[TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID] == raw_meta[TAG_XMP_XMPMM_DOCUMENT_ID]
+
+        # Step 2: create MSR for the same frame (different DocumentID)
+        msr_name = "1952.01.10.08.00.00.E.FAM.POR.0001.A.MSR.tiff"
+        msr_path = sources_dir / msr_name
+        create_test_image(msr_path, size=(2000, 1500), color="green", format="TIFF")
+
+        msr_meta = exifer.read(msr_path, [TAG_XMP_XMPMM_DOCUMENT_ID])
+        msr_doc_id = msr_meta[TAG_XMP_XMPMM_DOCUMENT_ID]
+
+        # The MSR has a different DocumentID than the RAW
+        assert msr_doc_id != raw_meta[TAG_XMP_XMPMM_DOCUMENT_ID]
+
+        # Step 3: process MSR — should upgrade PRV without overwrite flag
+        result = maker.process_single_file(
+            msr_path,
+            archive_path=archive_base,
+            overwrite=False,
+            max_size=800,
+            quality=70,
+        )
+        assert result is True, "Expected PRV upgrade from MSR"
+
+        # Step 4: verify PRV now derives from MSR
+        prv_meta_after = exifer.read(prv_path, [TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID])
+        assert prv_meta_after[TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID] == msr_doc_id
+
+    def test_msr_no_upgrade_when_prv_already_from_msr(self, require_exiftool):
+        """
+        When PRV was already generated from MSR, presenting the same MSR
+        again should NOT regenerate (DerivedFromDocumentID already matches).
+        """
+        temp_dir = self.create_temp_dir()
+
+        date_dir = temp_dir / "PHOTO_ARCHIVES" / "0001.Family" / "1953" / "1953.05.20"
+        sources_dir = date_dir / "SOURCES"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+
+        msr_name = "1953.05.20.14.00.00.E.FAM.POR.0001.A.MSR.tiff"
+        msr_path = sources_dir / msr_name
+        create_test_image(msr_path, size=(2000, 1500), color="red", format="TIFF")
+
+        logger = Logger("test_msr_no_upgrade")
+        maker = PreviewMaker(logger)
+        archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
+
+        # Generate PRV from MSR
+        result = maker.process_single_file(
+            msr_path,
+            archive_path=archive_base,
+            overwrite=False,
+            max_size=800,
+            quality=70,
+        )
+        assert result is True
+
+        prv_path = date_dir / "1953.05.20.14.00.00.E.FAM.POR.0001.A.PRV.jpg"
+        assert prv_path.exists()
+
+        # Process MSR again — should skip (DerivedFromDocumentID matches)
+        result = maker.process_single_file(
+            msr_path,
+            archive_path=archive_base,
+            overwrite=False,
+            max_size=800,
+            quality=70,
+        )
+        assert result is False, "Should skip when PRV already derived from same MSR"
+
     def test_generate_prv_from_raw_when_no_msr(self):
         """
         If only RAW exists, it should still generate a PRV.
@@ -130,7 +243,8 @@ class TestPreviewMakerBatch:
             assert max(w, h) <= 900
 
     def test_prv_inherits_metadata_with_new_identifier(self, require_exiftool):
-        """PRV should inherit context metadata but have its own identifier.
+        """
+        PRV should inherit context metadata but have its own identifier.
 
         We create an MSR file, let FileOrganizer write full metadata to it,
         then generate a PRV via PreviewMaker and verify that key fields are

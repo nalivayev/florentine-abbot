@@ -158,8 +158,17 @@ class PreviewMaker:
         prv_path = prv_dir / prv_filename
 
         if prv_path.exists() and not overwrite:
-            self._logger.debug("Skipping existing PRV (overwrite disabled): %s", prv_path)
-            return False
+            # Even without overwrite, regenerate PRV when a better master
+            # appears.  If the source is MSR and the existing PRV was
+            # derived from a different master (e.g. RAW), upgrade it.
+            if parsed.suffix.upper() == "MSR" and self._should_upgrade_prv(prv_path, src_path):
+                self._logger.info(
+                    "Upgrading PRV from MSR (was derived from RAW): %s",
+                    prv_path,
+                )
+            else:
+                self._logger.debug("Skipping existing PRV (overwrite disabled): %s", prv_path)
+                return False
 
         self._logger.info("Creating PRV: %s -> %s", src_path.name, prv_path)
 
@@ -173,6 +182,41 @@ class PreviewMaker:
             return True
         except ValueError:
             # Missing DocumentID/InstanceID — already logged by _convert_to_prv
+            return False
+
+    def _should_upgrade_prv(self, prv_path: Path, msr_path: Path) -> bool:
+        """Check whether an existing PRV should be regenerated from MSR.
+
+        Returns True when the PRV's ``DerivedFromDocumentID`` does **not**
+        match the MSR's ``DocumentID``, meaning the PRV was created from a
+        different master (typically RAW) and should be upgraded.
+
+        If either ID cannot be read (e.g. the PRV has no metadata yet),
+        returns False to avoid accidental overwrites.
+        """
+        try:
+            tagger = Tagger(prv_path, exifer=self._exifer)
+            tagger.begin()
+            tagger.read(KeyValueTag(TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID))
+            prv_tags = tagger.end() or {}
+
+            tagger = Tagger(msr_path, exifer=self._exifer)
+            tagger.begin()
+            tagger.read(KeyValueTag(TAG_XMP_XMPMM_DOCUMENT_ID))
+            msr_tags = tagger.end() or {}
+
+            prv_derived_from = prv_tags.get(TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID)
+            msr_doc_id = msr_tags.get(TAG_XMP_XMPMM_DOCUMENT_ID)
+
+            if not prv_derived_from or not msr_doc_id:
+                return False
+
+            return prv_derived_from != msr_doc_id
+        except Exception as exc:
+            self._logger.debug(
+                "Cannot determine upgrade eligibility for %s: %s",
+                prv_path, exc,
+            )
             return False
 
     def _generate_previews_for_sources(
