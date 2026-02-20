@@ -1,4 +1,6 @@
-"""Tests for common.router module."""
+"""
+Tests for common.router module.
+"""
 
 import pytest
 from pathlib import Path
@@ -8,10 +10,14 @@ from common.naming import ParsedFilename
 
 
 class TestRouter:
-    """Tests for Router class."""
+    """
+    Tests for Router class.
+    """
     
     def _create_parsed(self, suffix: str, extension: str = "tif") -> ParsedFilename:
-        """Create a ParsedFilename for testing."""
+        """
+        Create a ParsedFilename for testing.
+        """
         return ParsedFilename(
             year=2020,
             month=1,
@@ -29,7 +35,9 @@ class TestRouter:
         )
     
     def test_default_routing_raw_to_sources(self):
-        """RAW files should go to SOURCES/ with default routing."""
+        """
+        RAW files should go to SOURCES/ with default routing.
+        """
         router = Router()
         parsed = self._create_parsed("RAW")
         base_path = Path("/archive")
@@ -39,7 +47,9 @@ class TestRouter:
         assert target == Path("/archive/2020/2020.01.15/SOURCES")
     
     def test_default_routing_msr_to_sources(self):
-        """MSR files should go to SOURCES/ with default routing."""
+        """
+        MSR files should go to SOURCES/ with default routing.
+        """
         router = Router()
         parsed = self._create_parsed("MSR")
         base_path = Path("/archive")
@@ -49,7 +59,9 @@ class TestRouter:
         assert target == Path("/archive/2020/2020.01.15/SOURCES")
     
     def test_default_routing_prv_to_date_root(self):
-        """PRV files should go to date folder root with default routing."""
+        """
+        PRV files should go to date folder root with default routing.
+        """
         router = Router()
         parsed = self._create_parsed("PRV", "jpg")
         base_path = Path("/archive")
@@ -59,7 +71,9 @@ class TestRouter:
         assert target == Path("/archive/2020/2020.01.15")
     
     def test_default_routing_unknown_to_derivatives(self):
-        """Unknown suffix should default to DERIVATIVES/."""
+        """
+        Unknown suffix should default to DERIVATIVES/.
+        """
         router = Router()
         parsed = self._create_parsed("UNKNOWN")
         base_path = Path("/archive")
@@ -69,7 +83,9 @@ class TestRouter:
         assert target == Path("/archive/2020/2020.01.15/DERIVATIVES")
     
     def test_custom_routing(self):
-        """Custom routing rules should be respected."""
+        """
+        Custom routing rules should be respected.
+        """
         custom_routing = {
             "RAW": "SOURCES",
             "MSR": "SOURCES",
@@ -90,7 +106,9 @@ class TestRouter:
         assert edt_target == Path("/archive/2020/2020.01.15/EXPORTS")
     
     def test_case_insensitive_suffix_matching(self):
-        """Suffix matching should be case-insensitive."""
+        """
+        Suffix matching should be case-insensitive.
+        """
         router = Router()
         
         raw_upper = self._create_parsed("RAW")
@@ -107,7 +125,9 @@ class TestRouter:
         assert target_mixed == Path("/archive/2020/2020.01.15/SOURCES")
     
     def test_get_normalized_filename(self):
-        """Normalized filename should have leading zeros."""
+        """
+        Normalized filename should have leading zeros.
+        """
         router = Router()
         parsed = ParsedFilename(
             year=2020,
@@ -130,7 +150,9 @@ class TestRouter:
         assert normalized == "2020.01.05.09.08.07.E.FAM.POR.0001.A.RAW"
     
     def test_year_month_day_folder_structure(self):
-        """Target folder should follow YYYY/YYYY.MM.DD structure."""
+        """
+        Target folder should follow YYYY/YYYY.MM.DD structure.
+        """
         router = Router()
         
         # Test different dates
@@ -159,7 +181,9 @@ class TestRouter:
         assert target_dec == Path("/archive/2020/2020.12.31/SOURCES")
     
     def test_get_folders_for_suffixes_default_routing(self):
-        """get_folders_for_suffixes should return correct folders for default routing."""
+        """
+        get_folders_for_suffixes should return correct folders for default routing.
+        """
         router = Router()
         
         # RAW and MSR should both be in SOURCES
@@ -175,7 +199,9 @@ class TestRouter:
         assert folders == set()
     
     def test_get_folders_for_suffixes_custom_routing(self):
-        """get_folders_for_suffixes should respect custom routing rules."""
+        """
+        get_folders_for_suffixes should respect custom routing rules.
+        """
         custom_routing = {
             "RAW": "SOURCES",
             "MSR": "MASTERS",
@@ -198,7 +224,9 @@ class TestRouter:
         assert folders == set()
     
     def test_custom_default_folder_for_unknown_suffixes(self):
-        """Router should use '*' key from routing config as default for unknown suffixes."""
+        """
+        Router should use '*' key from routing config as default for unknown suffixes.
+        """
         custom_routing = {
             "RAW": "SOURCES",
             "MSR": "SOURCES",

@@ -1,4 +1,6 @@
-"""StoreExifer for testing - stores tags in memory."""
+"""
+StoreExifer for testing - stores tags in memory.
+"""
 
 from pathlib import Path
 from typing import Any

@@ -1,7 +1,13 @@
-"""Command Line Interface for Preview Maker.
+"""
+Command Line Interface for Preview Maker.
 
-Parses command-line arguments and delegates work to :mod:`preview_maker.maker`.
-The ``preview-maker`` console script is wired to :func:`main`.
+Provides two subcommands:
+
+* ``preview-maker batch`` — one-shot PRV generation for existing masters.
+* ``preview-maker watch`` — daemon mode that monitors for new masters.
+
+Global flags (``--verbose``, ``--log-path``, ``--version``)
+are shared across both subcommands.
 """
 
 import argparse
@@ -12,19 +18,16 @@ from pathlib import Path
 from common.logger import Logger
 from common.version import get_version
 from preview_maker.maker import PreviewMaker
+from preview_maker.watcher import PreviewWatcher
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Generate PRV (preview) JPEGs from source images using Pillow "
-            "in batch mode over processed/ SOURCES trees."
-        )
-    )
+def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add arguments shared between batch and watch subcommands."""
     parser.add_argument(
-        '--version',
-        action='version',
-        version=f'preview-maker (florentine-abbot {get_version()})'
+        "--path",
+        required=True,
+        type=str,
+        help="Path to the archive root (where year folders start)",
     )
     parser.add_argument(
         "--max-size",
@@ -38,9 +41,20 @@ def _build_parser() -> argparse.ArgumentParser:
         default=80,
         help="JPEG quality (1-100, default: 80)",
     )
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Preview Maker - Generate PRV JPEGs from master sources",
+        epilog="Use 'preview-maker <command> --help' for subcommand details.",
+    )
     parser.add_argument(
-        "-v",
-        "--verbose",
+        "--version",
+        action="version",
+        version=f"preview-maker (florentine-abbot {get_version()})",
+    )
+    parser.add_argument(
+        "-v", "--verbose",
         action="store_true",
         help="Enable verbose logging",
     )
@@ -48,49 +62,74 @@ def _build_parser() -> argparse.ArgumentParser:
         "--log-path",
         help="Custom directory for log files (default: ~/.florentine-abbot/logs/)",
     )
-    parser.add_argument(
-        "--path",
-        help=(
-            "Path to scan in batch mode. PRV files "
-            "are generated for SOURCES/ under this path."
-        ),
+
+    subparsers = parser.add_subparsers(dest="command")
+
+    # ── batch ──────────────────────────────────────────────────────────
+    batch_parser = subparsers.add_parser(
+        "batch",
+        help="One-shot PRV generation for existing master files",
+        description="Scan --path for RAW/MSR masters and generate PRV JPEGs.",
     )
-    parser.add_argument(
+    _add_common_arguments(batch_parser)
+    batch_parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Overwrite existing PRV files instead of keeping them.",
+        help="Overwrite existing PRV files instead of keeping them",
     )
+
+    # ── watch ──────────────────────────────────────────────────────────
+    watch_parser = subparsers.add_parser(
+        "watch",
+        help="Daemon mode — watch for new master files",
+        description="Watch --path for new RAW/MSR masters and generate PRVs continuously.",
+    )
+    _add_common_arguments(watch_parser)
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for the `preview-maker` CLI."""
+    """Entry point for the ``preview-maker`` CLI."""
 
     parser = _build_parser()
     args = parser.parse_args(argv)
 
+    if not args.command:
+        parser.print_help()
+        return 1
+
+    logger = Logger(
+        "preview_maker",
+        args.log_path,
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        console=True,
+    )
+
+    path = Path(args.path)
+    if not path.exists():
+        logger.error(f"Path does not exist: {path}")
+        return 1
+
     try:
-        logger = Logger(
-            "preview_maker",
-            args.log_path,
-            level=logging.DEBUG if args.verbose else logging.INFO,
-            console=True,
-        )
-        maker = PreviewMaker(logger)
-
-        if not args.path:
-            raise ValueError("Specify --path for batch mode.")
-
-        path = Path(args.path)
-        logger.info(f"Starting batch PRV generation under {path}")
-
-        count = maker(
-            path=path,
-            overwrite=bool(args.overwrite),
-            max_size=args.max_size,
-            quality=args.quality,
-        )
-        logger.info(f"Generated {count} PRV file(s) under {path}")
+        if args.command == "watch":
+            watcher = PreviewWatcher(
+                logger,
+                path=str(path),
+                max_size=args.max_size,
+                quality=args.quality,
+            )
+            watcher.start()
+        else:
+            # batch
+            maker = PreviewMaker(logger)
+            count = maker(
+                path=path,
+                overwrite=bool(args.overwrite),
+                max_size=args.max_size,
+                quality=args.quality,
+            )
+            logger.info(f"Generated {count} PRV file(s)")
     except Exception as exc:  # pragma: no cover - generic CLI error reporting
         print(f"[preview_maker] Error: {exc}", file=sys.stderr)
         return 1

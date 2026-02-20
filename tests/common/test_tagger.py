@@ -7,26 +7,28 @@ import pytest
 from common.exifer import Exifer
 from common.tagger import Tagger
 from common.tags import KeyValueTag, HistoryTag
-from common.constants import (
-    TAG_XMP_XMPMM_DOCUMENT_ID,
-    TAG_XMP_XMPMM_INSTANCE_ID,
-    XMP_ACTION_CREATED,
-)
+from common.constants import TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED
 from tests.common.test_utils import create_test_image
 
 
 @pytest.mark.usefixtures("require_exiftool")
 class TestTagger:
-    """Integration tests for Tagger with Tag descriptors."""
+    """
+    Integration tests for Tagger with Tag descriptors.
+    """
 
     def _create_image(self, tmp_path: Path) -> Path:
-        """Create a minimal test image without scan-batcher metadata."""
+        """
+        Create a minimal test image without scan-batcher metadata.
+        """
         file_path = tmp_path / "sample.tiff"
         create_test_image(file_path, size=(1, 1), format="TIFF", add_ids=False)
         return file_path
 
     def test_write_and_read_history(self, tmp_path):
-        """Write a History entry via Tagger batch and read it back."""
+        """
+        Write a History entry via Tagger batch and read it back.
+        """
         file_path = self._create_image(tmp_path)
 
         ex = Exifer()
@@ -51,7 +53,9 @@ class TestTagger:
         assert any(entry.get("instanceID") == instance for entry in history)
 
     def test_batch_read(self, tmp_path):
-        """Batch-read multiple tags in a single call."""
+        """
+        Batch-read multiple tags in a single call.
+        """
         file_path = self._create_image(tmp_path)
 
         ex = Exifer()
@@ -77,7 +81,9 @@ class TestTagger:
         assert result[TAG_XMP_XMPMM_INSTANCE_ID] == inst_id
 
     def test_batch_mode_errors(self):
-        """Verify batch mode raises on misuse."""
+        """
+        Verify batch mode raises on misuse.
+        """
         tagger = Tagger(Path("dummy.tif"))
 
         # end() without begin()

@@ -12,7 +12,6 @@ where test doubles inherit real classes and only override what is needed.
 import datetime
 from pathlib import Path
 
-from common.logger import Logger
 from scan_batcher.workflow import MetadataWorkflow
 
 
@@ -31,7 +30,8 @@ class FakeMetadataWorkflow(MetadataWorkflow):
 
     def __call__(self, workflow_path: str, templates: dict[str, str]) -> None:
         """
-        Not used — this fake is not meant to run as a workflow."""
+        Not used — this fake is not meant to run as a workflow.
+        """
         raise NotImplementedError("FakeMetadataWorkflow is not a runnable workflow")
 
     def write_xmp_metadata(

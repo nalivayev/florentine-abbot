@@ -148,12 +148,12 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 
 > **⚠️ Статус**: В разработке. Пока не полностью протестирована или документирована.
 
-Инструмент для автоматической организации отсканированных файлов на основе их имён. Он извлекает метаданные из имени файла (дата, модификаторы, роль по суффиксу) и перемещает каждый файл во вспомогательное дерево `processed/` со следующей структурой по умолчанию:
+Инструмент для автоматической организации отсканированных файлов на основе их имён. Он извлекает метаданные из имени файла (дата, модификаторы, роль по суффиксу) и перемещает каждый файл в дерево архива со следующей структурой по умолчанию:
 
-- `processed/{year}/{year}.{month}.{day}/` — папка конкретной даты (настраивается через `formats.json`)
-- `processed/{year}/{year}.{month}.{day}/SOURCES/` — RAW, мастер‑копии (`MSR`) и связанные с ними служебные файлы
-- `processed/{year}/{year}.{month}.{day}/DERIVATIVES/` — производные файлы (WEB, PRT и другие выходные форматы)
-- `processed/{year}/{year}.{month}.{day}/` — файлы `*.PRV.jpg` для быстрого просмотра (просмотровые копии), лежащие прямо в папке даты
+- `{output}/{year}/{year}.{month}.{day}/` — папка конкретной даты (настраивается через `formats.json`)
+- `{output}/{year}/{year}.{month}.{day}/SOURCES/` — RAW, мастер‑копии (`MSR`) и связанные с ними служебные файлы
+- `{output}/{year}/{year}.{month}.{day}/DERIVATIVES/` — производные файлы (WEB, PRT и другие выходные форматы)
+- `{output}/{year}/{year}.{month}.{day}/` — файлы `*.PRV.jpg` для быстрого просмотра (просмотровые копии), лежащие прямо в папке даты
 
 Структура архива полностью настраивается через `formats.json` (см. [Настройка форматов путей и имён файлов](#настройка-форматов-путей-и-имён-файлов-formatsjson) ниже).
 
@@ -161,14 +161,28 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 
 ### Использование
 
+File Organizer предоставляет две подкоманды: `batch` (одноразовая обработка) и `watch` (демон).
+
+Обе требуют `--input` (папка-источник / inbox) и `--output` (корень архива). Input и output не должны пересекаться.
+
 **Пакетный режим (обработка существующих файлов):**
 ```sh
-file-organizer "D:\Scans\Inbox"
+file-organizer batch --input "D:\Scans\Inbox" --output "D:\Archive"
 ```
 
-**Режим демона (непрерывный мониторинг):**
+**Пакетный режим с рекурсивным сканированием:**
 ```sh
-file-organizer "D:\Scans\Inbox" --daemon
+file-organizer batch --input "D:\Scans\Inbox" --output "D:\Archive" -r
+```
+
+**Режим демона (отслеживание новых файлов):**
+```sh
+file-organizer watch --input "D:\Scans\Inbox" --output "D:\Archive"
+```
+
+**Режим копирования (не удалять исходные файлы):**
+```sh
+file-organizer batch --input "D:\Scans\Inbox" --output "D:\Archive" --copy
 ```
 
 **С метаданными (через JSON-конфиг):**
@@ -305,14 +319,21 @@ Preview Maker использует те же правила маршрутиза
 - каждый `PRV` получает собственный идентификатор;
 - в метаданных фиксируется явная связь (relation) между `PRV` и его мастером.
 
+Preview Maker предоставляет две подкоманды: `batch` (одноразовая обработка) и `watch` (демон).
+
 **Пакетный режим (генерация превью для архива):**
 ```sh
-preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
 ```
 
 **С перезаписью существующих PRV:**
 ```sh
-preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --overwrite
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --overwrite
+```
+
+**Режим демона (отслеживание новых мастер-файлов):**
+```sh
+preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
 ```
 
 Логи пишутся по тем же правилам, что и у других утилит:
@@ -346,19 +367,26 @@ python -m archive_keeper.cli "D:\Archive\Photos"
 
 - `scan_batcher/cli.py` — основной CLI-модуль (используется для команды `scan-batcher`).
 - `archive_keeper/cli.py` — CLI для утилиты `archive-keeper`.
-- `file_organizer/cli.py` — CLI для утилиты `file-organizer`.
-- `preview_maker/cli.py` — CLI для утилиты `preview-maker`.
+- `file_organizer/cli.py` — CLI для утилиты `file-organizer` (подкоманды: `batch`, `watch`).
+- `file_organizer/organizer.py` — ядро пакетной обработки и пофайловой логики.
+- `file_organizer/watcher.py` — режим демона через watchdog, делегирует `FileOrganizer`.
+- `preview_maker/cli.py` — CLI для утилиты `preview-maker` (подкоманды: `batch`, `watch`).
 - `preview_maker/maker.py` — ядро Preview Maker (логика генерации PRV-превью).
+- `preview_maker/watcher.py` — режим демона через watchdog, делегирует `PreviewMaker`.
 - `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
 - `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
 - `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
 - `common/logger.py` — единая подсистема логирования для всех утилит.
+- `common/naming.py` — общий парсер и валидатор имён файлов.
+- `common/router.py` — настраиваемая маршрутизация файлов (суффикс → папка).
+- `common/formatter.py` — настраиваемое форматирование путей и имён файлов.
+- `common/tagger.py` — абстракция пакетного XMP/EXIF чтения/записи поверх exiftool.
+- `common/metadata.py` — политика архивных метаданных (многоязычные поля, мэппинг тегов).
 - `scan_batcher/constants.py` — централизованные константы и перечисления (например, `RoundingStrategy`).
 - `scan_batcher/workflow.py` — базовый класс для всех workflow-плагинов.
 - `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.
 - `scan_batcher/workflows/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
 - `common/exifer.py` — извлечение и обработка EXIF-метаданных, общая для всех утилит.
- - `common/archive_metadata.py` — централизованная политика архивных метаданных для мастер‑ и производных файлов.
 
 ### Установка
 

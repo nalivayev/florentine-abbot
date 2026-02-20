@@ -4,7 +4,6 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-import pytest
 from PIL import Image
 
 from preview_maker import PreviewMaker
@@ -16,16 +15,22 @@ from tests.common.test_utils import create_test_image
 
 class TestPreviewMakerBatch:
     def setup_method(self):
-        """Setup for each test method."""
+        """
+        Setup for each test method.
+        """
         self.temp_dir = None
 
     def teardown_method(self):
-        """Cleanup after each test method."""
+        """
+        Cleanup after each test method.
+        """
         if self.temp_dir and self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 
     def create_temp_dir(self) -> Path:
-        """Create a temporary directory."""
+        """
+        Create a temporary directory.
+        """
         temp_dir = tempfile.mkdtemp()
         self.temp_dir = Path(temp_dir)
         return self.temp_dir
@@ -99,7 +104,9 @@ class TestPreviewMakerBatch:
             assert max(img.size) <= 800
 
     def test_generate_prv_from_raw_when_no_msr(self):
-        """If only RAW exists, it should still generate a PRV."""
+        """
+        If only RAW exists, it should still generate a PRV.
+        """
         temp_dir = self.create_temp_dir()
 
         date_dir = temp_dir / "PHOTO_ARCHIVES" / "0001.Family" / "1951" / "1951.07.20"
@@ -132,9 +139,9 @@ class TestPreviewMakerBatch:
         """
         temp_dir = self.create_temp_dir()
 
-        root = temp_dir
-        input_dir = root / "input"
+        input_dir = temp_dir / "input"
         input_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = temp_dir / "output"
 
         filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
         msr_path = input_dir / filename
@@ -165,13 +172,14 @@ class TestPreviewMakerBatch:
 
         processed_count = organizer(
             input_path=input_dir,
+            output_path=output_dir,
             config_path=config_path,
             recursive=False,
             copy_mode=False,
         )
         assert processed_count == 1
 
-        processed_msr = input_dir / "processed" / "1950" / "1950.06.15" / "SOURCES" / filename
+        processed_msr = output_dir / "1950" / "1950.06.15" / "SOURCES" / filename
         assert processed_msr.exists()
 
         meta_master = self._get_exiftool_json(processed_msr)
@@ -189,13 +197,12 @@ class TestPreviewMakerBatch:
         # Step 2: generate PRV via PreviewMaker
         maker = PreviewMaker(logger)
         # Pass the archive base where year folders begin
-        archive_base = input_dir / "processed"
+        archive_base = output_dir
         count = maker(path=archive_base, overwrite=False, max_size=1000, quality=70)
         assert count == 1
 
         prv_path = (
-            input_dir
-            / "processed"
+            output_dir
             / "1950"
             / "1950.06.15"
             / "1950.06.15.12.30.45.E.FAM.POR.0001.A.PRV.jpg"
@@ -227,19 +234,27 @@ class TestPreviewMakerBatch:
 
 
 class TestPreviewMakerCustomFormats:
-    """Test PreviewMaker with custom path formats."""
+    """
+    Test PreviewMaker with custom path formats.
+    """
     
     def setup_method(self):
-        """Setup for each test method."""
+        """
+        Setup for each test method.
+        """
         self.temp_dir = None
     
     def teardown_method(self):
-        """Cleanup after each test method."""
+        """
+        Cleanup after each test method.
+        """
         if self.temp_dir and self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
     
     def create_temp_dir(self) -> Path:
-        """Create a temporary directory."""
+        """
+        Create a temporary directory.
+        """
         temp_dir = tempfile.mkdtemp()
         self.temp_dir = Path(temp_dir)
         return self.temp_dir
@@ -247,7 +262,9 @@ class TestPreviewMakerCustomFormats:
 
     
     def test_generate_prv_with_flat_path_structure(self):
-        """Test preview generation with flat path structure (no year folder)."""
+        """
+        Test preview generation with flat path structure (no year folder).
+        """
         temp_dir = self.create_temp_dir()
         logger = Logger("test", console=False)
         
@@ -284,7 +301,9 @@ class TestPreviewMakerCustomFormats:
         assert prv_path.exists(), f"PRV not found at {prv_path}"
     
     def test_generate_prv_with_month_grouping(self):
-        """Test preview generation with year/month grouping."""
+        """
+        Test preview generation with year/month grouping.
+        """
         temp_dir = self.create_temp_dir()
         logger = Logger("test", console=False)
         
@@ -317,7 +336,9 @@ class TestPreviewMakerCustomFormats:
         assert prv_path.exists(), f"PRV not found at {prv_path}"
     
     def test_generate_prv_with_group_in_path(self):
-        """Test preview generation with group in path structure."""
+        """
+        Test preview generation with group in path structure.
+        """
         temp_dir = self.create_temp_dir()
         logger = Logger("test", console=False)
         
@@ -350,7 +371,9 @@ class TestPreviewMakerCustomFormats:
         assert prv_path.exists(), f"PRV not found at {prv_path}"
     
     def test_generate_prv_with_compact_filename(self):
-        """Test preview generation with compact filename format."""
+        """
+        Test preview generation with compact filename format.
+        """
         temp_dir = self.create_temp_dir()
         logger = Logger("test", console=False)
         

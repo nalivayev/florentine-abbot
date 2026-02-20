@@ -10,34 +10,46 @@ from common.logger import Logger
 
 
 class TestArchiveScanner:
-    """Test cases for ArchiveScanner."""
+    """
+    Test cases for ArchiveScanner.
+    """
 
     @pytest.fixture
     def logger(self):
-        """Create a logger for testing."""
+        """
+        Create a logger for testing.
+        """
         return Logger("test")
 
     @pytest.fixture
     def db_manager(self):
-        """Create an in-memory database for testing."""
+        """
+        Create an in-memory database for testing.
+        """
         manager = DatabaseManager(":memory:")
         manager.init_db()
         yield manager
         # Cleanup: close all sessions
-        manager.engine.dispose()
+        manager.dispose()
 
     @pytest.fixture
     def archive_path(self, tmp_path):
-        """Create a temporary directory for the archive."""
+        """
+        Create a temporary directory for the archive.
+        """
         return tmp_path
 
     @pytest.fixture
     def scanner(self, archive_path, db_manager, logger):
-        """Create an ArchiveScanner instance."""
+        """
+        Create an ArchiveScanner instance.
+        """
         return ArchiveScanner(logger, str(archive_path), db_manager)
 
     def test_scan_new_file(self, scanner, archive_path, db_manager):
-        """Test detection of a new file."""
+        """
+        Test detection of a new file.
+        """
         # Create a file
         test_file = archive_path / "test.txt"
         test_file.write_text("content")
@@ -59,7 +71,9 @@ class TestArchiveScanner:
         session.close()
 
     def test_scan_modified_file(self, scanner, archive_path, db_manager):
-        """Test detection of a modified file."""
+        """
+        Test detection of a modified file.
+        """
         # 1. Initial state
         test_file = archive_path / "test.txt"
         test_file.write_text("content v1")
@@ -88,7 +102,9 @@ class TestArchiveScanner:
         session.close()
 
     def test_scan_missing_file(self, scanner, archive_path, db_manager):
-        """Test detection of a missing file."""
+        """
+        Test detection of a missing file.
+        """
         # 1. Initial state
         test_file = archive_path / "test.txt"
         test_file.write_text("content")
@@ -112,7 +128,9 @@ class TestArchiveScanner:
         session.close()
 
     def test_scan_recovered_file(self, scanner, archive_path, db_manager):
-        """Test recovery of a missing file."""
+        """
+        Test recovery of a missing file.
+        """
         # 1. Create and scan
         test_file = archive_path / "test.txt"
         test_file.write_text("content")
@@ -135,7 +153,9 @@ class TestArchiveScanner:
         session.close()
 
     def test_scan_corrupted_file(self, scanner, archive_path, db_manager):
-        """Test detection of silent corruption (same mtime/size, different hash)."""
+        """
+        Test detection of silent corruption (same mtime/size, different hash).
+        """
         # Note: This is hard to simulate with standard filesystem APIs because writing changes mtime.
         # We will manually manipulate the DB to simulate a state where the file on disk is different 
         # but mtime/size matches the DB record (bit rot simulation).

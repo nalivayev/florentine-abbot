@@ -4,6 +4,19 @@ This log summarizes the most recent changes in the repository, with commit IDs, 
 
 ## Commits
 
+### [Pending] — 2026-02-20
+refactor: subcommands CLI, composition watchers, DRY, daemon mode for preview-maker
+- Added: `src/file_organizer/watcher.py`, `src/preview_maker/watcher.py`
+- Deleted: `src/file_organizer/monitor.py`
+- Modified: `src/file_organizer/cli.py`, `src/file_organizer/organizer.py`, `src/file_organizer/__init__.py`, `src/preview_maker/cli.py`, `src/preview_maker/maker.py`, `src/preview_maker/__init__.py`, `tests/file_organizer/test_organizer.py`, `tests/preview_maker/test_maker.py`, `tests/test_pipeline.py`, `tests/test_manual_pipeline.py`, `README.md`, `README.ru.md`, `docs/change_log.md`
+- Features:
+  - **file-organizer subcommands**: `file-organizer batch --input --output` and `file-organizer watch --input --output`; `--output` is required, input/output overlap validation via `is_relative_to()`
+  - **preview-maker subcommands**: `preview-maker batch --path` and `preview-maker watch --path`
+  - **Composition pattern**: `FileWatcher` and `PreviewWatcher` are thin wrappers around `FileOrganizer`/`PreviewMaker` respectively; all per-file logic delegated via `process_single_file()` / `should_process()`
+  - **DRY refactoring**: extracted `process_single_file()` in both organizer and maker; eliminated ~130 lines of duplicated code from old monitor.py
+  - **Rename**: `monitor.py` → `watcher.py`, `FileMonitor` → `FileWatcher`
+  - 105 tests passing, 1 deselected (manual)
+
 ### [Pending] — 2026-01-22
 feat: add extensible configuration for metadata tags and suffix routing
 - Added: `src/file_organizer/tags.template.json`, `src/file_organizer/routes.template.json`, `tests/file_organizer/test_processor.py`

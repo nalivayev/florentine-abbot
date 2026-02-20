@@ -1,4 +1,6 @@
-"""Command Line Interface for Archive Keeper."""
+"""
+Command Line Interface for Archive Keeper.
+"""
 
 import argparse
 import logging

@@ -1,4 +1,6 @@
-"""Version utilities for florentine-abbot package."""
+"""
+Version utilities for florentine-abbot package.
+"""
 
 import importlib.metadata
 

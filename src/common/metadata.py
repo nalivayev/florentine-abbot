@@ -5,7 +5,7 @@ provider for metadata tags and values. It loads tags.json and metadata.json
 and provides methods to retrieve tag lists and values.
 
 Actual reading/writing of metadata is done by individual components
-(FileProcessor, PreviewMaker) using :class:`Exifer` directly.
+(FileProcessor, PreviewMaker) using :class:`~common.tagger.Tagger`.
 """
 
 from typing import Any, Optional
@@ -23,7 +23,8 @@ class ArchiveMetadata:
         - List of configurable tags (for reading/copying)
         - Dictionary of tag values with language variants (for writing)
 
-    Actual reading/writing of metadata is done by individual components using :class:`Exifer` directly.
+    Actual reading/writing of metadata is done by individual components
+    using :class:`~common.tagger.Tagger`.
     """
 
     def __init__(self, logger: Optional[Logger] = None) -> None:

@@ -1,4 +1,6 @@
-"""Database models for Archive Keeper."""
+"""
+Database models for Archive Keeper.
+"""
 
 from datetime import datetime, timezone
 from sqlalchemy import String, DateTime, ForeignKey, Enum, BigInteger

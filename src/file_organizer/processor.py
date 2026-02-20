@@ -9,7 +9,6 @@ and moving files into the ``processed/`` tree. Higher-level orchestration
 
 import uuid
 from pathlib import Path
-from typing import Any
 from datetime import datetime
 
 from common.logger import Logger

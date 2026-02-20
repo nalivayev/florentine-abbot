@@ -88,14 +88,6 @@ TAG_XMP_XMPMM_HISTORY_CHANGED = "XMP-xmpMM:HistoryChanged"
 TAG_XMP_XMPMM_HISTORY_PARAMETERS = "XMP-xmpMM:HistoryParameters"
 TAG_XMP_XMPMM_HISTORY_INSTANCE_ID = "XMP-xmpMM:HistoryInstanceID"
 
-# Tag groupings for easier reuse
-IDENTIFIER_TAGS = (TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER)
-DATE_TAGS = (
-    TAG_EXIF_DATETIME_ORIGINAL,
-    TAG_XMP_PHOTOSHOP_DATE_CREATED,
-    TAG_XMP_EXIF_DATETIME_DIGITIZED,
-)
-
 # XMP History event field names (stEvt namespace)
 # Used when building structured History entries
 XMP_FIELD_ACTION = "action"
@@ -142,7 +134,7 @@ DEFAULT_METADATA = {
 }
 
 # Default suffix routing rules
-# Used by FileProcessor when routes.json is not present
+# Used by Router when routes.json is not present
 # Maps file suffix (uppercase) to subdirectory name:
 #   "." = date root (no subfolder)
 #   "SOURCES" = SOURCES/ subfolder

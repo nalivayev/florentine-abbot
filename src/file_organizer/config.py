@@ -1,4 +1,6 @@
-"""Configuration management for file organizer."""
+"""
+Configuration management for file organizer.
+"""
 
 from pathlib import Path
 from typing import Any
@@ -22,14 +24,14 @@ class Config:
             logger (Logger): Logger instance for this config.
             config_path (str|Path|None): Path to JSON config file. If None, uses file-organizer/config.json in standard location.
         """
-        self.logger: Logger = logger
+        self._logger: Logger = logger
 
         # Get config path (custom or standard file-organizer/config.json)
         if config_path:
-            self.config_path: Path = Path(config_path)
+            self._config_path: Path = Path(config_path)
         else:
             config_dir = get_config_dir()
-            self.config_path = config_dir / 'file-organizer' / 'config.json'
+            self._config_path = config_dir / 'file-organizer' / 'config.json'
 
         # Ensure config exists, create from template if needed
         template_path = get_template_path('file_organizer', 'config.template.json')
@@ -37,23 +39,23 @@ class Config:
             "_comment": "Configuration for File Organizer"
         }
 
-        if ensure_config_exists(self.logger, self.config_path, default_config, template_path):
-            self.logger.info(f"Created new config at {self.config_path}")
-            self.logger.info("Please edit the configuration file and restart")
+        if ensure_config_exists(self._logger, self._config_path, default_config, template_path):
+            self._logger.info(f"Created new config at {self._config_path}")
+            self._logger.info("Please edit the configuration file and restart")
 
         # Load configuration
-        self.data: dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
         self._load()
     
     def _load(self) -> None:
         """
         Load configuration from file.
         """
-        self.data = load_config(self.logger, self.config_path)
-        if self.data:
-            self.logger.info(f"Loaded configuration from {self.config_path}")
+        self._data = load_config(self._logger, self._config_path)
+        if self._data:
+            self._logger.info(f"Loaded configuration from {self._config_path}")
         else:
-            self.logger.warning("Using empty configuration")
+            self._logger.warning("Using empty configuration")
     
     def reload(self) -> bool:
         """
@@ -62,14 +64,14 @@ class Config:
         Returns:
             bool: True if reload was successful, False otherwise.
         """
-        old_data = self.data.copy()
+        old_data = self._data.copy()
         self._load()
 
-        if self.data != old_data:
-            self.logger.info("Configuration reloaded successfully")
+        if self._data != old_data:
+            self._logger.info("Configuration reloaded successfully")
             return True
         else:
-            self.logger.debug("Configuration unchanged")
+            self._logger.debug("Configuration unchanged")
             return False
     
 
@@ -85,7 +87,7 @@ class Config:
         """
         config_dir = get_config_dir()
         tags_path = config_dir / "tags.json"
-        return load_optional_config(self.logger, tags_path, DEFAULT_TAGS)
+        return load_optional_config(self._logger, tags_path, DEFAULT_TAGS)
     
     def get_suffix_routing(self) -> dict[str, str]:
         """
@@ -98,7 +100,7 @@ class Config:
         """
         config_dir = get_config_dir()
         routes_path = config_dir / "routes.json"
-        return load_optional_config(self.logger, routes_path, DEFAULT_SUFFIX_ROUTING)
+        return load_optional_config(self._logger, routes_path, DEFAULT_SUFFIX_ROUTING)
     
     def get(self, key: str, default: Any = None) -> Any:
         """
@@ -110,4 +112,4 @@ class Config:
         Returns:
             Any: Configuration value or default.
         """
-        return self.data.get(key, default)
+        return self._data.get(key, default)

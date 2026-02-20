@@ -1,1 +1,3 @@
-"""Tests for scan_batcher module."""
+"""
+Tests for scan_batcher module.
+"""

@@ -1,4 +1,14 @@
-"""Command Line Interface for Archive Organizer."""
+"""
+Command Line Interface for File Organizer.
+
+Provides two subcommands:
+
+* ``file-organizer batch`` — one-shot processing of existing files.
+* ``file-organizer watch`` — daemon mode that monitors a directory.
+
+Global flags (``--verbose``, ``--config``, ``--log-path``, ``--version``)
+are shared across both subcommands.
+"""
 
 import argparse
 import logging
@@ -9,34 +19,91 @@ from common.logger import Logger
 from common.version import get_version
 from file_organizer.organizer import FileOrganizer
 from file_organizer.config import Config
-from file_organizer.monitor import FileMonitor
+from file_organizer.watcher import FileWatcher
+
+
+def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add arguments shared between batch and watch subcommands."""
+    parser.add_argument(
+        "--input",
+        required=True,
+        type=str,
+        dest="input_path",
+        help="Path to the input folder to process or monitor",
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        type=str,
+        dest="output_path",
+        help="Path to the archive (output) folder.",
+    )
+    parser.add_argument(
+        "--copy",
+        action="store_true",
+        help="Copy files instead of moving them (useful for testing)",
+    )
+    parser.add_argument(
+        "--config",
+        help="Path to JSON configuration file (see config.template.json)",
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="File Organizer - Metadata Extraction and Organization Tool",
-        epilog="Metadata is configured in metadata.json in the config directory.",
+        epilog="Use 'file-organizer <command> --help' for subcommand details.",
     )
     parser.add_argument(
-        '--version',
-        action='version',
-        version=f'file-organizer (florentine-abbot {get_version()})'
+        "--version",
+        action="version",
+        version=f"file-organizer (florentine-abbot {get_version()})",
     )
-    parser.add_argument("input_path", help="Path to the folder to process or monitor")
-    parser.add_argument("--daemon", action="store_true", help="Run in daemon mode (monitor for new files)")
-    parser.add_argument("-r", "--recursive", action="store_true", help="Process files recursively in subdirectories")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
-    parser.add_argument("--config", help="Path to JSON configuration file (see config.template.json)")
-    parser.add_argument("--log-path", help="Custom directory for log files (default: ~/.florentine-abbot/logs/)")
-    parser.add_argument("--copy", action="store_true", help="Copy files instead of moving them (useful for testing)")
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Enable verbose logging",
+    )
+    parser.add_argument(
+        "--log-path",
+        help="Custom directory for log files (default: ~/.florentine-abbot/logs/)",
+    )
+
+    subparsers = parser.add_subparsers(dest="command")
+
+    # ── batch ──────────────────────────────────────────────────────────
+    batch_parser = subparsers.add_parser(
+        "batch",
+        help="One-shot processing of existing files",
+        description="Process all matching files under --input and exit.",
+    )
+    _add_common_arguments(batch_parser)
+    batch_parser.add_argument(
+        "-r", "--recursive",
+        action="store_true",
+        help="Process files recursively in subdirectories",
+    )
+
+    # ── watch ──────────────────────────────────────────────────────────
+    watch_parser = subparsers.add_parser(
+        "watch",
+        help="Daemon mode — monitor a directory for new files",
+        description="Watch --input for new files and process them continuously.",
+    )
+    _add_common_arguments(watch_parser)
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for the `file-organizer` CLI."""
+    """Entry point for the ``file-organizer`` CLI."""
 
     parser = _build_parser()
     args = parser.parse_args(argv)
+
+    if not args.command:
+        parser.print_help()
+        return 1
 
     logger = Logger(
         "file_organizer",
@@ -50,17 +117,25 @@ def main(argv: list[str] | None = None) -> int:
         logger.error(f"Input path does not exist: {input_path}")
         return 1
 
+    output_path = Path(args.output_path)
+
     try:
-        if args.daemon:
-            # Daemon mode: run filesystem monitor around per-file processor.
+        if args.command == "watch":
             config = Config(logger, args.config)
-            monitor = FileMonitor(logger, str(input_path), config, copy_mode=args.copy)
-            monitor.start()
+            watcher = FileWatcher(
+                logger,
+                path=str(input_path),
+                config=config,
+                output_path=output_path,
+                copy_mode=args.copy,
+            )
+            watcher.start()
         else:
-            # Batch mode: one-shot processing of existing files.
+            # batch
             organizer = FileOrganizer(logger)
             organizer(
                 input_path=input_path,
+                output_path=output_path,
                 config_path=args.config,
                 recursive=args.recursive,
                 copy_mode=args.copy,
