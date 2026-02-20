@@ -18,7 +18,9 @@ from common.constants import (
     TAG_XMP_DC_FORMAT,
     TAG_XMP_EXIF_DATETIME_DIGITIZED,
     TAG_EXIFIFD_DATETIME_DIGITIZED,
+    TAG_EXIFIFD_CREATE_DATE,
     TAG_EXIF_OFFSET_TIME_DIGITIZED,
+    TAG_IFD0_DATETIME,
     TAG_IFD0_MAKE,
     TAG_IFD0_MODEL,
     TAG_IFD0_SOFTWARE,
@@ -69,16 +71,17 @@ class MetadataWorkflow(Workflow):
 
     # EXIF tag names for reading date information
     _EXIF_DATE_TAGS = [
-        "ExifIFD:DateTimeDigitized",
-        "ExifIFD:CreateDate",
-        "IFD0:DateTime",
+        TAG_EXIFIFD_DATETIME_DIGITIZED,
+        TAG_EXIFIFD_CREATE_DATE,
+        TAG_IFD0_DATETIME,
     ]
 
     # Image extensions that support EXIF metadata (lowercase).
     _EXIF_SUPPORTED_EXTENSIONS = {".tif", ".tiff", ".jpg", ".jpeg"}
 
     def __init__(self, logger: Logger) -> None:
-        """Initialize the metadata workflow.
+        """
+        Initialize the metadata workflow.
         
         Args:
             logger: Logger instance for this workflow.
@@ -88,7 +91,8 @@ class MetadataWorkflow(Workflow):
         self._exifer = Exifer()
 
     def _get_major_version(self) -> str:
-        """Get major version number from package version.
+        """
+        Get major version number from package version.
         
         Returns:
             Major version string (e.g., "1.0" from "1.0.5").
@@ -102,7 +106,8 @@ class MetadataWorkflow(Workflow):
         return version
 
     def _get_digitized_datetime(self, file_path: Path) -> datetime.datetime:
-        """Extract datetime from file EXIF or use file modification time.
+        """
+        Extract datetime from file EXIF or use file modification time.
         
         Args:
             file_path: Path to the file.
