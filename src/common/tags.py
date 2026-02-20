@@ -1,4 +1,5 @@
-"""Tag descriptors for :class:`~common.tagger.Tagger`.
+"""
+Tag descriptors for :class:`~common.tagger.Tagger`.
 
 Each ``Tag`` knows how to serialise itself for exiftool writes and how to
 request / parse data for exiftool reads.  ``Tagger`` works exclusively
@@ -25,35 +26,16 @@ Usage — read::
     tagger.read(HistoryTag())           # empty = read all history
 """
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
 
-from .constants import (
-    TAG_XMP_XMPMM_HISTORY,
-    TAG_XMP_XMPMM_HISTORY_ACTION,
-    TAG_XMP_XMPMM_HISTORY_WHEN,
-    TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT,
-    TAG_XMP_XMPMM_HISTORY_CHANGED,
-    TAG_XMP_XMPMM_HISTORY_PARAMETERS,
-    TAG_XMP_XMPMM_HISTORY_INSTANCE_ID,
-    XMP_FIELD_ACTION,
-    XMP_FIELD_WHEN,
-    XMP_FIELD_SOFTWARE_AGENT,
-    XMP_FIELD_CHANGED,
-    XMP_FIELD_PARAMETERS,
-    XMP_FIELD_INSTANCE_ID,
-)
+from .constants import TAG_XMP_XMPMM_HISTORY, TAG_XMP_XMPMM_HISTORY_ACTION, TAG_XMP_XMPMM_HISTORY_WHEN, TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT, TAG_XMP_XMPMM_HISTORY_CHANGED, TAG_XMP_XMPMM_HISTORY_PARAMETERS, TAG_XMP_XMPMM_HISTORY_INSTANCE_ID, XMP_FIELD_ACTION, XMP_FIELD_WHEN, XMP_FIELD_SOFTWARE_AGENT, XMP_FIELD_CHANGED, XMP_FIELD_PARAMETERS, XMP_FIELD_INSTANCE_ID
 
-
-# ======================================================================
-# Abstract base
-# ======================================================================
 
 class Tag(ABC):
-    """Descriptor that tells :class:`Tagger` *how* to read/write a tag.
+    """
+    Descriptor that tells :class:`Tagger` *how* to read/write a tag.
 
     Subclasses must implement four members:
 
@@ -67,27 +49,32 @@ class Tag(ABC):
     @property
     @abstractmethod
     def result_key(self) -> str:
-        """Key under which the parsed value appears in the result dict."""
+        """
+        Key under which the parsed value appears in the result dict.
+        """
 
     @abstractmethod
     def read_tags(self) -> list[str]:
-        """Return exiftool tag names needed for reading."""
+        """
+        Return exiftool tag names needed for reading.
+        """
 
     @abstractmethod
     def parse(self, raw: dict[str, Any]) -> Any:
-        """Extract and return the value from raw exiftool output."""
+        """
+        Extract and return the value from raw exiftool output.
+        """
 
     @abstractmethod
     def write_args(self) -> list[tuple[str, Any]]:
-        """Return ``(tag, value)`` pairs for a single exiftool write call."""
+        """
+        Return ``(tag, value)`` pairs for a single exiftool write call.
+        """
 
-
-# ======================================================================
-# KeyValueTag — simple scalar
-# ======================================================================
 
 class KeyValueTag(Tag):
-    """A simple scalar tag (one exiftool name, one value).
+    """
+    A simple scalar tag (one exiftool name, one value).
 
     For **reading** create with just the tag name::
 
@@ -115,10 +102,6 @@ class KeyValueTag(Tag):
     def write_args(self) -> list[tuple[str, Any]]:
         return [(self._tag, self._value)]
 
-
-# ======================================================================
-# HistoryTag — structured XMP History entry
-# ======================================================================
 
 # Flattened tags that exiftool uses for History arrays
 _HISTORY_FLATTENED_TAGS = [
@@ -152,7 +135,8 @@ _HISTORY_FIELDS_ORDER = (
 
 
 class HistoryTag(Tag):
-    """Structured XMP-xmpMM:History entry.
+    """
+    Structured XMP-xmpMM:History entry.
 
     For **reading** create with no arguments — returns ``list[dict]``::
 
@@ -194,8 +178,6 @@ class HistoryTag(Tag):
         if parameters is not None:
             self._fields[XMP_FIELD_PARAMETERS] = parameters
 
-    # -- Tag interface -------------------------------------------------
-
     @property
     def result_key(self) -> str:
         return TAG_XMP_XMPMM_HISTORY
@@ -204,7 +186,9 @@ class HistoryTag(Tag):
         return list(_HISTORY_FLATTENED_TAGS)
 
     def parse(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
-        """Parse flattened History arrays into ``list[dict]``."""
+        """
+        Parse flattened History arrays into ``list[dict]``.
+        """
         arrays: dict[str, list] = {}
         for flat_tag, dict_key in _HISTORY_FIELD_MAP.items():
             val = raw.get(flat_tag, [])
@@ -226,7 +210,9 @@ class HistoryTag(Tag):
         return history
 
     def write_args(self) -> list[tuple[str, Any]]:
-        """Return a single ``(TAG+, struct_str)`` pair for append."""
+        """
+        Return a single ``(TAG+, struct_str)`` pair for append.
+        """
         parts: list[str] = []
         for field in _HISTORY_FIELDS_ORDER:
             val = self._fields.get(field)
