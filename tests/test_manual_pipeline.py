@@ -15,7 +15,8 @@ from file_organizer.organizer import FileOrganizer
 from preview_maker.maker import PreviewMaker
 from common.logger import Logger
 from common.exifer import Exifer
-from common.historian import XMPHistorian
+from common.tagger import Tagger
+from common.tags import HistoryTag
 from common.constants import (
     TAG_IFD0_MAKE,
     TAG_IFD0_MODEL,
@@ -58,7 +59,6 @@ def test_full_pipeline(tmp_path):
     """
     logger = Logger("test_manual_pipeline", console=True)
     exifer = Exifer()
-    historian = XMPHistorian(exifer=exifer)
 
     input_file = tmp_path / f"{FILENAME_STEM}.RAW.tif"
 
@@ -101,7 +101,7 @@ def test_full_pipeline(tmp_path):
     digitized = tags.get(TAG_XMP_EXIF_DATETIME_DIGITIZED, "")
     assert "+" in digitized or "-" in digitized, f"DateTimeDigitized must have TZ: {digitized}"
 
-    history = historian.read_history(input_file)
+    history = Tagger(input_file, exifer=exifer).read(HistoryTag())
     actions = [e.get("action") for e in history]
     assert XMP_ACTION_CREATED in actions
     assert XMP_ACTION_EDITED in actions
@@ -137,7 +137,7 @@ def test_full_pipeline(tmp_path):
     assert master_identifier, "Master must have dc:Identifier after organizer"
     print(f"[OK] DocumentID preserved: {master_ids[TAG_XMP_XMPMM_DOCUMENT_ID]}")
 
-    master_history = historian.read_history(master)
+    master_history = Tagger(master, exifer=exifer).read(HistoryTag())
     assert len(master_history) >= 3
     print(f"[OK] Master history entries: {len(master_history)}")
     print("=" * 60)
@@ -181,7 +181,7 @@ def test_full_pipeline(tmp_path):
     prv_digitized = prv_tags.get(TAG_XMP_EXIF_DATETIME_DIGITIZED, "")
     assert "+" in prv_digitized or "-" in prv_digitized
 
-    prv_history = historian.read_history(prv)
+    prv_history = Tagger(prv, exifer=exifer).read(HistoryTag())
     prv_actions = [e.get("action") for e in prv_history]
     assert XMP_ACTION_CONVERTED in prv_actions
     assert XMP_ACTION_EDITED in prv_actions

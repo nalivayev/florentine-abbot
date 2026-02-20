@@ -15,7 +15,8 @@ from common.naming import FilenameParser
 from common.logger import Logger
 from common.exifer import Exifer
 from common.constants import TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED
-from common.historian import XMPHistorian
+from common.tagger import Tagger
+from common.tags import HistoryTag
 from tests.common.test_utils import create_test_image
 
 
@@ -245,21 +246,13 @@ class TestFileOrganizerIntegration:
         assert not (expected_dir / "SOURCES").exists()
         assert not (expected_dir / "DERIVATIVES").exists()
 
-    def test_date_modifier_scenarios(self, logger):
+    def test_date_modifier_scenarios(self, logger, require_exiftool):
         """Test FileOrganizer with different date modifiers (E, C, B, F, A).
         
         This test validates that files with various date precision levels
         are correctly processed and placed in appropriate year folders.
         Also verifies XMP History tracking works across different scenarios.
         """
-        import pytest
-        
-        # Skip if exiftool not available
-        try:
-            Exifer()._run(["-ver"])
-        except (FileNotFoundError, RuntimeError):
-            pytest.skip("ExifTool not found, skipping date modifier scenarios")
-        
         scenarios = [
             {
                 "name": "Exact Date",
@@ -320,26 +313,24 @@ class TestFileOrganizerIntegration:
             if to_write:
                 ex.write(file_path, to_write)
             
-            # Append history entries
-            historian = XMPHistorian(exifer=ex)
+            # Append history entries via Tagger
             created_when = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
-            historian.append_entry(
-                file_path, 
-                XMP_ACTION_CREATED, 
-                "test-organizer", 
-                created_when, 
-                logger=logger, 
-                instance_id=instance
-            )
-            historian.append_entry(
-                file_path, 
-                XMP_ACTION_EDITED, 
-                "test-organizer", 
-                datetime.now(timezone.utc), 
-                changed='metadata', 
-                logger=logger, 
-                instance_id=instance
-            )
+            tagger = Tagger(file_path, exifer=ex)
+            tagger.begin()
+            tagger.write(HistoryTag(
+                action=XMP_ACTION_CREATED,
+                when=created_when,
+                software_agent="test-organizer",
+                instance_id=instance,
+            ))
+            tagger.write(HistoryTag(
+                action=XMP_ACTION_EDITED,
+                when=datetime.now(timezone.utc),
+                software_agent="test-organizer",
+                changed="metadata",
+                instance_id=instance,
+            ))
+            tagger.end()
             
             # Read back tags including history
             read_back = ex.read(file_path, [TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY])

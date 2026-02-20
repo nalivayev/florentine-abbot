@@ -16,6 +16,15 @@ from common.logger import Logger
 from tests.scan_batcher.fake_metadata_workflow import FakeMetadataWorkflow
 
 
+def exiftool_available() -> bool:
+    """Return True if exiftool is installed and runnable."""
+    try:
+        Exifer()._run(["-ver"])
+        return True
+    except (FileNotFoundError, RuntimeError):
+        return False
+
+
 def create_test_image(
     path: Path,
     size: tuple[int, int] = (100, 100),

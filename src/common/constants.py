@@ -70,6 +70,7 @@ TAG_XMP_XMPRIGHTS_MARKED = "XMP-xmpRights:Marked"
 # XMP-tiff tags
 TAG_XMP_TIFF_MAKE = "XMP-tiff:Make"
 TAG_XMP_TIFF_MODEL = "XMP-tiff:Model"
+TAG_XMP_TIFF_SOFTWARE = "XMP-tiff:Software"
 
 # XMP-xmpMM (Media Management) tags
 TAG_XMP_XMPMM_HISTORY = "XMP-xmpMM:History"

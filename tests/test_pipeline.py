@@ -1,4 +1,5 @@
-"""Automated end-to-end pipeline test: scan-batcher -> file-organizer -> preview-maker.
+"""
+Automated end-to-end pipeline test: scan-batcher -> file-organizer -> preview-maker.
 
 Mirrors test_manual_pipeline.py but runs automatically in pytest.
 Uses create_test_image() which follows the real scanning workflow
@@ -11,7 +12,8 @@ from file_organizer.organizer import FileOrganizer
 from preview_maker.maker import PreviewMaker
 from common.exifer import Exifer
 from common.logger import Logger
-from common.historian import XMPHistorian
+from common.tagger import Tagger
+from common.tags import HistoryTag
 from common.constants import (
     TAG_IFD0_MAKE,
     TAG_IFD0_MODEL,
@@ -33,22 +35,7 @@ from common.constants import (
 from tests.common.test_utils import create_test_image
 
 
-def _exiftool_available() -> bool:
-    """Return True if exiftool is installed and runnable."""
-    try:
-        Exifer()._run(["-ver"])
-        return True
-    except (FileNotFoundError, RuntimeError):
-        return False
-
-
-# Skip entire module if exiftool is not available
-pytestmark = pytest.mark.skipif(
-    not _exiftool_available(),
-    reason="ExifTool not found",
-)
-
-
+@pytest.mark.usefixtures("require_exiftool")
 class TestPipeline:
     """End-to-end pipeline test: create_test_image -> file-organizer -> preview-maker.
 
@@ -66,7 +53,6 @@ class TestPipeline:
         self.root = tmp_path
         self.logger = Logger("test-pipeline")
         self.exifer = Exifer()
-        self.historian = XMPHistorian(exifer=self.exifer)
 
     # ------------------------------------------------------------------
     # helpers
@@ -127,7 +113,7 @@ class TestPipeline:
         )
 
         # XMP History: created + edited
-        history = self.historian.read_history(scan_file)
+        history = Tagger(scan_file, exifer=self.exifer).read(HistoryTag())
         actions = [e.get("action") for e in history]
         assert XMP_ACTION_CREATED in actions
         assert XMP_ACTION_EDITED in actions
@@ -169,7 +155,7 @@ class TestPipeline:
         assert master_identifier, "Master must have dc:Identifier after organizer"
 
         # History now has 3+ entries (created + edited from batcher, edited from organizer)
-        master_history = self.historian.read_history(master)
+        master_history = Tagger(master, exifer=self.exifer).read(HistoryTag())
         assert len(master_history) >= 3, (
             f"Expected >= 3 history entries, got {len(master_history)}"
         )
@@ -217,7 +203,7 @@ class TestPipeline:
         assert "+" in prv_digitized or "-" in prv_digitized
 
         # PRV History: converted + edited
-        prv_history = self.historian.read_history(prv)
+        prv_history = Tagger(prv, exifer=self.exifer).read(HistoryTag())
         prv_actions = [e.get("action") for e in prv_history]
         assert XMP_ACTION_CONVERTED in prv_actions
         assert XMP_ACTION_EDITED in prv_actions

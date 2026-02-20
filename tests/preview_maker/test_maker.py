@@ -122,7 +122,7 @@ class TestPreviewMakerBatch:
             w, h = img.size
             assert max(w, h) <= 900
 
-    def test_prv_inherits_metadata_with_new_identifier(self):
+    def test_prv_inherits_metadata_with_new_identifier(self, require_exiftool):
         """PRV should inherit context metadata but have its own identifier.
 
         We create an MSR file, let FileOrganizer write full metadata to it,
@@ -131,10 +131,6 @@ class TestPreviewMakerBatch:
         is recorded.
         """
         temp_dir = self.create_temp_dir()
-
-        # Skip if exiftool is not available
-        if shutil.which("exiftool") is None:
-            pytest.skip("ExifTool not found, skipping metadata inheritance test")
 
         root = temp_dir
         input_dir = root / "input"

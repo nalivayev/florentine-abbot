@@ -13,11 +13,25 @@ from PIL import Image
 
 from common.logger import Logger
 from common.naming import FilenameParser, ParsedFilename
-from common.constants import SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_FORMAT, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CONVERTED, XMP_ACTION_EDITED
+from common.constants import (
+    SUPPORTED_IMAGE_EXTENSIONS,
+    MIME_TYPE_MAP,
+    TAG_XMP_DC_IDENTIFIER,
+    TAG_XMP_XMP_IDENTIFIER,
+    TAG_XMP_DC_RELATION,
+    TAG_XMP_DC_FORMAT,
+    TAG_XMP_XMPMM_DOCUMENT_ID,
+    TAG_XMP_XMPMM_INSTANCE_ID,
+    TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID,
+    TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID,
+    XMP_ACTION_CONVERTED,
+    XMP_ACTION_EDITED,
+)
 from common.metadata import ArchiveMetadata
 from common.exifer import Exifer
+from common.tagger import Tagger
+from common.tags import KeyValueTag, HistoryTag
 from common.router import Router
-from common.historian import XMPHistorian
 from common.version import get_version
 
 
@@ -34,7 +48,6 @@ class PreviewMaker:
         self._metadata = ArchiveMetadata(logger=logger)
         self._exifer = Exifer()
         self._router = Router(logger=logger)
-        self._historian = XMPHistorian(exifer=self._exifer)
 
     def __call__(
         self,
@@ -191,7 +204,11 @@ class PreviewMaker:
             raise FileNotFoundError(f"Input file does not exist: {input_path}")
 
         # Check for DocumentID/InstanceID in master (must be set by scan-batcher)
-        existing_ids = self._exifer.read(input_path, [TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID])
+        tagger = Tagger(input_path, exifer=self._exifer)
+        tagger.begin()
+        tagger.read(KeyValueTag(TAG_XMP_XMPMM_DOCUMENT_ID))
+        tagger.read(KeyValueTag(TAG_XMP_XMPMM_INSTANCE_ID))
+        existing_ids = tagger.end() or {}
         if not existing_ids.get(TAG_XMP_XMPMM_DOCUMENT_ID) or not existing_ids.get(TAG_XMP_XMPMM_INSTANCE_ID):
             self._logger.warning(
                 "Skipping PRV generation for %s: missing DocumentID or InstanceID. "
@@ -234,7 +251,8 @@ class PreviewMaker:
         """Write EXIF/XMP metadata to PRV derivative based on master.
         
         Copies ALL XMP and EXIF metadata from master to PRV (format-agnostic tags),
-        then overwrites derivative-specific tags (identifiers, DerivedFrom, Format).
+        then overwrites derivative-specific tags (identifiers, DerivedFrom, Format)
+        and adds XMP History entries — all in a single exiftool call.
         
         This ensures any new tags added by batcher or scanner automatically propagate
         to PRV without manual duplication. IFD0/TIFF tags are excluded as they're
@@ -244,76 +262,84 @@ class PreviewMaker:
             master_path: Path to the master (MSR/RAW) file.
             prv_path: Path to the PRV file.
         """
-        # Read all XMP and EXIF tags from master, excluding History
-        # XMP and EXIF tags are format-agnostic and work in JPEG
-        # IFD0/TIFF tags are excluded as they're TIFF-specific
-        tags_to_write = self._exifer.read(
+        # Read all XMP and EXIF tags from master, excluding History and
+        # XMP-xmp:Identifier (bag type — exiftool accumulates instead of
+        # replacing, so we exclude it and write a fresh value below).
+        tags_from_master = self._exifer.read(
             master_path, 
             [],
-            exclude_patterns=["XMP-xmpMM:History"],
+            exclude_patterns=["XMP-xmpMM:History", "XMP-xmp:Identifier"],
             include_patterns=["XMP-", "XMP:", "EXIF:", "ExifIFD:"]
         )
         
         # Save master's identifiers before overwriting
-        master_id = tags_to_write.get(TAG_XMP_DC_IDENTIFIER) or tags_to_write.get(TAG_XMP_XMP_IDENTIFIER)
-        master_document_id = tags_to_write.get(TAG_XMP_XMPMM_DOCUMENT_ID)
-        master_instance_id = tags_to_write.get(TAG_XMP_XMPMM_INSTANCE_ID)
+        master_id = tags_from_master.get(TAG_XMP_DC_IDENTIFIER) or tags_from_master.get(TAG_XMP_XMP_IDENTIFIER)
+        master_document_id = tags_from_master.get(TAG_XMP_XMPMM_DOCUMENT_ID)
+        master_instance_id = tags_from_master.get(TAG_XMP_XMPMM_INSTANCE_ID)
         
-        # Now overwrite derivative-specific tags:
+        # Fresh InstanceIDs for derivative
+        # Two modifications happen:
+        #   1. Format conversion (PIL creates JPEG from master) → converted_instance_id
+        #   2. Metadata write (this exiftool call) → edited_instance_id
+        converted_instance_id = uuid.uuid4().hex
+        edited_instance_id = uuid.uuid4().hex
+
+        # ── single batch write to PRV ─────────────────────────────────
+        self._logger.debug("Writing metadata to PRV %s based on master %s", prv_path, master_path)
+        tagger = Tagger(prv_path, exifer=self._exifer)
+        tagger.begin()
+
+        # Write all master tags (these become the baseline)
+        for tag, value in tags_from_master.items():
+            tagger.write(KeyValueTag(tag, value))
+
+        # Overwrite derivative-specific tags:
         
-        # 1. Fresh identifier for PRV (overwrite master's identifier)
+        # 1. Fresh identifier for PRV
         prv_uuid = uuid.uuid4().hex
-        tags_to_write[TAG_XMP_DC_IDENTIFIER] = prv_uuid
-        tags_to_write[TAG_XMP_XMP_IDENTIFIER] = prv_uuid
+        tagger.write(KeyValueTag(TAG_XMP_DC_IDENTIFIER, prv_uuid))
+        tagger.write(KeyValueTag(TAG_XMP_XMP_IDENTIFIER, prv_uuid))
         
         # 2. Relation to master
         if master_id:
-            tags_to_write[TAG_XMP_DC_RELATION] = master_id
+            tagger.write(KeyValueTag(TAG_XMP_DC_RELATION, master_id))
         
-        # 3. Fresh InstanceID for derivative (DocumentID stays same)
-        prv_instance_id = uuid.uuid4().hex
-        tags_to_write[TAG_XMP_XMPMM_INSTANCE_ID] = prv_instance_id
+        # 3. Fresh InstanceID (DocumentID stays same)
+        tagger.write(KeyValueTag(TAG_XMP_XMPMM_INSTANCE_ID, edited_instance_id))
         
         # 4. dc:Format based on PRV file extension
         prv_extension = prv_path.suffix.lower().lstrip('.')
         dc_format = MIME_TYPE_MAP.get(prv_extension)
         if dc_format:
-            tags_to_write[TAG_XMP_DC_FORMAT] = dc_format
+            tagger.write(KeyValueTag(TAG_XMP_DC_FORMAT, dc_format))
         
-        # 5. xmpMM:DerivedFrom structure pointing to master
+        # 5. DerivedFrom structure pointing to master
         if master_document_id:
-            tags_to_write[TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID] = master_document_id
+            tagger.write(KeyValueTag(TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, master_document_id))
         if master_instance_id:
-            tags_to_write[TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID] = master_instance_id
-        
-        # 6. Write all tags to PRV
-        if tags_to_write:
-            self._logger.debug("Writing metadata to PRV %s based on master %s", prv_path, master_path)
-            self._exifer.write(prv_path, tags_to_write)
-        
-        # 7. Write XMP History entries for PRV creation (like VuescanWorkflow)
+            tagger.write(KeyValueTag(TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, master_instance_id))
+
+        # 6. XMP History entries
         if master_document_id:
             version = get_version()
             major_version = "0.0" if version == "unknown" else ".".join(version.split(".")[:2])
             now = datetime.datetime.now().astimezone()
-            
-            # First entry: 'converted' - PRV file created from master via format conversion
-            self._historian.append_entry(
-                file_path=prv_path,
+
+            # 'converted' — PRV file created from master via format conversion
+            tagger.write(HistoryTag(
                 action=XMP_ACTION_CONVERTED,
-                software_agent=f"preview-maker {major_version}",
                 when=now,
-                instance_id=prv_instance_id,
-                logger=self._logger,
-            )
-            
-            # Second entry: 'edited' - metadata population from master
-            self._historian.append_entry(
-                file_path=prv_path,
+                software_agent=f"preview-maker {major_version}",
+                instance_id=converted_instance_id,
+            ))
+
+            # 'edited' — metadata population from master
+            tagger.write(HistoryTag(
                 action=XMP_ACTION_EDITED,
-                software_agent=f"preview-maker {major_version}",
                 when=now,
+                software_agent=f"preview-maker {major_version}",
                 changed="metadata",
-                instance_id=prv_instance_id,
-                logger=self._logger,
-            )
+                instance_id=edited_instance_id,
+            ))
+
+        tagger.end()  # single exiftool call
