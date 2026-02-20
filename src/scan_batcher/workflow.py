@@ -4,6 +4,8 @@ import datetime
 import uuid
 
 from common.exifer import Exifer
+from common.tagger import Tagger
+from common.tags import KeyValueTag, HistoryTag
 from common.logger import Logger
 from common.version import get_version
 from common.constants import (
@@ -19,10 +21,12 @@ from common.constants import (
     TAG_EXIF_OFFSET_TIME_DIGITIZED,
     TAG_IFD0_MAKE,
     TAG_IFD0_MODEL,
+    TAG_IFD0_SOFTWARE,
     TAG_XMP_TIFF_MAKE,
     TAG_XMP_TIFF_MODEL,
+    TAG_XMP_TIFF_SOFTWARE,
+    TAG_XMP_XMP_CREATOR_TOOL,
 )
-from common.historian import XMPHistorian
 from scan_batcher.constants import EXIF_DATETIME_FORMAT, EXIF_DATETIME_FORMAT_MS
 
 
@@ -82,7 +86,6 @@ class MetadataWorkflow(Workflow):
         super().__init__(logger)
         self._logger = logger
         self._exifer = Exifer()
-        self._historian = XMPHistorian(exifer=self._exifer)
 
     def _get_major_version(self) -> str:
         """Get major version number from package version.
@@ -112,7 +115,11 @@ class MetadataWorkflow(Workflow):
         moment = None
         if file_path.suffix.lower() in self._EXIF_SUPPORTED_EXTENSIONS:
             try:
-                tags = self._exifer.read(file_path, self._EXIF_DATE_TAGS)
+                tagger = Tagger(file_path, exifer=self._exifer)
+                tagger.begin()
+                for tag_name in self._EXIF_DATE_TAGS:
+                    tagger.read(KeyValueTag(tag_name))
+                tags = tagger.end() or {}
                 
                 # Try to get date from any of the tags (in priority order)
                 for tag_name in self._EXIF_DATE_TAGS:
@@ -184,9 +191,14 @@ class MetadataWorkflow(Workflow):
             )
 
         try:
-            # Read existing DocumentID, InstanceID, Software, DateTimeDigitized, and Make/Model
+            tagger = Tagger(
+                file_path, exifer=self._exifer, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT,
+            )
+
+            # ── batch-read existing tags ──────────────────────────────
             self._logger.debug(f"Reading existing XMP tags from {file_path.name}...")
-            existing_tags = self._exifer.read(file_path, [
+            tagger.begin()
+            for tag in (
                 TAG_XMP_XMPMM_DOCUMENT_ID,
                 TAG_XMP_XMPMM_INSTANCE_ID,
                 TAG_XMP_EXIF_DATETIME_DIGITIZED,
@@ -194,7 +206,12 @@ class MetadataWorkflow(Workflow):
                 TAG_EXIF_OFFSET_TIME_DIGITIZED,
                 TAG_IFD0_MAKE,
                 TAG_IFD0_MODEL,
-            ])
+                TAG_IFD0_SOFTWARE,
+            ):
+                tagger.read(KeyValueTag(tag))
+            existing_tags = tagger.end() or {}
+
+            # ── prepare values ────────────────────────────────────────
 
             # Get or generate DocumentID (without dashes)
             document_id = existing_tags.get(TAG_XMP_XMPMM_DOCUMENT_ID)
@@ -204,110 +221,100 @@ class MetadataWorkflow(Workflow):
             else:
                 self._logger.debug(f"Using existing DocumentID: {document_id}")
 
-            # Get or generate InstanceID (without dashes)
-            instance_id = existing_tags.get(TAG_XMP_XMPMM_INSTANCE_ID)
-            if not instance_id:
-                instance_id = uuid.uuid4().hex
-                self._logger.debug(f"Generated new InstanceID: {instance_id}")
+            # InstanceID for the "created" event (file creation by scanner)
+            created_instance_id = existing_tags.get(TAG_XMP_XMPMM_INSTANCE_ID)
+            if not created_instance_id:
+                created_instance_id = uuid.uuid4().hex
+                self._logger.debug(f"Generated InstanceID for 'created': {created_instance_id}")
             else:
-                self._logger.debug(f"Using existing InstanceID: {instance_id}")
+                self._logger.debug(f"Using existing InstanceID for 'created': {created_instance_id}")
 
-            # Write DocumentID and InstanceID to file
-            self._logger.debug(f"Writing DocumentID and InstanceID to {file_path.name}...")
-            
-            # Get MIME type for dc:Format from extension map
+            # InstanceID for the "edited" event (metadata write by scan-batcher)
+            edited_instance_id = uuid.uuid4().hex
+            self._logger.debug(f"Generated InstanceID for 'edited': {edited_instance_id}")
+
+            # ── batch-write all tags + history in one call ────────────
+            self._logger.debug(f"Writing metadata to {file_path.name}...")
+            tagger.begin()
+
+            tagger.write(KeyValueTag(TAG_XMP_XMPMM_DOCUMENT_ID, document_id))
+            tagger.write(KeyValueTag(TAG_XMP_XMPMM_INSTANCE_ID, edited_instance_id))
+
+            # dc:Format from extension map
             file_extension = file_path.suffix.lower().lstrip('.')
             dc_format = MIME_TYPE_MAP.get(file_extension)
-            
-            tags_to_write = {
-                TAG_XMP_XMPMM_DOCUMENT_ID: document_id,
-                TAG_XMP_XMPMM_INSTANCE_ID: instance_id,
-            }
             if dc_format:
-                tags_to_write[TAG_XMP_DC_FORMAT] = dc_format
-            
+                tagger.write(KeyValueTag(TAG_XMP_DC_FORMAT, dc_format))
+
             # Handle DateTimeDigitized: write new or enrich existing with timezone
             date_digitized = (
                 existing_tags.get(TAG_XMP_EXIF_DATETIME_DIGITIZED)
                 or existing_tags.get(TAG_EXIFIFD_DATETIME_DIGITIZED)
             )
-            
+
             if not date_digitized:
-                # No DateTimeDigitized at all — write full ISO 8601 with timezone
                 dt_str = file_datetime.isoformat(timespec='milliseconds')
-                tags_to_write[TAG_XMP_EXIF_DATETIME_DIGITIZED] = dt_str
+                tagger.write(KeyValueTag(TAG_XMP_EXIF_DATETIME_DIGITIZED, dt_str))
                 self._logger.debug(f"Writing DateTimeDigitized: {dt_str}")
             elif "+" not in date_digitized and "-" not in date_digitized[10:]:
-                # DateTimeDigitized exists but lacks timezone info (e.g. VueScan writes
-                # "2026:02:18 14:30:00" without TZ). Enrich with timezone from file_datetime
-                # by writing XMP-exif:DateTimeDigitized in full ISO 8601 format.
                 dt_str = file_datetime.isoformat(timespec='milliseconds')
-                tags_to_write[TAG_XMP_EXIF_DATETIME_DIGITIZED] = dt_str
-                self._logger.debug(f"Enriching DateTimeDigitized with timezone: {date_digitized} -> {dt_str}")
+                tagger.write(KeyValueTag(TAG_XMP_EXIF_DATETIME_DIGITIZED, dt_str))
+                self._logger.debug(
+                    f"Enriching DateTimeDigitized with timezone: {date_digitized} -> {dt_str}"
+                )
             else:
                 self._logger.debug(f"DateTimeDigitized already has timezone: {date_digitized}")
-            
-            # Write OffsetTimeDigitized if not already set and timezone info is available
+
+            # OffsetTimeDigitized
             offset_time_digitized = existing_tags.get(TAG_EXIF_OFFSET_TIME_DIGITIZED)
-            
+
             if not offset_time_digitized and file_datetime.tzinfo is not None:
-                # Format: ±HH:MM (e.g., "+03:00" or "-05:00")
                 offset = file_datetime.strftime("%z")
                 if offset:
-                    # Insert colon: "+0300" -> "+03:00"
                     offset_formatted = f"{offset[:3]}:{offset[3:]}"
-                    tags_to_write[TAG_EXIF_OFFSET_TIME_DIGITIZED] = offset_formatted
+                    tagger.write(KeyValueTag(TAG_EXIF_OFFSET_TIME_DIGITIZED, offset_formatted))
                     self._logger.debug(f"Writing OffsetTimeDigitized: {offset_formatted}")
             elif offset_time_digitized:
                 self._logger.debug(f"OffsetTimeDigitized already set: {offset_time_digitized}")
-            
-            # Copy IFD0:Make/Model to XMP-tiff:Make/Model if they exist
+
+            # Copy IFD0:Make/Model → XMP-tiff:Make/Model
             ifd0_make = existing_tags.get(TAG_IFD0_MAKE)
             ifd0_model = existing_tags.get(TAG_IFD0_MODEL)
-            
+
             if ifd0_make:
-                tags_to_write[TAG_XMP_TIFF_MAKE] = ifd0_make
+                tagger.write(KeyValueTag(TAG_XMP_TIFF_MAKE, ifd0_make))
                 self._logger.debug(f"Copying Make to XMP: {ifd0_make}")
-            
+
             if ifd0_model:
-                tags_to_write[TAG_XMP_TIFF_MODEL] = ifd0_model
+                tagger.write(KeyValueTag(TAG_XMP_TIFF_MODEL, ifd0_model))
                 self._logger.debug(f"Copying Model to XMP: {ifd0_model}")
 
-            self._exifer.write(file_path, tags_to_write, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT)
-            self._logger.debug(f"Successfully wrote DocumentID, InstanceID" + (f", and dc:Format ({dc_format})" if dc_format else ""))
+            # Copy IFD0:Software → XMP-xmp:CreatorTool + XMP-tiff:Software
+            ifd0_software = existing_tags.get(TAG_IFD0_SOFTWARE)
+            if ifd0_software:
+                tagger.write(KeyValueTag(TAG_XMP_XMP_CREATOR_TOOL, ifd0_software))
+                tagger.write(KeyValueTag(TAG_XMP_TIFF_SOFTWARE, ifd0_software))
+                self._logger.debug(f"Copying Software to XMP: {ifd0_software}")
 
+            # XMP History entries
             agent = f"scan-batcher {self._get_major_version()}"
 
-            # Write first history entry: 'created'
-            self._logger.debug(f"Writing 'created' history entry for {file_path.name}...")
-            success = self._historian.append_entry(
-                file_path=file_path,
+            tagger.write(HistoryTag(
                 action=XMP_ACTION_CREATED,
-                software_agent=agent,
                 when=file_datetime,
-                instance_id=instance_id,
-                logger=self._logger,
-            )
-            if not success:
-                self._logger.warning(f"Failed to write 'created' history entry for {file_path.name}")
-            else:
-                self._logger.debug("Successfully wrote 'created' history entry")
+                software_agent=agent,
+                instance_id=created_instance_id,
+            ))
 
-            # Write second history entry: 'edited'
-            self._logger.debug(f"Writing 'edited' history entry for {file_path.name}...")
-            success = self._historian.append_entry(
-                file_path=file_path,
+            tagger.write(HistoryTag(
                 action=XMP_ACTION_EDITED,
-                software_agent=agent,
                 when=file_datetime,
+                software_agent=agent,
                 changed="metadata",
-                instance_id=instance_id,
-                logger=self._logger,
-            )
-            if not success:
-                self._logger.warning(f"Failed to write 'edited' history entry for {file_path.name}")
-            else:
-                self._logger.debug("Successfully wrote 'edited' history entry")
+                instance_id=edited_instance_id,
+            ))
+
+            tagger.end()  # single exiftool call for all writes
 
             self._logger.info(f"XMP history written for {file_path.name}")
             return True
