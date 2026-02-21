@@ -30,6 +30,12 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         help="Path to the archive root (where year folders start)",
     )
     parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to preview-maker config JSON (default: ~/.config/florentine-abbot/preview-maker/config.json)",
+    )
+    parser.add_argument(
         "--max-size",
         type=int,
         default=2000,
@@ -116,13 +122,14 @@ def main(argv: list[str] | None = None) -> int:
             watcher = PreviewWatcher(
                 logger,
                 path=str(path),
+                config_path=args.config,
                 max_size=args.max_size,
                 quality=args.quality,
             )
             watcher.start()
         else:
             # batch
-            maker = PreviewMaker(logger)
+            maker = PreviewMaker(logger, args.config)
             count = maker(
                 path=path,
                 overwrite=bool(args.overwrite),

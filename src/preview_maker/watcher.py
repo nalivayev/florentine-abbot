@@ -16,9 +16,9 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileSystemM
 from common.logger import Logger
 from preview_maker.maker import PreviewMaker
 
-
 class PreviewWatcher(FileSystemEventHandler):
-    """Watch an archive tree for new master files and generate PRV previews.
+    """
+    Watch an archive tree for new master files and generate PRV previews.
 
     Monitors the archive root recursively for new RAW/MSR files and
     automatically generates PRV JPEGs using :class:`PreviewMaker`.
@@ -29,14 +29,17 @@ class PreviewWatcher(FileSystemEventHandler):
         logger: Logger,
         path: str,
         *,
+        config_path: str | Path | None = None,
         max_size: int = 2000,
         quality: int = 80,
     ) -> None:
-        """Initialize the watcher.
+        """
+        Initialize the watcher.
 
         Args:
             logger: Logger instance.
             path: Archive root to watch (recursively).
+            config_path: Optional path to preview-maker config JSON.
             max_size: Maximum long edge in pixels for PRV.
             quality: JPEG quality (1-100).
         """
@@ -45,19 +48,23 @@ class PreviewWatcher(FileSystemEventHandler):
         self._logger = logger
         self._max_size = max_size
         self._quality = quality
-        self._maker = PreviewMaker(logger)
+        self._maker = PreviewMaker(logger, config_path)
         self._observer = Observer()
 
     # ── watchdog event handlers ────────────────────────────────────────
 
     def on_created(self, event: FileSystemEvent) -> None:
-        """Handle file creation events."""
+        """
+        Handle file creation events.
+        """
         if event.is_directory:
             return
         self._process_file(Path(event.src_path))
 
     def on_moved(self, event: FileSystemEvent) -> None:
-        """Handle file movement events."""
+        """
+        Handle file movement events.
+        """
         if event.is_directory:
             return
         if isinstance(event, FileSystemMovedEvent):
@@ -66,7 +73,8 @@ class PreviewWatcher(FileSystemEventHandler):
     # ── per-file processing ────────────────────────────────────────────
 
     def _process_file(self, file_path: Path) -> None:
-        """Filter and delegate a single file to :class:`PreviewMaker`.
+        """
+        Filter and delegate a single file to :class:`PreviewMaker`.
 
         Steps:
         1. Check the file still exists.
@@ -96,7 +104,8 @@ class PreviewWatcher(FileSystemEventHandler):
     # ── lifecycle ──────────────────────────────────────────────────────
 
     def start(self) -> None:
-        """Start watching.
+        """
+        Start watching.
 
         Watches the archive root recursively for new master files.
         Runs until interrupted by KeyboardInterrupt.
@@ -116,7 +125,9 @@ class PreviewWatcher(FileSystemEventHandler):
             self.stop()
 
     def stop(self) -> None:
-        """Stop watching and clean up resources."""
+        """
+        Stop watching and clean up resources.
+        """
         self._observer.stop()
         self._observer.join()
         self._logger.info("Stopped watching")

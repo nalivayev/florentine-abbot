@@ -3,7 +3,7 @@ Tests for ArchiveMetadata configuration provider.
 """
 
 
-from common.constants import DEFAULT_TAGS
+from common.constants import DEFAULT_TAGS, DEFAULT_METADATA
 from common.logger import Logger
 
 from tests.common.fake_archive_metadata import FakeArchiveMetadata
@@ -54,6 +54,17 @@ class TestGetMetadataValues:
         values = am.get_metadata_values()
         
         assert values == {}
+
+    def test_returns_defaults_when_using_default_metadata(self) -> None:
+        """
+        Returns default metadata values (terms, marked) when using DEFAULT_METADATA.
+        """
+        am = FakeArchiveMetadata(metadata_config=DEFAULT_METADATA)
+        
+        values = am.get_metadata_values()
+        
+        assert "XMP-xmpRights:UsageTerms" in values
+        assert "XMP-xmpRights:Marked" in values
 
     def test_returns_empty_dict_when_no_languages(self) -> None:
         """

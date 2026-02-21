@@ -21,6 +21,7 @@ from common.tagger import Tagger
 from common.tags import KeyValueTag, HistoryTag
 from common.router import Router
 from common.version import get_version
+from preview_maker.config import Config
 
 
 class PreviewMaker:
@@ -32,8 +33,9 @@ class PreviewMaker:
     call-specific parameters are passed to :meth:`__call__`.
     """
 
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: Logger, config_path: str | Path | None = None) -> None:
         self._logger = logger
+        self._config = Config(logger, config_path)
         self._metadata = ArchiveMetadata(logger=logger)
         self._exifer = Exifer()
         self._parser = FilenameParser()
@@ -67,8 +69,8 @@ class PreviewMaker:
         Checks:
         - Not a symlink
         - Has a supported image extension
-        - Filename parses to a RAW or MSR suffix
-        - If RAW, no MSR sibling exists (MSR is preferred)
+        - Filename parses to a configured source suffix (raw or master)
+        - If raw suffix, no master sibling exists (master is preferred)
 
         Args:
             file_path: Path to the candidate file.
@@ -90,17 +92,19 @@ class PreviewMaker:
             return False
 
         suffix = parsed.suffix.upper()
-        if suffix not in {"RAW", "MSR"}:
-            self._logger.debug("Skipping %s: suffix %s is not RAW/MSR", file_path, suffix)
+        source_suffixes = self._config.source_suffixes
+        if suffix not in source_suffixes:
+            self._logger.debug("Skipping %s: suffix %s is not in source_suffixes %s", file_path, suffix, source_suffixes)
             return False
 
-        if suffix == "RAW":
-            msr_name = file_path.name.replace(".RAW.", ".MSR.")
-            msr_candidate = file_path.with_name(msr_name)
-            if msr_candidate.exists():
+        master = self._config.master_suffix
+        if suffix != master:
+            master_name = file_path.name.replace(f".{suffix}.", f".{master}.")
+            master_candidate = file_path.with_name(master_name)
+            if master_candidate.exists():
                 self._logger.debug(
-                    "Skipping RAW in favour of MSR: %s (found %s)",
-                    file_path, msr_candidate,
+                    "Skipping %s in favour of %s: %s (found %s)",
+                    suffix, master, file_path, master_candidate,
                 )
                 return False
 
@@ -135,7 +139,7 @@ class PreviewMaker:
             self._logger.warning("Cannot parse filename: %s", src_path.name)
             return False
 
-        # Create PRV parsed filename by replacing suffix with PRV
+        # Create preview parsed filename by replacing suffix with preview_suffix
         prv_parsed = ParsedFilename(
             year=parsed.year,
             month=parsed.month,
@@ -148,7 +152,7 @@ class PreviewMaker:
             subgroup=parsed.subgroup,
             sequence=parsed.sequence,
             side=parsed.side,
-            suffix="PRV",
+            suffix=self._config.preview_suffix,
             extension="jpg",
         )
 
@@ -158,16 +162,16 @@ class PreviewMaker:
         prv_path = prv_dir / prv_filename
 
         if prv_path.exists() and not overwrite:
-            # Even without overwrite, regenerate PRV when a better master
-            # appears.  If the source is MSR and the existing PRV was
-            # derived from a different master (e.g. RAW), upgrade it.
-            if parsed.suffix.upper() == "MSR" and self._should_upgrade_prv(prv_path, src_path):
+            # Even without overwrite, regenerate preview when a better master
+            # appears: if the source is the master suffix and the existing
+            # preview was derived from a different master, upgrade it.
+            if parsed.suffix.upper() == self._config.master_suffix and self._should_upgrade_prv(prv_path, src_path):
                 self._logger.info(
-                    "Upgrading PRV from MSR (was derived from RAW): %s",
-                    prv_path,
+                    "Upgrading %s from %s (was derived from different master): %s",
+                    self._config.preview_suffix, self._config.master_suffix, prv_path,
                 )
             else:
-                self._logger.debug("Skipping existing PRV (overwrite disabled): %s", prv_path)
+                self._logger.debug("Skipping existing %s (overwrite disabled): %s", self._config.preview_suffix, prv_path)
                 return False
 
         self._logger.info("Creating PRV: %s -> %s", src_path.name, prv_path)
@@ -241,9 +245,8 @@ class PreviewMaker:
             quality,
         )
 
-        # Get folders where RAW/MSR files are stored according to routing rules
-        master_suffixes = ["RAW", "MSR"]
-        target_folders = self._router.get_folders_for_suffixes(master_suffixes)
+        # Get folders where master files are stored according to routing rules
+        target_folders = self._router.get_folders_for_suffixes(self._config.source_suffixes)
 
         if not target_folders:
             self._logger.warning("No target folders found for RAW/MSR files in routing configuration")

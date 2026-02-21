@@ -130,7 +130,19 @@ DEFAULT_TAGS = {
 # Default metadata configuration
 # Used by ArchiveMetadata when metadata.json is not present
 DEFAULT_METADATA = {
-    "languages": {}
+    "languages": {
+        "en-US": {
+            "default": True,
+            "creator": [],
+            "credit": [],
+            "description": [],
+            "rights": [],
+            "terms": ["All rights reserved."],
+            "source": [],
+            "type": "StillImage",
+            "marked": "True",
+        }
+    }
 }
 
 # Default suffix routing rules

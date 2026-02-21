@@ -1,0 +1,11 @@
+{
+
+  "help": "Configuration for Preview Maker",
+
+  "suffixes": {
+    "master": "MSR",
+    "raw": "RAW",
+    "preview": "PRV"
+  }
+
+}

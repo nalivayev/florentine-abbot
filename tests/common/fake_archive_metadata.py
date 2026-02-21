@@ -35,4 +35,4 @@ class FakeArchiveMetadata(ArchiveMetadata):
         # Don't call super().__init__() - it would load real configs
         self._logger = logger
         self._metadata_tags = metadata_tags if metadata_tags is not None else DEFAULT_TAGS
-        self._metadata_config = metadata_config if metadata_config is not None else DEFAULT_METADATA
+        self._metadata_config = metadata_config
