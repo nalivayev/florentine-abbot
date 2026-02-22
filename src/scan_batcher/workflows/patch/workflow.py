@@ -26,13 +26,14 @@ class PatchWorkflow(MetadataWorkflow):
         - filename: Name of the file (optional, for logging)
     """
 
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: Logger, no_metadata: bool = False) -> None:
         """Initialize the patch workflow.
         
         Args:
             logger: Logger instance for this workflow.
+            no_metadata: If True, skip writing EXIF/XMP metadata.
         """
-        super().__init__(logger)
+        super().__init__(logger, no_metadata=no_metadata)
 
     def __call__(self, workflow_path: str, templates: dict[str, str]) -> None:
         """

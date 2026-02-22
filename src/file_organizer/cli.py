@@ -47,6 +47,11 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         "--config",
         help="Path to JSON configuration file (see config.template.json)",
     )
+    parser.add_argument(
+        "--no-metadata",
+        action="store_true",
+        help="Skip writing EXIF/XMP metadata to files",
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -128,6 +133,7 @@ def main(argv: list[str] | None = None) -> int:
                 config=config,
                 output_path=output_path,
                 copy_mode=args.copy,
+                no_metadata=args.no_metadata,
             )
             watcher.start()
         else:
@@ -139,6 +145,7 @@ def main(argv: list[str] | None = None) -> int:
                 config_path=args.config,
                 recursive=args.recursive,
                 copy_mode=args.copy,
+                no_metadata=args.no_metadata,
             )
     except Exception as exc:  # pragma: no cover - generic CLI error reporting
         print(f"[file_organizer] Error: {exc}", file=sys.stderr)

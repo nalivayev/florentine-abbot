@@ -34,13 +34,14 @@ class VuescanWorkflow(MetadataWorkflow):
         "digitization_second"
     ]
 
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: Logger, no_metadata: bool = False) -> None:
         """Initialize the VueScan workflow.
         
         Args:
             logger: Logger instance for this workflow.
+            no_metadata: If True, skip writing EXIF/XMP metadata.
         """
-        super().__init__(logger)
+        super().__init__(logger, no_metadata=no_metadata)
         self._scan_datetime: datetime.datetime | None = None
         self._output_file_path: Path | None = None
 

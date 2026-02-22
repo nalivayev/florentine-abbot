@@ -3,7 +3,9 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
+import pytest
 from PIL import Image
 
 from preview_maker import PreviewMaker
@@ -16,7 +18,7 @@ from common.constants import (
     TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID,
 )
 from common.exifer import Exifer
-from tests.common.test_utils import create_test_image
+from tests.common.test_utils import create_test_image, exiftool_available
 
 
 class TestPreviewMakerBatch:
@@ -345,6 +347,62 @@ class TestPreviewMakerBatch:
         assert prv_credit == master_credit
         assert prv_usage == master_usage
         assert prv_source == master_source
+
+    @pytest.mark.skipif(not exiftool_available(), reason="exiftool not installed")
+    def test_convert_skips_metadata_when_no_metadata(self):
+        """_convert_to_prv does not call _write_derivative_metadata when flag is set."""
+        temp_dir = self.create_temp_dir()
+
+        date_dir = temp_dir / "ARCHIVES" / "0001.Family" / "1950" / "1950.06.15"
+        sources_dir = date_dir / "SOURCES"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+
+        msr_path = sources_dir / "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff"
+        create_test_image(msr_path)
+
+        prv_dir = date_dir / "PREVIEWS"
+        prv_dir.mkdir(parents=True, exist_ok=True)
+        prv_path = prv_dir / "1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
+
+        logger = Logger("test", console=False)
+        maker = PreviewMaker(logger, no_metadata=True)
+
+        with patch.object(maker, '_write_derivative_metadata') as mock_write:
+            maker._convert_to_prv(
+                input_path=msr_path, output_path=prv_path,
+                max_size=200, quality=80,
+            )
+
+        assert prv_path.exists()
+        mock_write.assert_not_called()
+
+    @pytest.mark.skipif(not exiftool_available(), reason="exiftool not installed")
+    def test_convert_writes_metadata_when_no_metadata_is_false(self):
+        """_convert_to_prv calls _write_derivative_metadata normally when flag is off."""
+        temp_dir = self.create_temp_dir()
+
+        date_dir = temp_dir / "ARCHIVES" / "0001.Family" / "1950" / "1950.06.15"
+        sources_dir = date_dir / "SOURCES"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+
+        msr_path = sources_dir / "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff"
+        create_test_image(msr_path)
+
+        prv_dir = date_dir / "PREVIEWS"
+        prv_dir.mkdir(parents=True, exist_ok=True)
+        prv_path = prv_dir / "1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
+
+        logger = Logger("test", console=False)
+        maker = PreviewMaker(logger, no_metadata=False)
+
+        with patch.object(maker, '_write_derivative_metadata') as mock_write:
+            maker._convert_to_prv(
+                input_path=msr_path, output_path=prv_path,
+                max_size=200, quality=80,
+            )
+
+        assert prv_path.exists()
+        mock_write.assert_called_once()
 
 
 class TestPreviewMakerCustomFormats:

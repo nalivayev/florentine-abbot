@@ -81,6 +81,7 @@ class FileOrganizer:
         config_path: str | Path | None = None,
         recursive: bool = False,
         copy_mode: bool = False,
+        no_metadata: bool = False,
     ) -> int:
         """
         Run the organizer in batch mode.
@@ -91,6 +92,7 @@ class FileOrganizer:
             config_path: Optional path to the JSON configuration file.
             recursive: If True, process files in subdirectories recursively.
             copy_mode: If True, copy files instead of moving them.
+            no_metadata: If True, skip writing EXIF/XMP metadata.
 
         Returns:
             The number of successfully processed files.
@@ -105,6 +107,7 @@ class FileOrganizer:
             config_path=config_path,
             recursive=recursive,
             copy_mode=copy_mode,
+            no_metadata=no_metadata,
         )
 
     def _load_config(self, config_path: str | Path | None) -> Config:
@@ -122,6 +125,7 @@ class FileOrganizer:
         config_path: str | Path | None = None,
         recursive: bool = False,
         copy_mode: bool = False,
+        no_metadata: bool = False,
     ) -> int:
         """
         Process existing files under ``input_path`` once and exit.
@@ -132,6 +136,7 @@ class FileOrganizer:
             config_path: Optional path to the JSON configuration file.
             recursive: If True, process files in subdirectories recursively.
             copy_mode: If True, copy files instead of moving them.
+            no_metadata: If True, skip writing EXIF/XMP metadata.
 
         Returns:
             The number of successfully processed files.
@@ -170,7 +175,7 @@ class FileOrganizer:
                 skipped += 1
                 continue
 
-            if self.process_single_file(file_path, output_path=resolved_output, copy_mode=copy_mode):
+            if self.process_single_file(file_path, output_path=resolved_output, copy_mode=copy_mode, no_metadata=no_metadata):
                 count += 1
             else:
                 skipped += 1
@@ -185,6 +190,7 @@ class FileOrganizer:
         *,
         output_path: Path,
         copy_mode: bool = False,
+        no_metadata: bool = False,
     ) -> bool:
         """
         Process a single file: validate, copy, write metadata, clean up.
@@ -198,6 +204,7 @@ class FileOrganizer:
             file_path: Source image file.
             output_path: Resolved archive root.
             copy_mode: If True keep the source file; otherwise delete it.
+            no_metadata: If True, skip writing EXIF/XMP metadata.
 
         Returns:
             True on success, False on any error.
@@ -258,7 +265,7 @@ class FileOrganizer:
             return False
 
         # Write metadata to TEMP destination file
-        if not self._processor.process(temp_dest_path, parsed):
+        if not self._processor.process(temp_dest_path, parsed, no_metadata=no_metadata):
             self._logger.warning(f"Metadata write failed, deleting temp file {temp_dest_path}")
             try:
                 temp_dest_path.unlink()

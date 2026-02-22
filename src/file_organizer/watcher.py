@@ -27,7 +27,7 @@ class FileWatcher(FileSystemEventHandler):
     using :class:`FileOrganizer`.  Supports config reloading via SIGHUP.
     """
 
-    def __init__(self, logger: Logger, path: str, config: Config, output_path: Path, copy_mode: bool = False) -> None:
+    def __init__(self, logger: Logger, path: str, config: Config, output_path: Path, copy_mode: bool = False, no_metadata: bool = False) -> None:
         """
         Initialize the monitor.
 
@@ -37,6 +37,7 @@ class FileWatcher(FileSystemEventHandler):
             config: Config instance for file processing.
             output_path: Destination archive root.
             copy_mode: If True, copy files instead of moving them.
+            no_metadata: If True, skip writing EXIF/XMP metadata.
 
         Raises:
             ValueError: If *path* and *output_path* overlap (equal or
@@ -47,6 +48,7 @@ class FileWatcher(FileSystemEventHandler):
         self._config = config
         self._logger = logger
         self._copy_mode = copy_mode
+        self._no_metadata = no_metadata
         self._output_path: Path = Path(output_path).resolve()
 
         # Validate early — reuse the same check as batch mode.
@@ -118,6 +120,7 @@ class FileWatcher(FileSystemEventHandler):
                 file_path,
                 output_path=self._output_path,
                 copy_mode=self._copy_mode,
+                no_metadata=self._no_metadata,
             )
         except Exception as e:
             self._logger.error(f"Error processing {file_path}: {e}")

@@ -32,6 +32,7 @@ class PreviewWatcher(FileSystemEventHandler):
         config_path: str | Path | None = None,
         max_size: int = 2000,
         quality: int = 80,
+        no_metadata: bool = False,
     ) -> None:
         """
         Initialize the watcher.
@@ -42,13 +43,14 @@ class PreviewWatcher(FileSystemEventHandler):
             config_path: Optional path to preview-maker config JSON.
             max_size: Maximum long edge in pixels for PRV.
             quality: JPEG quality (1-100).
+            no_metadata: If True, skip writing EXIF/XMP metadata.
         """
         super().__init__()
         self._path = Path(path).resolve()
         self._logger = logger
         self._max_size = max_size
         self._quality = quality
-        self._maker = PreviewMaker(logger, config_path)
+        self._maker = PreviewMaker(logger, config_path, no_metadata=no_metadata)
         self._observer = Observer()
 
     # ── watchdog event handlers ────────────────────────────────────────
