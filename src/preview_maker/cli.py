@@ -47,6 +47,11 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         default=80,
         help="JPEG quality (1-100, default: 80)",
     )
+    parser.add_argument(
+        "--no-metadata",
+        action="store_true",
+        help="Skip writing EXIF/XMP metadata to PRV files",
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -125,11 +130,12 @@ def main(argv: list[str] | None = None) -> int:
                 config_path=args.config,
                 max_size=args.max_size,
                 quality=args.quality,
+                no_metadata=args.no_metadata,
             )
             watcher.start()
         else:
             # batch
-            maker = PreviewMaker(logger, args.config)
+            maker = PreviewMaker(logger, args.config, no_metadata=args.no_metadata)
             count = maker(
                 path=path,
                 overwrite=bool(args.overwrite),

@@ -38,11 +38,12 @@ class Workflow(ABC):
     All workflow classes must inherit from this class and implement the __call__ method.
     """
 
-    def __init__(self, logger: Logger | None = None) -> None:
+    def __init__(self, logger: Logger | None = None, no_metadata: bool = False) -> None:
         """Initialize the workflow.
         
         Args:
             logger: Optional logger instance for subclasses that need it.
+            no_metadata: If True, skip writing EXIF/XMP metadata.
         """
         pass
 
@@ -79,16 +80,18 @@ class MetadataWorkflow(Workflow):
     # Image extensions that support EXIF metadata (lowercase).
     _EXIF_SUPPORTED_EXTENSIONS = {".tif", ".tiff", ".jpg", ".jpeg"}
 
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: Logger, no_metadata: bool = False) -> None:
         """
         Initialize the metadata workflow.
         
         Args:
             logger: Logger instance for this workflow.
+            no_metadata: If True, skip writing EXIF/XMP metadata.
         """
         super().__init__(logger)
         self._logger = logger
         self._exifer = Exifer()
+        self._no_metadata = no_metadata
 
     def _get_major_version(self) -> str:
         """
@@ -184,6 +187,10 @@ class MetadataWorkflow(Workflow):
         Returns:
             True if successful, False otherwise.
         """
+        if self._no_metadata:
+            self._logger.info(f"Skipping metadata write for {file_path.name} (--no-metadata)")
+            return True
+
         if not file_path.exists():
             self._logger.warning(f"Cannot write XMP history: file doesn't exist: {file_path}")
             return False

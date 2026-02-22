@@ -140,6 +140,11 @@ class Parser(ArgumentParser):
             ),
         )
         self.add_argument(
+            "--no-metadata",
+            action="store_true",
+            help="Skip writing EXIF/XMP metadata to files",
+        )
+        self.add_argument(
             "--log-path",
             type=str,
             default=None,

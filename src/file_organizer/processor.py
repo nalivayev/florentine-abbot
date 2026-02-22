@@ -83,17 +83,22 @@ class FileProcessor:
         
         return parsed
 
-    def process(self, dest_path: Path, parsed: ParsedFilename) -> bool:
+    def process(self, dest_path: Path, parsed: ParsedFilename, no_metadata: bool = False) -> bool:
         """
         Write EXIF/XMP metadata to destination file.
 
         Args:
             dest_path: Path to the destination file (already copied).
             parsed: Parsed filename data from source.
+            no_metadata: If True, skip writing metadata.
 
         Returns:
-            True if metadata written successfully, False otherwise.
+            True if metadata written successfully (or skipped), False otherwise.
         """
+        if no_metadata:
+            self._logger.info(f"Skipping metadata write for {dest_path.name} (--no-metadata)")
+            return True
+
         self._logger.info(f"Writing metadata to: {dest_path}")
 
         # Write EXIF/XMP metadata to destination

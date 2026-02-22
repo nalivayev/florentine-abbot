@@ -5,8 +5,10 @@ Tests for FileProcessor class.
 import shutil
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from common.logger import Logger
+from common.naming import ParsedFilename
 from file_organizer.processor import FileProcessor
 from tests.common.test_utils import create_test_image
 
@@ -82,4 +84,36 @@ class TestFileProcessor:
         processor = FileProcessor(self.logger)
         result = processor._parse_and_validate('1950.13.15.00.00.00.E.FAM.POR.000001.A.MSR.tiff')
         assert result is None
+
+    def test_process_skips_write_when_no_metadata(self):
+        """process() returns True without calling _write_metadata."""
+        processor = FileProcessor(self.logger)
+        parsed = ParsedFilename(
+            year=1950, month=6, day=15,
+            hour=12, minute=0, second=0,
+            modifier="E", group="FAM", subgroup="POR",
+            sequence="000001", side="A", suffix="MSR", extension="tiff",
+        )
+
+        with patch.object(processor, '_write_metadata') as mock_write:
+            result = processor.process(Path("dummy.tiff"), parsed, no_metadata=True)
+
+        assert result is True
+        mock_write.assert_not_called()
+
+    def test_process_calls_write_when_no_metadata_is_false(self):
+        """process() calls _write_metadata normally when flag is off."""
+        processor = FileProcessor(self.logger)
+        parsed = ParsedFilename(
+            year=1950, month=6, day=15,
+            hour=12, minute=0, second=0,
+            modifier="E", group="FAM", subgroup="POR",
+            sequence="000001", side="A", suffix="MSR", extension="tiff",
+        )
+
+        with patch.object(processor, '_write_metadata', return_value=True) as mock_write:
+            result = processor.process(Path("dummy.tiff"), parsed, no_metadata=False)
+
+        assert result is True
+        mock_write.assert_called_once()
 

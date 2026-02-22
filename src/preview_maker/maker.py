@@ -33,13 +33,14 @@ class PreviewMaker:
     call-specific parameters are passed to :meth:`__call__`.
     """
 
-    def __init__(self, logger: Logger, config_path: str | Path | None = None) -> None:
+    def __init__(self, logger: Logger, config_path: str | Path | None = None, no_metadata: bool = False) -> None:
         self._logger = logger
         self._config = Config(logger, config_path)
         self._metadata = ArchiveMetadata(logger=logger)
         self._exifer = Exifer()
         self._parser = FilenameParser()
         self._router = Router(logger=logger)
+        self._no_metadata = no_metadata
 
     def __call__(
         self,
@@ -340,11 +341,14 @@ class PreviewMaker:
 
         # After pixels are written, propagate archival metadata from source
         # master (MSR/RAW) to the PRV derivative.
-        try:
-            self._write_derivative_metadata(input_path, output_path)
-        except (FileNotFoundError, RuntimeError, ValueError) as exc:
-            # Treat metadata issues as errors in logs but keep the image.
-            self._logger.error("Failed to copy metadata to PRV %s: %s", output_path, exc)
+        if self._no_metadata:
+            self._logger.info("Skipping metadata write for %s (--no-metadata)", output_path.name)
+        else:
+            try:
+                self._write_derivative_metadata(input_path, output_path)
+            except (FileNotFoundError, RuntimeError, ValueError) as exc:
+                # Treat metadata issues as errors in logs but keep the image.
+                self._logger.error("Failed to copy metadata to PRV %s: %s", output_path, exc)
 
         self._logger.info("Saved PRV: %s", output_path)
 
