@@ -67,7 +67,7 @@ def _create_batch(
     
     raise ValueError(f"Unknown batch type: {batch[0]}")
 
-def _create_workflow(logger: Logger, engine: str = DEFAULT_ENGINE) -> Workflow:
+def _create_workflow(logger: Logger, engine: str = DEFAULT_ENGINE, no_metadata: bool = False) -> Workflow:
     """
     Get a registered workflow class by engine name and return its instance.
 
@@ -82,7 +82,7 @@ def _create_workflow(logger: Logger, engine: str = DEFAULT_ENGINE) -> Workflow:
         ValueError: If the workflow is not registered.
     """
     workflow_class = get_workflow(engine)
-    return workflow_class(logger)
+    return workflow_class(logger, no_metadata=no_metadata)
 
 def main() -> None:
     """
@@ -99,7 +99,7 @@ def main() -> None:
     logger.info("Script has been started")
     batch = _create_batch(logger, args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)
 
-    workflow = _create_workflow(logger, args.engine)
+    workflow = _create_workflow(logger, args.engine, no_metadata=args.no_metadata)
     for item in batch:
         try:
             batch_dict = dict(item) if isinstance(item, list) else item

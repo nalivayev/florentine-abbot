@@ -12,6 +12,7 @@ where test doubles inherit real classes and only override what is needed.
 import datetime
 from pathlib import Path
 
+from common.logger import Logger
 from scan_batcher.workflow import MetadataWorkflow
 
 
@@ -27,6 +28,9 @@ class FakeMetadataWorkflow(MetadataWorkflow):
         workflow = FakeMetadataWorkflow(logger)
         workflow.write_xmp_metadata(file_path, file_datetime)
     """
+
+    def __init__(self, logger: Logger, no_metadata: bool = False) -> None:
+        super().__init__(logger, no_metadata=no_metadata)
 
     def __call__(self, workflow_path: str, templates: dict[str, str]) -> None:
         """
