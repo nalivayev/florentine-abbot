@@ -5,6 +5,7 @@ from typing import Sequence
 from common.logger import Logger
 from scan_batcher.batch import Batch, Scan
 from scan_batcher.parser import Parser
+from common.version import get_version
 from scan_batcher.workflows import get_workflow
 from scan_batcher.workflow import Workflow
 from scan_batcher.constants import DEFAULT_ENGINE, RoundingStrategy
@@ -96,6 +97,23 @@ def main() -> None:
     args = parser.parse_args()
     
     logger = Logger("scan_batcher", args.log_path, level=logging.INFO, console=True)
+
+    # ── summary banner ─────────────────────────────────────────────
+    version = get_version()
+    batch_type = args.batch[0] if args.batch else "scan"
+    dpis_str = ", ".join(str(d) for d in args.dpis) if args.dpis else "auto"
+    logger.info("-" * 45)
+    logger.info("  scan-batcher %s", version)
+    logger.info("  Engine:      %s", args.engine)
+    logger.info("  Batch:       %s", batch_type)
+    logger.info("  Workflow:    %s", args.workflow or "none")
+    logger.info("  Min DPI:     %s", args.min_dpi or "auto")
+    logger.info("  Max DPI:     %s", args.max_dpi or "auto")
+    logger.info("  DPIs:        %s", dpis_str)
+    logger.info("  Rounding:    %s", args.rounding)
+    logger.info("  No metadata: %s", "yes" if args.no_metadata else "no")
+    logger.info("-" * 45)
+
     logger.info("Script has been started")
     batch = _create_batch(logger, args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)
 

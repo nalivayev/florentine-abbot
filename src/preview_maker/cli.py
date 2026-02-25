@@ -118,6 +118,21 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     path = Path(args.path)
+
+    # ── summary banner ─────────────────────────────────────────────
+    version = get_version()
+    logger.info("-" * 45)
+    logger.info("  preview-maker %s", version)
+    logger.info("  Mode:        %s", args.command)
+    logger.info("  Path:        %s", path)
+    logger.info("  Max size:    %spx", args.max_size)
+    logger.info("  Quality:     %s", args.quality)
+    if args.command == "batch":
+        logger.info("  Overwrite:   %s", "yes" if args.overwrite else "no")
+    logger.info("  No metadata: %s", "yes" if args.no_metadata else "no")
+    logger.info("  Config:      %s", args.config or "default")
+    logger.info("-" * 45)
+
     if not path.exists():
         logger.error(f"Path does not exist: {path}")
         return 1

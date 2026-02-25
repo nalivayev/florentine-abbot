@@ -118,11 +118,25 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     input_path = Path(args.input_path)
+    output_path = Path(args.output_path)
+
+    # ── summary banner ─────────────────────────────────────────────
+    version = get_version()
+    logger.info("-" * 45)
+    logger.info("  file-organizer %s", version)
+    logger.info("  Mode:        %s", args.command)
+    logger.info("  Input:       %s", input_path)
+    logger.info("  Output:      %s", output_path)
+    logger.info("  Copy mode:   %s", "yes" if args.copy else "no")
+    if args.command == "batch":
+        logger.info("  Recursive:   %s", "yes" if args.recursive else "no")
+    logger.info("  No metadata: %s", "yes" if args.no_metadata else "no")
+    logger.info("  Config:      %s", args.config or "default")
+    logger.info("-" * 45)
+
     if not input_path.exists():
         logger.error(f"Input path does not exist: {input_path}")
         return 1
-
-    output_path = Path(args.output_path)
 
     try:
         if args.command == "watch":

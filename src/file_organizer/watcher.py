@@ -84,14 +84,14 @@ class FileWatcher(FileSystemEventHandler):
         """Handle file creation events."""
         if event.is_directory:
             return
-        self._process_file(Path(event.src_path))
+        self._process_file(Path(str(event.src_path)))
 
     def on_moved(self, event: FileSystemEvent) -> None:
         """Handle file movement events."""
         if event.is_directory:
             return
         if isinstance(event, FileSystemMovedEvent):
-            self._process_file(Path(event.dest_path))
+            self._process_file(Path(str(event.dest_path)))
 
     # ── per-file processing ────────────────────────────────────────────
 
