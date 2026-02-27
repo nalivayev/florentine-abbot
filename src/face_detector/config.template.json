@@ -1,0 +1,28 @@
+{
+  "help": "Configuration for Face Detector",
+
+  "watch": {
+    "path": null
+  },
+
+  "detection": {
+    "backend": "retinaface",
+    "model": "ArcFace",
+    "enforce_detection": false,
+    "align": true
+  },
+
+  "processing": {
+    "source_extensions": [".jpg", ".jpeg", ".tif", ".tiff", ".png", ".bmp"],
+    "source_suffixes": ["PRV", "MSR", "RAW"]
+  },
+
+  "database": {
+    "path": null
+  },
+
+  "clustering": {
+    "eps": 0.4,
+    "min_samples": 2
+  }
+}

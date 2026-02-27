@@ -213,4 +213,3 @@ class TestManualPipeline:
         print(f"  exiftool -a -G1 \"{master}\"")
         print(f"  exiftool -a -G1 \"{prv}\"")
         print(f"\nFiles preserved in: {tmp_path}")
-

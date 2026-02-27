@@ -146,8 +146,6 @@ class FileOrganizer:
                 or one is a subdirectory of the other).
         """
 
-        config = self._load_config(config_path)
-
         resolved_input = Path(input_path).resolve()
         resolved_output = Path(output_path).resolve()
 
@@ -327,7 +325,7 @@ class FileOrganizer:
         if output_path is not None:
             try:
                 file_path.resolve().relative_to(output_path.resolve())
-                self._logger.debug("Skipping %s: inside output directory %s", file_path, output_path)
+                self._logger.debug(f"Skipping {file_path}: inside output directory {output_path}")
                 return False
             except ValueError:
                 pass  # not under output_path — OK

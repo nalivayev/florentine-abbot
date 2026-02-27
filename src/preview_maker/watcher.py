@@ -7,6 +7,7 @@ per-file logic (filtering, conversion, metadata) is delegated to
 :meth:`PreviewMaker.should_process` and :meth:`PreviewMaker.process_single_file`.
 """
 
+import threading
 import time
 from pathlib import Path
 
@@ -52,6 +53,7 @@ class PreviewWatcher(FileSystemEventHandler):
         self._quality = quality
         self._maker = PreviewMaker(logger, config_path, no_metadata=no_metadata)
         self._observer = Observer()
+        self._stop_event = threading.Event()
 
     # ── watchdog event handlers ────────────────────────────────────────
 
@@ -101,7 +103,7 @@ class PreviewWatcher(FileSystemEventHandler):
                 quality=self._quality,
             )
         except Exception as e:
-            self._logger.error("Error processing %s: %s", file_path, e)
+            self._logger.error(f"Error processing {file_path}: {e}")
 
     # ── lifecycle ──────────────────────────────────────────────────────
 
@@ -113,23 +115,23 @@ class PreviewWatcher(FileSystemEventHandler):
         Runs until interrupted by KeyboardInterrupt.
         """
         if not self._path.exists():
-            self._logger.error("Path does not exist: %s", self._path)
+            self._logger.error(f"Path does not exist: {self._path}")
             return
 
         self._observer.schedule(self, str(self._path), recursive=True)
         self._observer.start()
-        self._logger.info("Started watching for new masters in %s", self._path)
+        self._logger.info(f"Started watching for new masters in {self._path}")
 
         try:
-            while True:
-                time.sleep(1)
+            self._stop_event.wait()
         except KeyboardInterrupt:
-            self.stop()
-
-    def stop(self) -> None:
-        """
-        Stop watching and clean up resources.
-        """
+            pass
         self._observer.stop()
         self._observer.join()
         self._logger.info("Stopped watching")
+
+    def stop(self) -> None:
+        """
+        Signal watching to stop. Safe to call from any thread.
+        """
+        self._stop_event.set()

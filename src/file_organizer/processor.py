@@ -153,7 +153,7 @@ class FileProcessor:
                     file_path.name,
                 )
             else:
-                self._logger.info("Running exiftool on %s...", file_path.name)
+                self._logger.info(f"Running exiftool on {file_path.name}...")
 
             tagger = Tagger(file_path, exifer=self._exifer, timeout=timeout)
             tagger.begin()

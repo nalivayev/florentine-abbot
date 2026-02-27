@@ -6,8 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from common.logger import Logger
-from common.config_utils import get_config_dir, ensure_config_exists, load_config, load_optional_config, get_template_path
-from common.constants import DEFAULT_TAGS, DEFAULT_SUFFIX_ROUTING
+from common.config_utils import get_config_dir, ensure_config_exists, load_config, get_template_path
 
 
 class Config:
@@ -36,7 +35,7 @@ class Config:
         # Ensure config exists, create from template if needed
         template_path = get_template_path('file_organizer', 'config.template.json')
         default_config = {
-            "_comment": "Configuration for File Organizer"
+            "help": "Configuration for File Organizer"
         }
 
         if ensure_config_exists(self._logger, self._config_path, default_config, template_path):
@@ -73,34 +72,6 @@ class Config:
         else:
             self._logger.debug("Configuration unchanged")
             return False
-    
-
-    
-    def get_metadata_tags(self) -> dict[str, str]:
-        """
-        Get metadata field to XMP tag mapping.
-
-        Loads from tags.json if present, otherwise uses DEFAULT_TAGS.
-
-        Returns:
-            dict[str, str]: Mapping field names to XMP tag names.
-        """
-        config_dir = get_config_dir()
-        tags_path = config_dir / "tags.json"
-        return load_optional_config(self._logger, tags_path, DEFAULT_TAGS)
-    
-    def get_suffix_routing(self) -> dict[str, str]:
-        """
-        Get suffix routing rules.
-
-        Loads from routes.json if present, otherwise uses DEFAULT_SUFFIX_ROUTING.
-
-        Returns:
-            dict[str, str]: Mapping file suffixes to subfolder names ('SOURCES', 'DERIVATIVES', '.', etc.).
-        """
-        config_dir = get_config_dir()
-        routes_path = config_dir / "routes.json"
-        return load_optional_config(self._logger, routes_path, DEFAULT_SUFFIX_ROUTING)
     
     def get(self, key: str, default: Any = None) -> Any:
         """

@@ -1,7 +1,10 @@
 {
 
-  "help": [
-    "Configuration for File Organizer"
-  ]
+  "help": ["Configuration for File Organizer"],
+
+  "watch": {
+    "path": null,
+    "output": null
+  }
 
 }

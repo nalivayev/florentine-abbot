@@ -1,5 +1,5 @@
 {
-  "_comment": "Configuration for Archive Keeper - copy to config.json and edit",
+  "help": "Configuration for Archive Keeper - copy to config.json and edit",
   "database": "archive.db",
   "chunk_size": 67108864,
   "log_progress_threshold": 104857600,

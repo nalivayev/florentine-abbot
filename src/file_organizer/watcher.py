@@ -8,6 +8,7 @@ per-file logic (validation, copy, metadata, cleanup) is delegated to
 """
 
 import signal
+import threading
 import time
 from pathlib import Path
 
@@ -56,6 +57,7 @@ class FileWatcher(FileSystemEventHandler):
 
         self._organizer = FileOrganizer(logger)
         self._observer = Observer()
+        self._stop_event = threading.Event()
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self) -> None:
@@ -140,19 +142,19 @@ class FileWatcher(FileSystemEventHandler):
 
         self._observer.schedule(self, str(self._path), recursive=False)
         self._observer.start()
-        self._logger.info("Started monitoring %s -> %s", self._path, self._output_path)
+        self._logger.info(f"Started monitoring {self._path} -> {self._output_path}")
         self._logger.info("Send SIGHUP to reload configuration (Unix) or restart the process (Windows)")
 
         try:
-            while True:
-                time.sleep(1)
+            self._stop_event.wait()
         except KeyboardInterrupt:
-            self.stop()
-
-    def stop(self) -> None:
-        """
-        Stop monitoring and clean up resources.
-        """
+            pass
         self._observer.stop()
         self._observer.join()
         self._logger.info("Stopped monitoring")
+
+    def stop(self) -> None:
+        """
+        Signal monitoring to stop. Safe to call from any thread.
+        """
+        self._stop_event.set()

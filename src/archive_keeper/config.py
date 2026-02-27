@@ -29,7 +29,7 @@ class Config:
         # Ensure config exists, create from template if needed
         template_path = get_template_path('archive_keeper', 'config.template.json')
         default_config = {
-            "_comment": "Configuration for Archive Keeper",
+            "help": "Configuration for Archive Keeper",
             "database": "archive.db",
             "chunk_size": 67108864,  # 64MB
             "log_progress_threshold": 104857600  # 100MB

@@ -9,14 +9,6 @@ from common.logger import Logger
 from common.config_utils import get_config_dir, ensure_config_exists, load_config, get_template_path
 
 
-# Default configuration values
-_DEFAULT_SUFFIXES = {
-    "master": "MSR",
-    "raw": "RAW",
-    "preview": "PRV",
-}
-
-
 class Config:
     """
     Configuration manager for Preview Maker.
@@ -24,6 +16,12 @@ class Config:
     Handles loading and access to preview-maker config file.
     Falls back to defaults when no config file is present.
     """
+
+    _DEFAULT_SUFFIXES = {
+        "master": "MSR",
+        "raw": "RAW",
+        "preview": "PRV",
+    }
 
     def __init__(self, logger: Logger, config_path: str | Path | None = None) -> None:
         """
@@ -44,7 +42,7 @@ class Config:
 
         template_path = get_template_path("preview_maker", "config.template.json")
         default_config: dict[str, Any] = {
-            "_comment": "Configuration for Preview Maker"
+            "help": "Configuration for Preview Maker"
         }
 
         if ensure_config_exists(self._logger, self._config_path, default_config, template_path):
@@ -65,7 +63,7 @@ class Config:
     def _get_suffix(self, key: str) -> str:
         """Return a suffix value by key, case-normalized to uppercase."""
         suffixes = self._data.get("suffixes", {})
-        value = suffixes.get(key, _DEFAULT_SUFFIXES[key])
+        value = suffixes.get(key, self._DEFAULT_SUFFIXES[key])
         return str(value).upper()
 
     @property

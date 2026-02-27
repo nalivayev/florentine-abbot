@@ -78,7 +78,7 @@ class ArchiveMetadata:
         if self._metadata_tags is None:
             return list(DEFAULT_TAGS.values())
         # Filter out _comment key and any non-string values
-        return [v for k, v in self._metadata_tags.items() if k != "_comment" and isinstance(v, str)]
+        return [v for k, v in self._metadata_tags.items() if k != "help" and isinstance(v, str)]
 
     def get_metadata_values(self, logger: Optional[Logger] = None) -> dict[str, Any]:
         """

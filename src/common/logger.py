@@ -12,7 +12,7 @@ import os
 import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
-from typing import Optional
+from typing import Any, Optional
 
 
 class Logger:
@@ -70,7 +70,7 @@ class Logger:
         self._log_file = self._log_directory / f"{self._module_name}.log"
 
         # Setup logging immediately
-        handlers = []
+        handlers: list[logging.Handler] = []
 
         # Console handler (stdout)
         if console:
@@ -125,37 +125,37 @@ class Logger:
         return log_dir
     
     # Delegate logging methods to internal logger
-    def debug(self, msg: str, *args, **kwargs) -> None:
+    def debug(self, msg: str, *args: object, **kwargs: Any) -> None:
         """
         Log a debug message.
         """
         self._logger.debug(msg, *args, **kwargs)
 
-    def info(self, msg: str, *args, **kwargs) -> None:
+    def info(self, msg: str, *args: object, **kwargs: Any) -> None:
         """
         Log an info message.
         """
         self._logger.info(msg, *args, **kwargs)
 
-    def warning(self, msg: str, *args, **kwargs) -> None:
+    def warning(self, msg: str, *args: object, **kwargs: Any) -> None:
         """
         Log a warning message.
         """
         self._logger.warning(msg, *args, **kwargs)
 
-    def error(self, msg: str, *args, **kwargs) -> None:
+    def error(self, msg: str, *args: object, **kwargs: Any) -> None:
         """
         Log an error message.
         """
         self._logger.error(msg, *args, **kwargs)
 
-    def critical(self, msg: str, *args, **kwargs) -> None:
+    def critical(self, msg: str, *args: object, **kwargs: Any) -> None:
         """
         Log a critical message.
         """
         self._logger.critical(msg, *args, **kwargs)
 
-    def exception(self, msg: str, *args, **kwargs) -> None:
+    def exception(self, msg: str, *args: object, **kwargs: Any) -> None:
         """
         Log an exception with traceback.
         """

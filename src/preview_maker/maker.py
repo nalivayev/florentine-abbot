@@ -80,22 +80,22 @@ class PreviewMaker:
             True if the file should be processed, False otherwise.
         """
         if file_path.is_symlink():
-            self._logger.debug("Skipping %s: is symlink", file_path)
+            self._logger.debug(f"Skipping {file_path}: is symlink")
             return False
 
         if file_path.suffix.lower() not in SUPPORTED_IMAGE_EXTENSIONS:
-            self._logger.debug("Skipping %s: unsupported extension '%s'", file_path, file_path.suffix)
+            self._logger.debug(f"Skipping {file_path}: unsupported extension '{file_path.suffix}'")
             return False
 
         parsed = self._parser.parse(file_path.name)
         if not parsed:
-            self._logger.debug("Skipping %s: cannot parse filename", file_path)
+            self._logger.debug(f"Skipping {file_path}: cannot parse filename")
             return False
 
         suffix = parsed.suffix.upper()
         source_suffixes = self._config.source_suffixes
         if suffix not in source_suffixes:
-            self._logger.debug("Skipping %s: suffix %s is not in source_suffixes %s", file_path, suffix, source_suffixes)
+            self._logger.debug(f"Skipping {file_path}: suffix {suffix} is not in source_suffixes {source_suffixes}")
             return False
 
         master = self._config.master_suffix
@@ -103,10 +103,7 @@ class PreviewMaker:
             master_name = file_path.name.replace(f".{suffix}.", f".{master}.")
             master_candidate = file_path.with_name(master_name)
             if master_candidate.exists():
-                self._logger.debug(
-                    "Skipping %s in favour of %s: %s (found %s)",
-                    suffix, master, file_path, master_candidate,
-                )
+                self._logger.debug(f"Skipping {suffix} in favour of {master}: {file_path} (found {master_candidate})")
                 return False
 
         return True
@@ -137,7 +134,7 @@ class PreviewMaker:
         """
         parsed = self._parser.parse(src_path.name)
         if not parsed:
-            self._logger.warning("Cannot parse filename: %s", src_path.name)
+            self._logger.warning(f"Cannot parse filename: {src_path.name}")
             return False
 
         # Create preview parsed filename by replacing suffix with preview_suffix
@@ -167,15 +164,12 @@ class PreviewMaker:
             # appears: if the source is the master suffix and the existing
             # preview was derived from a different master, upgrade it.
             if parsed.suffix.upper() == self._config.master_suffix and self._should_upgrade_prv(prv_path, src_path):
-                self._logger.info(
-                    "Upgrading %s from %s (was derived from different master): %s",
-                    self._config.preview_suffix, self._config.master_suffix, prv_path,
-                )
+                self._logger.info(f"Upgrading {self._config.preview_suffix} from {self._config.master_suffix} (was derived from different master): {prv_path}")
             else:
-                self._logger.debug("Skipping existing %s (overwrite disabled): %s", self._config.preview_suffix, prv_path)
+                self._logger.debug(f"Skipping existing {self._config.preview_suffix} (overwrite disabled): {prv_path}")
                 return False
 
-        self._logger.info("Creating PRV: %s -> %s", src_path.name, prv_path)
+        self._logger.info(f"Creating PRV: {src_path.name} -> {prv_path}")
 
         try:
             self._convert_to_prv(
@@ -218,10 +212,7 @@ class PreviewMaker:
 
             return prv_derived_from != msr_doc_id
         except Exception as exc:
-            self._logger.debug(
-                "Cannot determine upgrade eligibility for %s: %s",
-                prv_path, exc,
-            )
+            self._logger.debug(f"Cannot determine upgrade eligibility for {prv_path}: {exc}")
             return False
 
     def _generate_previews_for_sources(
@@ -238,13 +229,7 @@ class PreviewMaker:
 
         written = 0
 
-        self._logger.debug(
-            "Starting batch preview generation under %s (overwrite=%s, max_size=%d, quality=%d)",
-            path,
-            overwrite,
-            max_size,
-            quality,
-        )
+        self._logger.debug(f"Starting batch preview generation under {path} (overwrite={overwrite}, max_size={max_size}, quality={quality})")
 
         # Get folders where master files are stored according to routing rules
         target_folders = self._router.get_folders_for_suffixes(self._config.source_suffixes)
@@ -253,7 +238,7 @@ class PreviewMaker:
             self._logger.warning("No target folders found for RAW/MSR files in routing configuration")
             return 0
 
-        self._logger.debug("Scanning for master files in folders: %s", target_folders)
+        self._logger.debug(f"Scanning for master files in folders: {target_folders}")
 
         # Determine archive base path:
         # If path/processed exists, use it as the base (legacy organizer layout)
@@ -267,7 +252,7 @@ class PreviewMaker:
                 if not dirpath.is_dir():
                     continue
 
-                self._logger.info("Scanning for master files in: %s", dirpath)
+                self._logger.info(f"Scanning for master files in: {dirpath}")
 
                 for src_path in dirpath.iterdir():
                     if not src_path.is_file():
@@ -285,7 +270,7 @@ class PreviewMaker:
                     ):
                         written += 1
 
-        self._logger.info("Finished batch preview generation: %d file(s) written", written)
+        self._logger.info(f"Finished batch preview generation: {written} file(s) written")
 
         return written
 
@@ -302,7 +287,7 @@ class PreviewMaker:
         """
 
         if not input_path.exists():
-            self._logger.error("Input file does not exist: %s", input_path)
+            self._logger.error(f"Input file does not exist: {input_path}")
             raise FileNotFoundError(f"Input file does not exist: {input_path}")
 
         # Check for DocumentID/InstanceID in master (must be set by scan-batcher)
@@ -313,20 +298,14 @@ class PreviewMaker:
         existing_ids = tagger.end() or {}
         if not existing_ids.get(TAG_XMP_XMPMM_DOCUMENT_ID) or not existing_ids.get(TAG_XMP_XMPMM_INSTANCE_ID):
             self._logger.warning(
-                "Skipping PRV generation for %s: missing DocumentID or InstanceID. "
-                "These must be set by scan-batcher before processing.",
-                input_path.name,
+                f"Skipping PRV generation for {input_path.name}: missing DocumentID or InstanceID. "
+                "These must be set by scan-batcher before processing."
             )
             raise ValueError(f"Missing DocumentID or InstanceID in {input_path.name}")
 
         Image.MAX_IMAGE_PIXELS = None
 
-        self._logger.debug(
-            "Opening source image for PRV conversion: %s (max_size=%d, quality=%d)",
-            input_path,
-            max_size,
-            quality,
-        )
+        self._logger.debug(f"Opening source image for PRV conversion: {input_path} (max_size={max_size}, quality={quality})")
 
         with Image.open(input_path) as img:
             img.load()
@@ -342,15 +321,15 @@ class PreviewMaker:
         # After pixels are written, propagate archival metadata from source
         # master (MSR/RAW) to the PRV derivative.
         if self._no_metadata:
-            self._logger.info("Skipping metadata write for %s (--no-metadata)", output_path.name)
+            self._logger.info(f"Skipping metadata write for {output_path.name} (--no-metadata)")
         else:
             try:
                 self._write_derivative_metadata(input_path, output_path)
             except (FileNotFoundError, RuntimeError, ValueError) as exc:
                 # Treat metadata issues as errors in logs but keep the image.
-                self._logger.error("Failed to copy metadata to PRV %s: %s", output_path, exc)
+                self._logger.error(f"Failed to copy metadata to PRV {output_path}: {exc}")
 
-        self._logger.info("Saved PRV: %s", output_path)
+        self._logger.info(f"Saved PRV: {output_path}")
 
     def _write_derivative_metadata(self, master_path: Path, prv_path: Path) -> None:
         """
@@ -391,7 +370,7 @@ class PreviewMaker:
         edited_instance_id = uuid.uuid4().hex
 
         # ── single batch write to PRV ─────────────────────────────────
-        self._logger.debug("Writing metadata to PRV %s based on master %s", prv_path, master_path)
+        self._logger.debug(f"Writing metadata to PRV {prv_path} based on master {master_path}")
         tagger = Tagger(prv_path, exifer=self._exifer)
         tagger.begin()
 
