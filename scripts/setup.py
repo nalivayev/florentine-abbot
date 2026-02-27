@@ -98,29 +98,15 @@ class Installer(ABC):
         else:
             print("  Skipped — make sure to create it before starting the daemon.")
 
-    def _configure_file_organizer(self, inbox: str, archive: str) -> None:
-        path = self.config_dir / "file-organizer" / "config.json"
+    def _configure_daemon(self, daemon: str, module: str, watch_update: dict[str, Any]) -> None:
+        path = self.config_dir / daemon / "config.json"
         data = self._merge_watch(self._load_json(path) if path.exists() else {},
-                                 self._load_template("file_organizer"),
-                                 {"path": inbox, "output": archive})
-        self._save_json(path, data)
-
-    def _configure_preview_maker(self, archive: str) -> None:
-        path = self.config_dir / "preview-maker" / "config.json"
-        data = self._merge_watch(self._load_json(path) if path.exists() else {},
-                                 self._load_template("preview_maker"),
-                                 {"path": archive})
-        self._save_json(path, data)
-
-    def _configure_face_detector(self, archive: str) -> None:
-        path = self.config_dir / "face-detector" / "config.json"
-        data = self._merge_watch(self._load_json(path) if path.exists() else {},
-                                 self._load_template("face_detector"),
-                                 {"path": archive})
+                                 self._load_template(module),
+                                 watch_update)
         self._save_json(path, data)
 
     def _exiftool_ok(self) -> bool:
-        return shutil.which("exiftool") is not None
+        return subprocess.run(["exiftool", "-ver"], capture_output=True).returncode == 0
 
     @abstractmethod
     def _step_exiftool(self) -> bool:
@@ -156,9 +142,9 @@ class Installer(ABC):
 
     def _step_write_configs(self, inbox: str, archive: str) -> None:
         print("  Writing configuration files...")
-        self._configure_file_organizer(inbox, archive)
-        self._configure_preview_maker(archive)
-        self._configure_face_detector(archive)
+        self._configure_daemon("file-organizer", "file_organizer", {"path": inbox, "output": archive})
+        self._configure_daemon("preview-maker",  "preview_maker",  {"path": archive})
+        self._configure_daemon("face-detector",  "face_detector",  {"path": archive})
         print()
 
     def _step_launch_dashboard(self) -> int:
@@ -179,7 +165,7 @@ class Installer(ABC):
             print(f"  To start later, run:  {script}")
         return 0
 
-    def run(self) -> int:
+    def __call__(self) -> int:
         print()
         print("=" * 54)
         print("   Florentine Abbot — Setup Wizard")
@@ -258,16 +244,11 @@ class WindowsInstaller(Installer):
                 capture_output=True,
             )
             if result.returncode == 0:
-                for candidate_dir in [
-                    Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Links",
-                    Path("C:/Program Files/ExifTool"),
-                ]:
-                    if (candidate_dir / "exiftool.exe").exists():
-                        os.environ["PATH"] += ";" + str(candidate_dir)
-                        break
                 if self._exiftool_ok():
                     print("  [OK] Installed via winget")
                     return True
+                print("  [OK] Installed via winget (restart your terminal to update PATH)")
+                return True
 
         print()
         install_dir = self._ask("Install directory", default=r"C:\Program Files\ExifTool")
@@ -398,7 +379,7 @@ def main() -> int:
         "win32":  WindowsInstaller,
         "darwin": MacOSInstaller,
     }
-    return _map.get(sys.platform, LinuxInstaller)().run()
+    return _map.get(sys.platform, LinuxInstaller)()()
 
 
 if __name__ == "__main__":

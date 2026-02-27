@@ -8,13 +8,13 @@ per-file logic (filtering, conversion, metadata) is delegated to
 """
 
 import threading
-import time
 from pathlib import Path
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileSystemMovedEvent
 
 from common.logger import Logger
+from common.utils import wait_for_stable
 from preview_maker.maker import PreviewMaker
 
 class PreviewWatcher(FileSystemEventHandler):
@@ -63,7 +63,7 @@ class PreviewWatcher(FileSystemEventHandler):
         """
         if event.is_directory:
             return
-        self._process_file(Path(str(event.src_path)))
+        self._process_file(Path(str(event.src_path)), wait=True)
 
     def on_moved(self, event: FileSystemEvent) -> None:
         """
@@ -72,18 +72,19 @@ class PreviewWatcher(FileSystemEventHandler):
         if event.is_directory:
             return
         if isinstance(event, FileSystemMovedEvent):
-            self._process_file(Path(str(event.dest_path)))
+            self._process_file(Path(str(event.dest_path)), wait=False)
 
     # ── per-file processing ────────────────────────────────────────────
 
-    def _process_file(self, file_path: Path) -> None:
+    def _process_file(self, file_path: Path, wait: bool = True) -> None:
         """
         Filter and delegate a single file to :class:`PreviewMaker`.
 
         Steps:
         1. Check the file still exists.
         2. Apply the same extension / suffix filter that batch mode uses.
-        3. Wait briefly for the file write to complete.
+        3. For on_created events: wait until the file size stabilises
+           (handles OS copy and cross-filesystem moves).
         4. Delegate to :meth:`PreviewMaker.process_single_file`.
         """
         if not file_path.exists():
@@ -92,10 +93,9 @@ class PreviewWatcher(FileSystemEventHandler):
         if not self._maker.should_process(file_path):
             return
 
-        # Small delay to let the OS finish writing the file.
-        time.sleep(1)
-
         try:
+            if wait:
+                wait_for_stable(file_path)
             self._maker.process_single_file(
                 file_path,
                 archive_path=self._path,

@@ -9,13 +9,13 @@ per-file logic (validation, copy, metadata, cleanup) is delegated to
 
 import signal
 import threading
-import time
 from pathlib import Path
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileSystemMovedEvent
 
 from common.logger import Logger
+from common.utils import wait_for_stable
 from file_organizer.config import Config
 from file_organizer.organizer import FileOrganizer
 
@@ -86,18 +86,18 @@ class FileWatcher(FileSystemEventHandler):
         """Handle file creation events."""
         if event.is_directory:
             return
-        self._process_file(Path(str(event.src_path)))
+        self._process_file(Path(str(event.src_path)), wait=True)
 
     def on_moved(self, event: FileSystemEvent) -> None:
         """Handle file movement events."""
         if event.is_directory:
             return
         if isinstance(event, FileSystemMovedEvent):
-            self._process_file(Path(str(event.dest_path)))
+            self._process_file(Path(str(event.dest_path)), wait=False)
 
     # ── per-file processing ────────────────────────────────────────────
 
-    def _process_file(self, file_path: Path) -> None:
+    def _process_file(self, file_path: Path, wait: bool = True) -> None:
         """Filter and delegate a single file to :class:`FileOrganizer`.
 
         Steps:
@@ -105,7 +105,8 @@ class FileWatcher(FileSystemEventHandler):
            handler).
         2. Apply the same extension / symlink / output-tree filter that
            batch mode uses.
-        3. Wait briefly for the file write to complete (simple heuristic).
+        3. For on_created events: wait until the file size stabilises
+           (handles OS copy and cross-filesystem moves).
         4. Delegate to :meth:`FileOrganizer.process_single_file`.
         """
         if not file_path.exists():
@@ -114,10 +115,9 @@ class FileWatcher(FileSystemEventHandler):
         if not self._organizer.should_process(file_path, output_path=self._output_path):
             return
 
-        # Small delay to let the OS finish writing the file.
-        time.sleep(1)
-
         try:
+            if wait:
+                wait_for_stable(file_path)
             self._organizer.process_single_file(
                 file_path,
                 output_path=self._output_path,
