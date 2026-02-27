@@ -7,12 +7,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from common.constants import (
-    TAG_IFD0_MAKE,
-    TAG_IFD0_MODEL,
-    TAG_IFD0_SOFTWARE,
-    TAG_EXIFIFD_CREATE_DATE,
-)
+from common.constants import TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_IFD0_SOFTWARE, TAG_EXIFIFD_CREATE_DATE
 from common.exifer import Exifer
 from common.logger import Logger
 from tests.scan_batcher.fake_metadata_workflow import FakeMetadataWorkflow
@@ -38,7 +33,8 @@ def create_test_image(
     scanner_make: str = "Test Scanner",
     scanner_model: str = "Test Model",
 ) -> None:
-    """Create a test image with optional scanner metadata.
+    """
+    Create a test image with optional scanner metadata.
     
     Creates a PIL image and optionally writes scanner metadata that mirrors
     the real scanning workflow:
@@ -73,7 +69,8 @@ def add_scanner_metadata(
     scanner_model: str = "Test Model",
     scanner_software: str = "VueScan 9 x64 (9.8.50)",
 ) -> None:
-    """Add scanner metadata matching the real scanning workflow.
+    """
+    Add scanner metadata matching the real scanning workflow.
     
     Simulates the two-phase metadata writing that happens in production:
     
