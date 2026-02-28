@@ -243,6 +243,7 @@ class FileOrganizer:
         # 3. Rename temp file to final destination (atomic move)
 
         temp_dest_path = dest_path.with_suffix(dest_path.suffix + ".tmp")
+        temp_dest_log_path = dest_log_path.with_suffix(dest_log_path.suffix + ".tmp") if dest_log_path else None
 
         # Copy files to temp destination
         try:
@@ -250,17 +251,18 @@ class FileOrganizer:
             shutil.copy2(str(file_path), str(temp_dest_path))
             self._logger.info(f"  Copied to temp: {temp_dest_path}")
 
-            if log_file_path and dest_log_path:
-                dest_log_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(str(log_file_path), str(dest_log_path))
-                self._logger.info(f"  Copied log to: {dest_log_path}")
+            if log_file_path and temp_dest_log_path:
+                temp_dest_log_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(str(log_file_path), str(temp_dest_log_path))
+                self._logger.info(f"  Copied log to temp: {temp_dest_log_path}")
         except Exception as e:
             self._logger.error(f"Failed to copy file: {e}")
-            if temp_dest_path.exists():
-                try:
-                    temp_dest_path.unlink()
-                except OSError:
-                    pass
+            for p in (temp_dest_path, temp_dest_log_path):
+                if p and p.exists():
+                    try:
+                        p.unlink()
+                    except OSError:
+                        pass
             raise
 
         # Write metadata to TEMP destination file
@@ -270,8 +272,8 @@ class FileOrganizer:
             self._logger.warning(f"Metadata write failed ({e}), deleting temp file {temp_dest_path}")
             try:
                 temp_dest_path.unlink()
-                if dest_log_path and dest_log_path.exists():
-                    dest_log_path.unlink()
+                if temp_dest_log_path and temp_dest_log_path.exists():
+                    temp_dest_log_path.unlink()
             except OSError as cleanup_error:
                 self._logger.error(f"Failed to cleanup temp file: {cleanup_error}")
             raise
@@ -285,11 +287,23 @@ class FileOrganizer:
             try:
                 if temp_dest_path.exists():
                     temp_dest_path.unlink()
-                if dest_log_path and dest_log_path.exists():
-                    dest_log_path.unlink()
+                if temp_dest_log_path and temp_dest_log_path.exists():
+                    temp_dest_log_path.unlink()
             except OSError:
                 pass
             raise
+
+        # Atomic rename log file (best-effort: image is already safe at dest_path)
+        if temp_dest_log_path and dest_log_path:
+            try:
+                temp_dest_log_path.rename(dest_log_path)
+                self._logger.info(f"  Atomic rename: {temp_dest_log_path.name} -> {dest_log_path.name}")
+            except OSError as e:
+                self._logger.warning(f"Failed to rename log file {temp_dest_log_path}: {e}")
+                try:
+                    temp_dest_log_path.unlink()
+                except OSError:
+                    pass
 
         # If move mode, delete source files
         if not copy_mode:
@@ -303,7 +317,7 @@ class FileOrganizer:
             except Exception as e:
                 self._logger.warning(f"Failed to delete source file after successful copy: {e}")
 
-        self._logger.info(f"Successfully processed: {temp_dest_path.name}")
+        self._logger.info(f"Successfully processed: {dest_path.name}")
 
     def should_process(self, file_path: Path, output_path: Path | None = None) -> bool:
         """
