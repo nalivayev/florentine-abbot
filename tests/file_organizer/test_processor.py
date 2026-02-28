@@ -86,7 +86,7 @@ class TestFileProcessor:
         assert result is None
 
     def test_process_skips_write_when_no_metadata(self):
-        """process() returns True without calling _write_metadata."""
+        """process() skips _write_metadata when no_metadata=True."""
         processor = FileProcessor(self.logger)
         parsed = ParsedFilename(
             year=1950, month=6, day=15,
@@ -96,9 +96,8 @@ class TestFileProcessor:
         )
 
         with patch.object(processor, '_write_metadata') as mock_write:
-            result = processor.process(Path("dummy.tiff"), parsed, no_metadata=True)
+            processor.process(Path("dummy.tiff"), parsed, no_metadata=True)
 
-        assert result is True
         mock_write.assert_not_called()
 
     def test_process_calls_write_when_no_metadata_is_false(self):
@@ -111,9 +110,8 @@ class TestFileProcessor:
             sequence="000001", side="A", suffix="MSR", extension="tiff",
         )
 
-        with patch.object(processor, '_write_metadata', return_value=True) as mock_write:
-            result = processor.process(Path("dummy.tiff"), parsed, no_metadata=False)
+        with patch.object(processor, '_write_metadata') as mock_write:
+            processor.process(Path("dummy.tiff"), parsed, no_metadata=False)
 
-        assert result is True
         mock_write.assert_called_once()
 

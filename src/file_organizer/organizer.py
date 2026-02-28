@@ -173,9 +173,16 @@ class FileOrganizer:
                 skipped += 1
                 continue
 
-            if self.process_single_file(file_path, output_path=resolved_output, copy_mode=copy_mode, no_metadata=no_metadata):
+            try:
+                self.process_single_file(
+                    file_path,
+                    output_path=resolved_output,
+                    copy_mode=copy_mode,
+                    no_metadata=no_metadata,
+                )
                 count += 1
-            else:
+            except Exception as e:
+                self._logger.error(f"Error processing {file_path.name}: {e}")
                 skipped += 1
 
         self._logger.info(f"Batch processing complete. Processed {count} files, skipped {skipped} files.")
@@ -189,7 +196,7 @@ class FileOrganizer:
         output_path: Path,
         copy_mode: bool = False,
         no_metadata: bool = False,
-    ) -> bool:
+    ) -> None:
         """
         Process a single file: validate, copy, write metadata, clean up.
 
@@ -204,37 +211,31 @@ class FileOrganizer:
             copy_mode: If True keep the source file; otherwise delete it.
             no_metadata: If True, skip writing EXIF/XMP metadata.
 
-        Returns:
-            True on success, False on any error.
+        Raises:
+            ValueError: If filename validation fails or DocumentID/InstanceID missing.
+            FileExistsError: If the destination file already exists.
+            OSError: If file copy or rename fails.
         """
-        # Validate source file (DocumentID/InstanceID, parse, validate)
+        # Validate source file (DocumentID/InstanceID, parse, validate) — raises on failure
         parsed = self._processor.validate(file_path)
-        if not parsed:
-            return False
 
         # Get destination paths using Router
-        try:
-            dest_path, dest_log_path, log_file_path = self._calculate_destination_paths(
-                file_path, parsed, output_path
-            )
-        except Exception as e:
-            self._logger.error(f"Failed to calculate destination path: {e}")
-            return False
+        dest_path, dest_log_path, log_file_path = self._calculate_destination_paths(
+            file_path, parsed, output_path
+        )
 
         # Check if destination already exists
         if dest_path.exists():
-            self._logger.error(
+            raise FileExistsError(
                 f"Destination file already exists: {dest_path}. "
                 f"Leaving source file in place."
             )
-            return False
 
         if dest_log_path and dest_log_path.exists():
-            self._logger.error(
+            raise FileExistsError(
                 f"Destination log file already exists: {dest_log_path}. "
                 f"Leaving source files in place."
             )
-            return False
 
         # ATOMIC COPY STRATEGY:
         # 1. Copy to temp file (.tmp extension)
@@ -260,18 +261,20 @@ class FileOrganizer:
                     temp_dest_path.unlink()
                 except OSError:
                     pass
-            return False
+            raise
 
         # Write metadata to TEMP destination file
-        if not self._processor.process(temp_dest_path, parsed, no_metadata=no_metadata):
-            self._logger.warning(f"Metadata write failed, deleting temp file {temp_dest_path}")
+        try:
+            self._processor.process(temp_dest_path, parsed, no_metadata=no_metadata)
+        except Exception as e:
+            self._logger.warning(f"Metadata write failed ({e}), deleting temp file {temp_dest_path}")
             try:
                 temp_dest_path.unlink()
                 if dest_log_path and dest_log_path.exists():
                     dest_log_path.unlink()
-            except Exception as e:
-                self._logger.error(f"Failed to cleanup temp file: {e}")
-            return False
+            except OSError as cleanup_error:
+                self._logger.error(f"Failed to cleanup temp file: {cleanup_error}")
+            raise
 
         # Atomic rename to final name
         try:
@@ -286,7 +289,7 @@ class FileOrganizer:
                     dest_log_path.unlink()
             except OSError:
                 pass
-            return False
+            raise
 
         # If move mode, delete source files
         if not copy_mode:
@@ -301,7 +304,6 @@ class FileOrganizer:
                 self._logger.warning(f"Failed to delete source file after successful copy: {e}")
 
         self._logger.info(f"Successfully processed: {temp_dest_path.name}")
-        return True
 
     def should_process(self, file_path: Path, output_path: Path | None = None) -> bool:
         """

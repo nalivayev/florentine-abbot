@@ -134,8 +134,7 @@ class PreviewMaker:
         """
         parsed = self._parser.parse(src_path.name)
         if not parsed:
-            self._logger.warning(f"Cannot parse filename: {src_path.name}")
-            return False
+            raise ValueError(f"Cannot parse filename: {src_path.name}")
 
         # Create preview parsed filename by replacing suffix with preview_suffix
         prv_parsed = ParsedFilename(
@@ -171,17 +170,13 @@ class PreviewMaker:
 
         self._logger.info(f"Creating PRV: {src_path.name} -> {prv_path}")
 
-        try:
-            self._convert_to_prv(
-                input_path=src_path,
-                output_path=prv_path,
-                max_size=max_size,
-                quality=quality,
-            )
-            return True
-        except ValueError:
-            # Missing DocumentID/InstanceID — already logged by _convert_to_prv
-            return False
+        self._convert_to_prv(
+            input_path=src_path,
+            output_path=prv_path,
+            max_size=max_size,
+            quality=quality,
+        )
+        return True
 
     def _should_upgrade_prv(self, prv_path: Path, msr_path: Path) -> bool:
         """Check whether an existing PRV should be regenerated from MSR.
@@ -261,14 +256,17 @@ class PreviewMaker:
                     if not self.should_process(src_path):
                         continue
 
-                    if self.process_single_file(
-                        src_path,
-                        archive_path=archive_path,
-                        overwrite=overwrite,
-                        max_size=max_size,
-                        quality=quality,
-                    ):
-                        written += 1
+                    try:
+                        if self.process_single_file(
+                            src_path,
+                            archive_path=archive_path,
+                            overwrite=overwrite,
+                            max_size=max_size,
+                            quality=quality,
+                        ):
+                            written += 1
+                    except Exception as e:
+                        self._logger.error(f"Error processing {src_path.name}: {e}")
 
         self._logger.info(f"Finished batch preview generation: {written} file(s) written")
 
