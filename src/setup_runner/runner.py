@@ -1,9 +1,9 @@
 """
-Florentine Abbot — Setup Wizard.
+Florentine Abbot — Setup Runner.
 
 Run once before first use to configure paths and create config files:
 
-    python scripts/setup.py
+    setup-runner
 """
 
 import json
@@ -21,9 +21,9 @@ from pathlib import Path
 from typing import Any
 
 
-class Installer(ABC):
+class Runner(ABC):
     """
-    Base wizard.  Handles shared steps: I/O, paths, config writing, dashboard.
+    Base runner.  Handles shared steps: I/O, paths, config writing, dashboard.
     Platform subclasses override the exiftool-related methods.
     """
 
@@ -77,7 +77,7 @@ class Installer(ABC):
         print(f"  Saved: {path}")
 
     def _load_template(self, module: str) -> dict[str, Any]:
-        path = Path(__file__).resolve().parent.parent / "src" / module / "config.template.json"
+        path = Path(__file__).resolve().parent.parent / module / "config.template.json"
         return self._load_json(path) if path.exists() else {}
 
     def _merge_watch(self, existing: dict[str, Any], template: dict[str, Any],
@@ -172,7 +172,7 @@ class Installer(ABC):
     def __call__(self) -> int:
         print()
         print("=" * 54)
-        print("   Florentine Abbot — Setup Wizard")
+        print("   Florentine Abbot — Setup Runner")
         print("=" * 54)
         print()
         print(f"  Config directory: {self.config_dir}")
@@ -199,7 +199,7 @@ class Installer(ABC):
         return self._step_launch_dashboard()
 
 
-class WindowsInstaller(Installer):
+class WindowsRunner(Runner):
     """Windows: installs exiftool via winget or direct download."""
 
     def _reg_append_path(self, hive: int, subkey: str, directory: str) -> None:
@@ -302,7 +302,7 @@ class WindowsInstaller(Installer):
 
         except PermissionError:
             print(f"  Permission denied writing to {install_path}")
-            print("  Choose a directory you own, or run the wizard as administrator.")
+            print("  Choose a directory you own, or run the runner as administrator.")
             return False
         except Exception as e:
             print(f"  Download failed: {e}")
@@ -366,7 +366,7 @@ class WindowsInstaller(Installer):
         return self._ask_yn("Continue setup without exiftool?", default=False)
 
 
-class MacOSInstaller(Installer):
+class MacOSRunner(Runner):
     """macOS: installs exiftool via Homebrew."""
 
     def _step_exiftool(self) -> bool:
@@ -406,7 +406,7 @@ class MacOSInstaller(Installer):
         print()
 
 
-class LinuxInstaller(Installer):
+class LinuxRunner(Runner):
     """Linux: no auto-install, prints package manager instructions."""
 
     def _step_exiftool(self) -> bool:
@@ -459,13 +459,3 @@ class LinuxInstaller(Installer):
         print()
 
 
-def main() -> int:
-    _map: dict[str, type[Installer]] = {
-        "win32":  WindowsInstaller,
-        "darwin": MacOSInstaller,
-    }
-    return _map.get(sys.platform, LinuxInstaller)()()
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
