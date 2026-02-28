@@ -8,6 +8,7 @@ Run once before first use to configure paths and create config files:
 
 import json
 import os
+import plistlib
 import re
 import shutil
 import subprocess
@@ -390,6 +391,20 @@ class MacOSInstaller(Installer):
         print()
         return self._ask_yn("Continue setup without exiftool?", default=False)
 
+    def _step_shortcut(self) -> None:
+        print()
+        if not self._ask_yn("Create a desktop shortcut for the web dashboard?", default=True):
+            return
+        shortcut = Path.home() / "Desktop" / "Florentine Abbot.webloc"
+        try:
+            shortcut.write_bytes(
+                plistlib.dumps({"URL": "http://127.0.0.1:8000/"}, fmt=plistlib.FMT_XML)
+            )
+            print(f"  [OK] Shortcut created: {shortcut}")
+        except Exception as e:
+            print(f"  [!!] Could not create shortcut: {e}")
+        print()
+
 
 class LinuxInstaller(Installer):
     """Linux: no auto-install, prints package manager instructions."""
@@ -408,6 +423,40 @@ class LinuxInstaller(Installer):
         print("    sudo dnf install perl-Image-ExifTool      # Fedora")
         print()
         return self._ask_yn("Continue setup without exiftool?", default=False)
+
+    def _desktop_path(self) -> Path:
+        """Return the XDG Desktop path, falling back to ~/Desktop."""
+        try:
+            result = subprocess.run(
+                ["xdg-user-dir", "DESKTOP"], capture_output=True, text=True
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return Path(result.stdout.strip())
+        except Exception:
+            pass
+        return Path.home() / "Desktop"
+
+    def _step_shortcut(self) -> None:
+        print()
+        if not self._ask_yn("Create a desktop shortcut for the web dashboard?", default=True):
+            return
+        desktop = self._desktop_path()
+        shortcut = desktop / "florentine-abbot.desktop"
+        content = (
+            "[Desktop Entry]\n"
+            "Version=1.0\n"
+            "Type=Link\n"
+            "Name=Florentine Abbot\n"
+            "URL=http://127.0.0.1:8000/\n"
+            "Icon=web-browser\n"
+        )
+        try:
+            shortcut.write_text(content, encoding="utf-8")
+            shortcut.chmod(0o755)
+            print(f"  [OK] Shortcut created: {shortcut}")
+        except Exception as e:
+            print(f"  [!!] Could not create shortcut: {e}")
+        print()
 
 
 def main() -> int:
