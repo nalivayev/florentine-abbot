@@ -20,9 +20,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-if sys.platform == "win32":
-    import winreg
-
 
 class Installer(ABC):
     """
@@ -206,6 +203,7 @@ class WindowsInstaller(Installer):
     """Windows: installs exiftool via winget or direct download."""
 
     def _reg_append_path(self, hive: int, subkey: str, directory: str) -> None:
+        import winreg
         key = winreg.OpenKey(hive, subkey, 0, winreg.KEY_READ | winreg.KEY_WRITE)
         try:
             current, _ = winreg.QueryValueEx(key, "Path")
@@ -219,6 +217,7 @@ class WindowsInstaller(Installer):
 
     def _add_to_path(self, directory: str) -> None:
         """Add directory to Windows PATH via registry; HKLM first, HKCU fallback."""
+        import winreg
         try:
             self._reg_append_path(
                 winreg.HKEY_LOCAL_MACHINE,
@@ -311,6 +310,7 @@ class WindowsInstaller(Installer):
 
     def _desktop_path(self) -> Path:
         """Return the real Desktop path, accounting for OneDrive redirection."""
+        import winreg
         try:
             key = winreg.OpenKey(
                 winreg.HKEY_CURRENT_USER,
