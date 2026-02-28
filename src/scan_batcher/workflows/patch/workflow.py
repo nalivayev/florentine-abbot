@@ -45,14 +45,12 @@ class PatchWorkflow(MetadataWorkflow):
         """
         file_path_str = templates.get("path")
         if not file_path_str:
-            self._logger.error("No 'path' template provided for patch workflow")
-            return
+            raise ValueError("No 'path' template provided for patch workflow")
 
         file_path = Path(file_path_str)
-        
+
         if not file_path.exists():
-            self._logger.error(f"File not found: {file_path}")
-            return
+            raise FileNotFoundError(f"File not found: {file_path}")
 
         if not file_path.is_file():
             self._logger.warning(f"Skipping non-file: {file_path}")
@@ -71,10 +69,5 @@ class PatchWorkflow(MetadataWorkflow):
         # Get datetime from file
         file_datetime = self._get_digitized_datetime(file_path)
 
-        # Write XMP history
-        success = self._write_xmp_history(file_path, file_datetime)
-        
-        if success:
-            self._logger.info(f"Successfully patched: {file_path.name}")
-        else:
-            self._logger.error(f"Failed to patch: {file_path.name}")
+        self._write_xmp_history(file_path, file_datetime)
+        self._logger.info(f"Successfully patched: {file_path.name}")

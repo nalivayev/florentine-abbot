@@ -32,7 +32,7 @@ class TestMetadataWorkflow:
 
     @pytest.mark.skipif(not exiftool_available(), reason="exiftool not installed")
     def test_write_xmp_history_skipped_when_no_metadata(self):
-        """_write_xmp_history returns True without calling exiftool."""
+        """_write_xmp_history skips exiftool when no_metadata=True."""
         temp_dir = self.create_temp_dir()
         file_path = temp_dir / "test.tiff"
         create_test_image(file_path, add_ids=False)
@@ -43,9 +43,8 @@ class TestMetadataWorkflow:
         now = datetime.datetime.now().astimezone()
 
         with patch.object(workflow, '_exifer') as mock_exifer:
-            result = workflow.write_xmp_metadata(file_path, now)
+            workflow.write_xmp_metadata(file_path, now)
 
-        assert result is True
         mock_exifer.write.assert_not_called()
 
     @pytest.mark.skipif(not exiftool_available(), reason="exiftool not installed")
@@ -59,6 +58,4 @@ class TestMetadataWorkflow:
         workflow = FakeMetadataWorkflow(logger, no_metadata=False)
 
         now = datetime.datetime.now().astimezone()
-        result = workflow.write_xmp_metadata(file_path, now)
-
-        assert result is True
+        workflow.write_xmp_metadata(file_path, now)  # raises on failure

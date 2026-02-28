@@ -42,25 +42,26 @@ class FakeMetadataWorkflow(MetadataWorkflow):
         self,
         file_path: Path,
         file_datetime: datetime.datetime,
-    ) -> bool:
+    ) -> None:
         """
         Write XMP metadata to a file (public wrapper for _write_xmp_history).
-        
+
         Delegates to the real MetadataWorkflow._write_xmp_history which:
         - Generates DocumentID and InstanceID (if missing)
         - Writes dc:Format (MIME type)
         - Writes or enriches XMP-exif:DateTimeDigitized with timezone
         - Writes Exif:OffsetTimeDigitized (if missing)
         - Appends XMP History entries (created + edited)
-        
+
         Args:
             file_path: Path to the file to write metadata to.
             file_datetime: Datetime for metadata (with timezone).
-        
-        Returns:
-            True if successful, False otherwise.
+
+        Raises:
+            FileNotFoundError: If *file_path* does not exist.
+            RuntimeError: If exiftool fails.
         """
-        return self._write_xmp_history(file_path, file_datetime)
+        self._write_xmp_history(file_path, file_datetime)
 
     def get_digitized_datetime(self, file_path: Path) -> datetime.datetime:
         """
