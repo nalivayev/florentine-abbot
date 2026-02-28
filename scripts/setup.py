@@ -19,6 +19,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+if sys.platform == "win32":
+    import winreg
+
 
 class Installer(ABC):
     """
@@ -147,6 +150,9 @@ class Installer(ABC):
         self._configure_daemon("face-detector",  "face_detector",  {"path": archive})
         print()
 
+    def _step_shortcut(self) -> None:
+        """Platform hook: create a desktop shortcut. No-op by default."""
+
     def _step_launch_dashboard(self) -> int:
         script = shutil.which("florentine-web") or "florentine-web"
         if self._ask_yn("Start the web dashboard now?", default=True):
@@ -184,6 +190,7 @@ class Installer(ABC):
         inbox, archive = result
 
         self._step_write_configs(inbox, archive)
+        self._step_shortcut()
 
         print("  Setup complete.")
         print()
@@ -198,7 +205,6 @@ class WindowsInstaller(Installer):
     """Windows: installs exiftool via winget or direct download."""
 
     def _reg_append_path(self, hive: int, subkey: str, directory: str) -> None:
-        import winreg
         key = winreg.OpenKey(hive, subkey, 0, winreg.KEY_READ | winreg.KEY_WRITE)
         try:
             current, _ = winreg.QueryValueEx(key, "Path")
@@ -212,7 +218,6 @@ class WindowsInstaller(Installer):
 
     def _add_to_path(self, directory: str) -> None:
         """Add directory to Windows PATH via registry; HKLM first, HKCU fallback."""
-        import winreg
         try:
             self._reg_append_path(
                 winreg.HKEY_LOCAL_MACHINE,
@@ -302,6 +307,37 @@ class WindowsInstaller(Installer):
         except Exception as e:
             print(f"  Download failed: {e}")
             return False
+
+    def _desktop_path(self) -> Path:
+        """Return the real Desktop path, accounting for OneDrive redirection."""
+        try:
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders",
+            )
+            try:
+                value, _ = winreg.QueryValueEx(key, "Desktop")
+                return Path(value)
+            finally:
+                winreg.CloseKey(key)
+        except Exception:
+            return Path.home() / "Desktop"
+
+    def _step_shortcut(self) -> None:
+        print()
+        if not self._ask_yn("Create a desktop shortcut for the web dashboard?", default=True):
+            return
+        desktop = self._desktop_path()
+        shortcut = desktop / "Florentine Abbot.url"
+        try:
+            shortcut.write_text(
+                "[InternetShortcut]\r\nURL=http://127.0.0.1:8000/\r\n",
+                encoding="utf-8",
+            )
+            print(f"  [OK] Shortcut created: {shortcut}")
+        except Exception as e:
+            print(f"  [!!] Could not create shortcut: {e}")
+        print()
 
     def _step_exiftool(self) -> bool:
         print("  Checking dependencies...")
