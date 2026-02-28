@@ -363,6 +363,77 @@ python -m archive_keeper.cli "D:\Archive\Photos"
 
 This will create `archive.db` and populate it with the current state of the archive. Subsequent runs will compare the file system against this database.
 
+## Face Detection (Face Detector)
+
+> **⚠️ Status**: In development. Not yet fully tested or documented. Not included in the installable package; run from source.
+
+A tool for automated face detection and identity clustering across a photo archive. It recursively scans a directory tree for images, detects faces using a pluggable detection backend, stores embeddings in a SQLite database, and clusters them into identity domains using DBSCAN.
+
+- **Pluggable detector backends** — built-in support for InsightFace; additional detectors can be registered via entry points.
+- **Incremental processing** — already-processed files are skipped unless `--overwrite` is specified.
+- **Identity clustering** — DBSCAN groups detected face embeddings across images into identity domains.
+- **Visualization** — draws bounding boxes on a JPEG preview for manual verification.
+
+### Requirements
+
+Optional dependencies are required. Install with the `face-insightface` extra from source:
+
+```sh
+pip install -e .[face-insightface]
+```
+
+### Usage
+
+Run from the source tree using the module entry point:
+
+**Scan for faces and cluster:**
+```sh
+python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES"
+```
+
+**Skip clustering:**
+```sh
+python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluster
+```
+
+**Re-process already indexed files:**
+```sh
+python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
+```
+
+**Visualize detected faces on an image:**
+```sh
+python -m face_detector.cli visualize --image "D:\Archive\2024\photo.jpg"
+```
+
+For a full list of arguments:
+
+```sh
+python -m face_detector.cli --help
+```
+
+## Setup (Setup Runner)
+
+A one-time interactive configuration tool. Run it once after installation to set up paths and generate configuration files for all daemons.
+
+### What it does
+
+- **Checks ExifTool** — verifies the dependency is installed; offers automatic installation via winget (Windows) or Homebrew (macOS), or prints manual instructions.
+- **Configures paths** — asks for the inbox folder (where new scans arrive) and the archive root (where organized files go), and creates them if needed.
+- **Writes daemon configs** — generates `config.json` for `file-organizer`, `preview-maker`, and `face-detector`.
+- **Creates a desktop shortcut** — places a shortcut to the web dashboard (`http://127.0.0.1:8000/`) on the desktop (Windows, macOS, Linux).
+- **Optionally launches the web dashboard** — starts `florentine-web` immediately after setup.
+
+### Usage
+
+```sh
+setup-runner
+```
+
+Config files are written to:
+- Windows: `%APPDATA%\florentine-abbot\`
+- Linux/macOS: `~/.config/florentine-abbot/`
+
 ## Technical Details
 
 ### Main Utilities
@@ -389,6 +460,13 @@ This will create `archive.db` and populate it with the current state of the arch
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
 - `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
 - `common/exifer.py` — EXIF metadata extraction and processing, shared across all tools.
+- `face_detector/cli.py` — CLI for the `face-detector` tool (subcommands: `batch`, `visualize`).
+- `face_detector/engine.py` — orchestrates batch detection over a directory tree.
+- `face_detector/detector.py` — abstract base class for detector plugins.
+- `face_detector/store.py` — SQLite persistence for face embeddings.
+- `face_detector/clusterer.py` — DBSCAN-based identity clustering.
+- `setup_runner/cli.py` — CLI entry point for `setup-runner`.
+- `setup_runner/runner.py` — interactive setup logic; platform subclasses for Windows, macOS, Linux.
 
 ### Installation
 
@@ -409,6 +487,8 @@ This will install all required dependencies and make the main CLI commands avail
 - `scan-batcher`
 - `file-organizer`
 - `preview-maker`
+- `florentine-web`
+- `setup-runner`
 
 > **Note:**  
 > It is recommended to use a [virtual environment](https://docs.python.org/3/library/venv.html) for installation and development.
@@ -440,6 +520,7 @@ All utilities write logs to a centralized location:
 - `file_organizer.log` — File Organizer (`file-organizer`) activity
 - `archive_keeper.log` — Archive Keeper activity
 - `preview_maker.log` — Preview Maker (`preview-maker`) activity
+- `face_detector.log` — Face Detector activity
 
 **Custom log location:**
 

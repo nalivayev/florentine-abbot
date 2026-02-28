@@ -361,6 +361,77 @@ python -m archive_keeper.cli "D:\Archive\Photos"
 
 Это создаст файл `archive.db` и заполнит его текущим состоянием архива. Последующие запуски будут сравнивать файловую систему с этой базой данных.
 
+## Распознавание лиц (Face Detector)
+
+> **⚠️ Статус**: В разработке. Пока не полностью протестирован или документирован. Не входит в устанавливаемый пакет; запускать из исходников.
+
+Инструмент для автоматического обнаружения лиц и кластеризации идентичностей в фотоархиве. Рекурсивно сканирует дерево каталогов, обнаруживает лица с помощью подключаемых детекторов, сохраняет эмбеддинги в базе данных SQLite и кластеризует их в домены идентичностей с помощью DBSCAN.
+
+- **Подключаемые детекторы** — встроенная поддержка InsightFace; дополнительные детекторы можно регистрировать через entry points.
+- **Инкрементальная обработка** — уже обработанные файлы пропускаются, если не указан `--overwrite`.
+- **Кластеризация идентичностей** — DBSCAN группирует эмбеддинги лиц из разных изображений в домены идентичностей.
+- **Визуализация** — отрисовывает bounding box'ы на JPEG-превью для ручной проверки.
+
+### Требования
+
+Требуются дополнительные зависимости. Установите с опцией `face-insightface` из исходников:
+
+```sh
+pip install -e .[face-insightface]
+```
+
+### Использование
+
+Запускайте из исходников через модульную точку входа:
+
+**Сканирование и кластеризация:**
+```sh
+python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES"
+```
+
+**Без кластеризации:**
+```sh
+python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluster
+```
+
+**Повторная обработка уже проиндексированных файлов:**
+```sh
+python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
+```
+
+**Визуализация обнаруженных лиц:**
+```sh
+python -m face_detector.cli visualize --image "D:\Archive\2024\photo.jpg"
+```
+
+Полный список аргументов:
+
+```sh
+python -m face_detector.cli --help
+```
+
+## Настройка (Setup Runner)
+
+Интерактивный инструмент первоначальной настройки. Запустите один раз после установки, чтобы задать пути и создать файлы конфигурации для всех демонов.
+
+### Что он делает
+
+- **Проверяет ExifTool** — проверяет наличие зависимости; предлагает автоматическую установку через winget (Windows) или Homebrew (macOS) или выводит инструкции для ручной установки.
+- **Настраивает пути** — запрашивает папку входящих файлов (inbox) и корень архива, создаёт их при необходимости.
+- **Создаёт конфиги демонов** — генерирует `config.json` для `file-organizer`, `preview-maker` и `face-detector`.
+- **Создаёт ярлык на рабочем столе** — ярлык для веб-дашборда (`http://127.0.0.1:8000/`) на рабочем столе (Windows, macOS, Linux).
+- **Опционально запускает веб-дашборд** — сразу после настройки может запустить `florentine-web`.
+
+### Использование
+
+```sh
+setup-runner
+```
+
+Файлы конфигурации записываются в:
+- Windows: `%APPDATA%\florentine-abbot\`
+- Linux/macOS: `~/.config/florentine-abbot/`
+
 ## Технические детали
 
 ### Основные модули
@@ -387,6 +458,13 @@ python -m archive_keeper.cli "D:\Archive\Photos"
 - `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.
 - `scan_batcher/workflows/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
 - `common/exifer.py` — извлечение и обработка EXIF-метаданных, общая для всех утилит.
+- `face_detector/cli.py` — CLI для утилиты `face-detector` (подкоманды: `batch`, `visualize`).
+- `face_detector/engine.py` — оркестрация пакетного обнаружения по дереву каталогов.
+- `face_detector/detector.py` — абстрактный базовый класс для детектор-плагинов.
+- `face_detector/store.py` — SQLite-хранилище для эмбеддингов лиц.
+- `face_detector/clusterer.py` — кластеризация идентичностей на основе DBSCAN.
+- `setup_runner/cli.py` — точка входа CLI для `setup-runner`.
+- `setup_runner/runner.py` — логика интерактивной настройки; платформенные подклассы для Windows, macOS, Linux.
 
 ### Установка
 
@@ -407,6 +485,8 @@ pip install .
 - `scan-batcher`
 - `file-organizer`
 - `preview-maker`
+- `florentine-web`
+- `setup-runner`
 
 > **Примечание:**  
 > Рекомендуется использовать [виртуальное окружение](https://docs.python.org/3/library/venv.html) для установки и разработки.
@@ -437,7 +517,8 @@ pip install --upgrade .
 - `scan_batcher.log` — активность Scan Batcher
 - `file_organizer.log` — активность File Organizer (`file-organizer`)
 - `archive_keeper.log` — активность Archive Keeper
- - `preview_maker.log` — активность Preview Maker (`preview-maker`)
+- `preview_maker.log` — активность Preview Maker (`preview-maker`)
+- `face_detector.log` — активность Face Detector
 
 **Пользовательское расположение логов:**
 
