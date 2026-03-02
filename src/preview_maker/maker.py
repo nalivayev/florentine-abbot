@@ -136,6 +136,22 @@ class PreviewMaker:
         if not parsed:
             raise ValueError(f"Cannot parse filename: {src_path.name}")
 
+        # Verify that scan-batcher has registered this file before preview
+        # generation. DocumentID/InstanceID are required for provenance metadata
+        # in the derivative PRV. This check belongs here (not in _convert_to_prv)
+        # so that _convert_to_prv remains usable independently of the archive workflow.
+        tagger = Tagger(src_path, exifer=self._exifer)
+        tagger.begin()
+        tagger.read(KeyValueTag(TAG_XMP_XMPMM_DOCUMENT_ID))
+        tagger.read(KeyValueTag(TAG_XMP_XMPMM_INSTANCE_ID))
+        existing_ids = tagger.end() or {}
+        if not existing_ids.get(TAG_XMP_XMPMM_DOCUMENT_ID) or not existing_ids.get(TAG_XMP_XMPMM_INSTANCE_ID):
+            self._logger.warning(
+                f"Skipping PRV generation for {src_path.name}: missing DocumentID or InstanceID. "
+                "These must be set by scan-batcher before processing."
+            )
+            raise ValueError(f"Missing DocumentID or InstanceID in {src_path.name}")
+
         # Create preview parsed filename by replacing suffix with preview_suffix
         prv_parsed = ParsedFilename(
             year=parsed.year,
@@ -287,19 +303,6 @@ class PreviewMaker:
         if not input_path.exists():
             self._logger.error(f"Input file does not exist: {input_path}")
             raise FileNotFoundError(f"Input file does not exist: {input_path}")
-
-        # Check for DocumentID/InstanceID in master (must be set by scan-batcher)
-        tagger = Tagger(input_path, exifer=self._exifer)
-        tagger.begin()
-        tagger.read(KeyValueTag(TAG_XMP_XMPMM_DOCUMENT_ID))
-        tagger.read(KeyValueTag(TAG_XMP_XMPMM_INSTANCE_ID))
-        existing_ids = tagger.end() or {}
-        if not existing_ids.get(TAG_XMP_XMPMM_DOCUMENT_ID) or not existing_ids.get(TAG_XMP_XMPMM_INSTANCE_ID):
-            self._logger.warning(
-                f"Skipping PRV generation for {input_path.name}: missing DocumentID or InstanceID. "
-                "These must be set by scan-batcher before processing."
-            )
-            raise ValueError(f"Missing DocumentID or InstanceID in {input_path.name}")
 
         Image.MAX_IMAGE_PIXELS = None
 
