@@ -1,5 +1,26 @@
 {
-  "help": "Configuration for Face Detector",
+  
+  "help": [
+    "Configuration for Face Detector.",
+    "",
+    "detection:",
+    "  backend:            Detector backend (retinaface, mtcnn, opencv, mediapipe).",
+    "  model:              Embedding model (ArcFace, VGG-Face, etc.).",
+    "  enforce_detection:  If false, return empty list when no face found.",
+    "  align:              Align faces before embedding extraction.",
+    "",
+    "processing:",
+    "  source_extensions:  File extensions eligible for face detection.",
+    "  source_priority:    Ordered glob patterns for master files.",
+    "                      First match wins. Uses fnmatch syntax.",
+    "",
+    "database:",
+    "  path:  Path to SQLite database (null = next to config file).",
+    "",
+    "clustering:",
+    "  eps:          DBSCAN cosine distance threshold (0.0–1.0).",
+    "  min_samples:  Minimum faces to form a cluster."
+  ],
 
   "watch": {
     "path": null
@@ -14,7 +35,7 @@
 
   "processing": {
     "source_extensions": [".jpg", ".jpeg", ".tif", ".tiff", ".png", ".bmp"],
-    "source_suffixes": ["PRV", "MSR", "RAW"]
+    "source_priority": ["*.MSR.*"]
   },
 
   "database": {
@@ -25,4 +46,5 @@
     "eps": 0.4,
     "min_samples": 2
   }
+
 }

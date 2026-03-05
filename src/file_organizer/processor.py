@@ -12,13 +12,14 @@ from pathlib import Path
 from datetime import datetime
 
 from common.logger import Logger
-from common.naming import FilenameParser, ParsedFilename, FilenameValidator
+from common.formatter import Formatter, ParsedFilename
 from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, XMP_ACTION_EDITED
 from common.metadata import ArchiveMetadata
 from common.exifer import Exifer
 from common.tagger import Tagger
 from common.tags import KeyValueTag, HistoryTag
 from common.version import get_version
+from common.project_config import ProjectConfig
 
 
 class FileProcessor:
@@ -42,9 +43,10 @@ class FileProcessor:
             logger: Logger instance.
         """
         self._logger = logger
-        self._parser = FilenameParser()
-        self._validator = FilenameValidator()
-        self._metadata = ArchiveMetadata(logger=logger)
+
+        cfg = ProjectConfig.instance()
+        self._formatter = Formatter(logger=logger, formats=cfg.formats)
+        self._metadata = ArchiveMetadata(metadata=cfg.metadata, logger=logger)
         self._exifer = Exifer()
 
     def validate(self, file_path: Path) -> ParsedFilename:
@@ -114,11 +116,11 @@ class FileProcessor:
         Returns:
             Parsed filename data if valid, None otherwise.
         """
-        parsed = self._parser.parse(filename)
+        parsed = self._formatter.parse(filename)
         if not parsed:
             return None
 
-        validation_errors = self._validator.validate(parsed)
+        validation_errors = self._formatter.validate(parsed)
         if validation_errors:
             return None
 

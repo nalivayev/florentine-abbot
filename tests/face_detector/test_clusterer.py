@@ -67,18 +67,19 @@ def test_assign_domains_creates_domains(logger, store):
 
     for i in range(4):
         vec = _cluster_vec(center, 0.01, i)
+        img_file = store.get_or_create_file(f"/img{i}.jpg")
         store.add_face(
-            file_path=f"/img{i}.jpg", face_index=0,
+            file=img_file,
             bbox=(0, 0, 50, 50), embedding=vec,
         )
 
     clusterer = FaceClusterer(logger, eps=0.3, min_samples=2)
-    n_new = clusterer.assign_domains(store)
-    assert n_new >= 1
+    n_assigned = clusterer.assign_domains(store)
+    assert n_assigned >= 1
 
-    assigned = [f for f in store.get_faces_without_domain()]
-    # At most, noise points remain unassigned
-    assert len(assigned) <= 4
+    # After clustering, at most noise points remain without a cluster
+    unclustered = store.get_faces_without_cluster()
+    assert len(unclustered) <= 4
 
 
 def test_assign_domains_no_faces(logger, store):

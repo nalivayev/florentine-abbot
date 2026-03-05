@@ -1,24 +1,20 @@
 """File routing logic for organizing files in the archive structure.
 
 This module provides the Router class that determines target folders
-for files based on parsed filename data and routing configuration.
+for files based on glob-pattern rules and configurable path templates.
 Used by both file-organizer and preview-maker.
 """
 
+import fnmatch
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from common.naming import ParsedFilename
-from common.constants import DEFAULT_SUFFIX_ROUTING
-from common.formatter import Formatter
-from common.config_utils import get_config_dir, load_optional_config
+from common.formatter import ParsedFilename, Formatter
+from common.constants import DEFAULT_ROUTES
 
 
 class Router:
-    """
-    Determines target folders for files based on routing rules.
-
-    Uses suffix-based routing rules and configurable path templates to determine where files should be placed in the archive structure.
+    """Determines target folders for files based on pattern-based routing rules.
 
     Archive structure (configurable via Formatter):
         Default: archive_root/{year:04d}/{year:04d}.{month:02d}.{day:02d}/
@@ -26,87 +22,124 @@ class Router:
             ├── DERIVATIVES/  - Processed derivatives
             └── (date folder)  - Preview files stored directly here
 
-    Path structure can be customized via formats.json:
-        - Flat: {year:04d}.{month:02d}.{day:02d}/
-        - By month: {year:04d}/{year:04d}.{month:02d}/
-        - By group: {group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}/
+    Routing is configured via an ordered list of ``[glob_pattern, subfolder]``
+    rules.  Each filename is tested against the patterns in order; the first
+    match determines the subfolder:
 
-    Routing is configured via a suffix mapping (suffix -> subfolder):
-        - "SOURCES": File goes to SOURCES/ subfolder
-        - "DERIVATIVES": File goes to DERIVATIVES/ subfolder
-        - ".": File goes directly to date folder root
+    - ``"SOURCES"`` → ``date_folder/SOURCES/``
+    - ``"."`` → ``date_folder/`` (date root)
+    - ``"DERIVATIVES"`` → ``date_folder/DERIVATIVES/``
+
+    Patterns use standard ``fnmatch`` syntax (``*``, ``?``, ``[seq]``).
+    Matching is **case-insensitive**.
     """
-    
-    def __init__(self, suffix_routing: Optional[dict[str, str]] = None, logger = None) -> None:
-        """
-        Initialize Router.
+
+    def __init__(
+        self,
+        routes: Optional[dict[str, Any]] = None,
+        logger=None,
+        formats: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Initialize Router.
 
         Args:
-            suffix_routing (dict[str, str]|None): Optional suffix routing rules (suffix -> 'SOURCES'/'DERIVATIVES'/'.').
-                If None, loads from routes.json or uses DEFAULT_SUFFIX_ROUTING.
+            routes: The ``routes`` section from :class:`ProjectConfig`.
+                If *None*, uses :data:`DEFAULT_ROUTES`.
             logger: Optional logger for diagnostic messages.
+            formats: ``formats`` section from :class:`ProjectConfig`,
+                forwarded to :class:`Formatter`.
         """
         self._logger = logger
-        self._formatter = Formatter(logger=logger)
+        self._formatter = Formatter(logger=logger, formats=formats)
+        section = routes if routes is not None else DEFAULT_ROUTES
+        self._routes = section.get("rules", [])
 
-        if suffix_routing is not None:
-            self._suffix_routing = suffix_routing
-        else:
-            # Load from routes.json if available
-            config_dir = get_config_dir()
-            routes_path = config_dir / "routes.json"
-            self._suffix_routing = load_optional_config(logger, routes_path, DEFAULT_SUFFIX_ROUTING)
-    
-    def get_target_folder(self, parsed: ParsedFilename, base_path: Path) -> Path:
-        """
-        Determine target folder for a file based on parsed filename.
+    def get_target_folder(
+        self, parsed: ParsedFilename, base_path: Path, filename: str | None = None,
+    ) -> Path:
+        """Determine target folder for a file.
 
-        Uses Formatter to build path from template, then applies suffix routing to determine subfolder (SOURCES/DERIVATIVES/date root).
+        Builds the date-based path from *parsed* via :class:`Formatter`,
+        then matches *filename* against routing rules to pick a subfolder.
+
+        When *filename* is not supplied it is reconstructed from *parsed*
+        using the archive filename template + extension.
 
         Args:
-            parsed (ParsedFilename): Parsed filename data.
-            base_path (Path): Base path (e.g., archive root or processed root).
+            parsed: Parsed filename data (used for date path).
+            base_path: Archive root or processed root.
+            filename: Original filename for pattern matching.  Optional —
+                if omitted, derived from *parsed*.
 
         Returns:
-            Path: Full path to target folder where file should be placed (e.g., base_path/2024/2024.03.15/SOURCES or custom structure).
+            Full path to target folder.
         """
         formatted_path = self._formatter.format_path(parsed)
-        suffix_upper = parsed.suffix.upper()
         date_root_dir = base_path / formatted_path
-        subfolder = self._suffix_routing.get(suffix_upper, self._suffix_routing.get("*", "DERIVATIVES"))
+
+        if filename is None:
+            filename = self._formatter.format_filename(parsed) + f".{parsed.extension}"
+
+        subfolder = self._match_route(filename)
         if subfolder == ".":
             return date_root_dir
-        else:
-            return date_root_dir / subfolder
-    
-    def get_normalized_filename(self, parsed: ParsedFilename) -> str:
-        """
-        Format filename according to configured template.
+        return date_root_dir / subfolder
 
-        Uses Formatter to apply filename template with format specifiers (e.g., {year:04d}.{month:02d}.{day:02d}... or custom format).
+    def get_normalized_filename(self, parsed: ParsedFilename) -> str:
+        """Format filename according to the configured archive template.
 
         Args:
-            parsed (ParsedFilename): Parsed filename data.
+            parsed: Parsed filename data.
 
         Returns:
-            str: Formatted filename (without extension).
+            Formatted filename **without** extension.
         """
         return self._formatter.format_filename(parsed)
-    
-    def get_folders_for_suffixes(self, suffixes: list[str]) -> set[str]:
-        """
-        Get unique folder names where files with given suffixes are stored.
+
+    def get_folders_for_patterns(self, patterns: list[str]) -> set[str]:
+        """Get unique subfolder names assigned to the given patterns.
+
+        For each *pattern* the routing table is scanned for the **first**
+        rule whose glob also matches a hypothetical filename satisfying
+        *pattern*.  Because exact intersection of globs is non-trivial,
+        this implementation simply returns the subfolder directly
+        associated with each supplied pattern (looked up literally in the
+        routing table).  If the pattern is not found, the fallback rule
+        (last entry, typically ``"*"``) is used.
+
+        ``"."`` entries are excluded because they represent the date root,
+        not a named subfolder.
 
         Args:
-            suffixes (list[str]): List of file suffixes (e.g., ['RAW', 'MSR']).
+            patterns: List of glob patterns (e.g. ``["*.MSR.*", "*.RAW.*"]``).
 
         Returns:
-            set[str]: Set of folder names (e.g., {'SOURCES', 'MASTERS'}). '.' is excluded as it represents date root, not a subfolder.
+            Set of subfolder names.
         """
-        folders = set()
-        for suffix in suffixes:
-            suffix_upper = suffix.upper()
-            folder = self._suffix_routing.get(suffix_upper, self._suffix_routing.get("*", "DERIVATIVES"))
-            if folder != ".":  # Exclude date root
-                folders.add(folder)
+        folders: set[str] = set()
+        for pattern in patterns:
+            # Direct lookup: find the route whose pattern matches ours.
+            for route_pattern, subfolder in self._routes:
+                if route_pattern == pattern:
+                    if subfolder != ".":
+                        folders.add(subfolder)
+                    break
+            else:
+                # Fallback: last route (catch-all).
+                if self._routes:
+                    last_subfolder = self._routes[-1][1]
+                    if last_subfolder != ".":
+                        folders.add(last_subfolder)
         return folders
+
+    def _match_route(self, filename: str) -> str:
+        """Return the subfolder for the first matching route.
+
+        Falls back to ``"DERIVATIVES"`` when no rule matches (should not
+        happen if a catch-all ``"*"`` rule is present).
+        """
+        filename_lower = filename.lower()
+        for pattern, subfolder in self._routes:
+            if fnmatch.fnmatch(filename_lower, pattern.lower()):
+                return subfolder
+        return "DERIVATIVES"

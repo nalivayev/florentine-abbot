@@ -19,10 +19,11 @@ from preview_maker.maker import PreviewMaker
 
 class PreviewWatcher(FileSystemEventHandler):
     """
-    Watch an archive tree for new master files and generate PRV previews.
+    Watch an archive tree for new source files and generate previews.
 
-    Monitors the archive root recursively for new RAW/MSR files and
-    automatically generates PRV JPEGs using :class:`PreviewMaker`.
+    Monitors the archive root recursively for files matching the configured
+    ``source_priority`` patterns and automatically generates preview JPEGs
+    using :class:`PreviewMaker`.
     """
 
     def __init__(
@@ -42,7 +43,7 @@ class PreviewWatcher(FileSystemEventHandler):
             logger: Logger instance.
             path: Archive root to watch (recursively).
             config_path: Optional path to preview-maker config JSON.
-            max_size: Maximum long edge in pixels for PRV.
+            max_size: Maximum long edge in pixels for preview.
             quality: JPEG quality (1-100).
             no_metadata: If True, skip writing EXIF/XMP metadata.
         """
@@ -111,7 +112,7 @@ class PreviewWatcher(FileSystemEventHandler):
         """
         Start watching.
 
-        Watches the archive root recursively for new master files.
+        Watches the archive root recursively for new source files.
         Runs until interrupted by KeyboardInterrupt.
         """
         if not self._path.exists():
@@ -120,7 +121,7 @@ class PreviewWatcher(FileSystemEventHandler):
 
         self._observer.schedule(self, str(self._path), recursive=True)
         self._observer.start()
-        self._logger.info(f"Started watching for new masters in {self._path}")
+        self._logger.info(f"Started watching for new sources in {self._path}")
 
         try:
             self._stop_event.wait()

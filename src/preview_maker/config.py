@@ -10,22 +10,34 @@ from common.config_utils import get_config_dir, ensure_config_exists, load_confi
 
 
 class Config:
-    """
-    Configuration manager for Preview Maker.
+    """Configuration manager for Preview Maker.
 
     Handles loading and access to preview-maker config file.
     Falls back to defaults when no config file is present.
+
+    Source patterns are glob patterns matched against filenames to identify
+    master images eligible for preview generation.  They are listed in
+    **priority order** — when multiple sources exist for the same shot,
+    the file matching the earliest pattern wins.
+
+    The preview filename template uses the same ``{field}`` / ``{field:spec}``
+    syntax as ``archive_filename_template`` in ``formats.json``.
     """
 
-    _DEFAULT_SUFFIXES = {
-        "master": "MSR",
-        "raw": "RAW",
-        "preview": "PRV",
-    }
+    _DEFAULT_SOURCE_PRIORITY: list[str] = [
+        "*.MSR.*",
+        "*.RAW.*",
+    ]
+    _DEFAULT_PREVIEW_FILENAME_TEMPLATE: str = (
+        "{year:04d}.{month:02d}.{day:02d}"
+        ".{hour:02d}.{minute:02d}.{second:02d}"
+        ".{modifier}.{group}.{subgroup}"
+        ".{sequence:04d}.{side}.PRV"
+    )
+    _DEFAULT_PREVIEW_EXTENSION: str = "jpg"
 
     def __init__(self, logger: Logger, config_path: str | Path | None = None) -> None:
-        """
-        Initialize configuration.
+        """Initialize configuration.
 
         Args:
             logger: Logger instance for this config.
@@ -60,35 +72,36 @@ class Config:
         else:
             self._logger.debug("Config not found or empty — using defaults")
 
-    def _get_suffix(self, key: str) -> str:
-        """Return a suffix value by key, case-normalized to uppercase."""
-        suffixes = self._data.get("suffixes", {})
-        value = suffixes.get(key, self._DEFAULT_SUFFIXES[key])
-        return str(value).upper()
+    @property
+    def source_priority(self) -> list[str]:
+        """Ordered list of glob patterns identifying source files.
+
+        The first pattern has the highest priority.  When multiple files
+        in a folder match different patterns, the one matching an earlier
+        pattern is preferred as the preview source.
+        """
+        return self._data.get("source_priority", self._DEFAULT_SOURCE_PRIORITY)
 
     @property
-    def master_suffix(self) -> str:
-        """Preferred master suffix (processed/retouched scan). E.g. 'MSR'."""
-        return self._get_suffix("master")
+    def preview_filename_template(self) -> str:
+        """Template for preview filenames (without extension).
+
+        Uses the same ``{field}`` syntax as ``archive_filename_template``.
+        The literal preview marker (e.g. ``PRV``) should be embedded
+        directly in the template string.
+        """
+        return self._data.get(
+            "preview_filename_template",
+            self._DEFAULT_PREVIEW_FILENAME_TEMPLATE,
+        )
 
     @property
-    def raw_suffix(self) -> str:
-        """Raw scan suffix (unprocessed). E.g. 'RAW'."""
-        return self._get_suffix("raw")
-
-    @property
-    def preview_suffix(self) -> str:
-        """Preview derivative suffix. E.g. 'PRV'."""
-        return self._get_suffix("preview")
-
-    @property
-    def source_suffixes(self) -> list[str]:
-        """All suffixes that can be used as source for preview generation."""
-        return [self.raw_suffix, self.master_suffix]
+    def preview_extension(self) -> str:
+        """File extension for generated previews (without dot)."""
+        return self._data.get("preview_extension", self._DEFAULT_PREVIEW_EXTENSION)
 
     def get(self, key: str, default: Any = None) -> Any:
-        """
-        Get a raw configuration value by key.
+        """Get a raw configuration value by key.
 
         Args:
             key: Configuration key.

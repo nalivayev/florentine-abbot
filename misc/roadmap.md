@@ -2,24 +2,6 @@
 
 ## Ideas and future plans
 
-### Universal file routing
-
-Currently `Router` is tightly coupled to a specific filename format — it extracts a
-suffix token (`RAW`, `MSR`, `PRV`) via `FilenameParser` and uses it to determine the
-target subfolder. Files with arbitrary names cannot be routed.
-
-The goal is a routing scheme based on generic criteria — file extension, glob pattern,
-or a priority-ordered list of rules — so that any file can be organized regardless of
-its naming convention.
-
-**Why not now:** Too many components depend on `FilenameParser` and the specific filename
-format: `Router`, `FileProcessor`, `Formatter`, `preview_maker`. A proper fix requires
-reworking the entire pipeline.
-
-**When to revisit:** After the current filename/format architecture stabilises.
-
----
-
 ### Metadata synchronization across master and derivatives
 
 When a daemon (face-detector, future colorizer, etc.) updates metadata on a master file,

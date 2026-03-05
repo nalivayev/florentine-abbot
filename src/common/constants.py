@@ -115,21 +115,19 @@ XMP_ACTION_PRODUCED = "produced"            # File produced/rendered
 XMP_ACTION_RESIZED = "resized"              # Image resized
 XMP_ACTION_SAVED = "saved"                  # File saved
 
-# Default metadata field to XMP tag mapping
-# Used by ArchiveMetadata when tags.json is not present
-DEFAULT_TAGS = {
-    "description": TAG_XMP_DC_DESCRIPTION,
-    "creator": TAG_XMP_DC_CREATOR,
-    "credit": TAG_XMP_PHOTOSHOP_CREDIT,
-    "rights": TAG_XMP_DC_RIGHTS,
-    "terms": TAG_XMP_XMPRIGHTS_USAGE_TERMS,
-    "marked": TAG_XMP_XMPRIGHTS_MARKED,
-    "source": TAG_XMP_DC_SOURCE,
-}
-
-# Default metadata configuration
-# Used by ArchiveMetadata when metadata.json is not present
-DEFAULT_METADATA = {
+# Default metadata configuration (tags + languages)
+# Used by ArchiveMetadata.  The "tags" sub-dict maps friendly field names to
+# XMP tags; "languages" holds per-language values for those fields.
+DEFAULT_METADATA: dict = {
+    "tags": {
+        "description": TAG_XMP_DC_DESCRIPTION,
+        "creator": TAG_XMP_DC_CREATOR,
+        "credit": TAG_XMP_PHOTOSHOP_CREDIT,
+        "rights": TAG_XMP_DC_RIGHTS,
+        "terms": TAG_XMP_XMPRIGHTS_USAGE_TERMS,
+        "marked": TAG_XMP_XMPRIGHTS_MARKED,
+        "source": TAG_XMP_DC_SOURCE,
+    },
     "languages": {
         "en-US": {
             "default": True,
@@ -142,19 +140,40 @@ DEFAULT_METADATA = {
             "type": "StillImage",
             "marked": "True",
         }
-    }
+    },
 }
 
-# Default suffix routing rules
-# Used by Router when routes.json is not present
-# Maps file suffix (uppercase) to subdirectory name:
+# Default routing rules (pattern-based)
+# Used by Router when routes.json is not present.
+# Each entry is [glob_pattern, subfolder]:
+#   Pattern is matched against the full filename using fnmatch (case-insensitive).
+#   Rules are evaluated in order — first match wins.
 #   "." = date root (no subfolder)
-#   "SOURCES" = SOURCES/ subfolder
-#   "DERIVATIVES" = DERIVATIVES/ subfolder
-#   "*" = default for unknown suffixes
-DEFAULT_SUFFIX_ROUTING = {
-    "RAW": "SOURCES",
-    "MSR": "SOURCES",
-    "PRV": ".",
-    "*": "DERIVATIVES",
+DEFAULT_ROUTES: dict = {
+    "rules": [
+        ["*.RAW.*",  "SOURCES"],
+        ["*.MSR.*",  "SOURCES"],
+        ["*.PRV.*",  "."],
+        ["*",        "DERIVATIVES"],
+    ],
+}
+
+# Default filename / path templates
+DEFAULT_SOURCE_FILENAME_TEMPLATE = "{year}.{month}.{day}.{hour}.{minute}.{second}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}"
+
+DEFAULT_ARCHIVE_PATH_TEMPLATE = "{year:04d}/{year:04d}.{month:02d}.{day:02d}"
+
+DEFAULT_ARCHIVE_FILENAME_TEMPLATE = "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+
+DEFAULT_FORMATS: dict[str, str] = {
+    "source_filename_template": DEFAULT_SOURCE_FILENAME_TEMPLATE,
+    "archive_path_template": DEFAULT_ARCHIVE_PATH_TEMPLATE,
+    "archive_filename_template": DEFAULT_ARCHIVE_FILENAME_TEMPLATE,
+}
+
+# Complete default configuration — used as fallback when config.json is absent
+DEFAULT_CONFIG: dict = {
+    "formats": DEFAULT_FORMATS,
+    "routes": DEFAULT_ROUTES,
+    "metadata": DEFAULT_METADATA,
 }

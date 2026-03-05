@@ -1,26 +1,28 @@
 """
 Core implementation for Preview Maker.
 
-Provides utilities to generate PRV (preview) JPEGs from RAW/MSR sources.
+Provides utilities to generate preview JPEGs from source files whose
+names match configurable glob patterns listed in priority order.
 
 The primary API is exposed via the :class:`PreviewMaker` class, which is
 configured with parameters and then executed via :meth:`__call__`.
 """
 
+import fnmatch
 import uuid
 import datetime
 from pathlib import Path
 from PIL import Image
 
 from common.logger import Logger
-from common.naming import FilenameParser, ParsedFilename
+from common.formatter import Formatter, ParsedFilename
 from common.constants import SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_FORMAT, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CONVERTED, XMP_ACTION_EDITED
-from common.metadata import ArchiveMetadata
 from common.exifer import Exifer
 from common.tagger import Tagger
 from common.tags import KeyValueTag, HistoryTag
 from common.router import Router
 from common.version import get_version
+from common.project_config import ProjectConfig
 from preview_maker.config import Config
 
 
@@ -36,10 +38,11 @@ class PreviewMaker:
     def __init__(self, logger: Logger, config_path: str | Path | None = None, no_metadata: bool = False) -> None:
         self._logger = logger
         self._config = Config(logger, config_path)
-        self._metadata = ArchiveMetadata(logger=logger)
+
+        cfg = ProjectConfig.instance()
         self._exifer = Exifer()
-        self._parser = FilenameParser()
-        self._router = Router(logger=logger)
+        self._formatter = Formatter(logger=logger, formats=cfg.formats)
+        self._router = Router(routes=cfg.routes, logger=logger, formats=cfg.formats)
         self._no_metadata = no_metadata
 
     def __call__(
@@ -65,13 +68,14 @@ class PreviewMaker:
         )
 
     def should_process(self, file_path: Path) -> bool:
-        """Check whether a file is a master image eligible for PRV generation.
+        """Check whether a file is eligible for preview generation.
 
         Checks:
+
         - Not a symlink
         - Has a supported image extension
-        - Filename parses to a configured source suffix (raw or master)
-        - If raw suffix, no master sibling exists (master is preferred)
+        - Filename matches one of the configured ``source_priority`` patterns
+        - No higher-priority source sibling exists for the same shot
 
         Args:
             file_path: Path to the candidate file.
@@ -87,24 +91,31 @@ class PreviewMaker:
             self._logger.debug(f"Skipping {file_path}: unsupported extension '{file_path.suffix}'")
             return False
 
-        parsed = self._parser.parse(file_path.name)
+        parsed = self._formatter.parse(file_path.name)
         if not parsed:
             self._logger.debug(f"Skipping {file_path}: cannot parse filename")
             return False
 
-        suffix = parsed.suffix.upper()
-        source_suffixes = self._config.source_suffixes
-        if suffix not in source_suffixes:
-            self._logger.debug(f"Skipping {file_path}: suffix {suffix} is not in source_suffixes {source_suffixes}")
+        my_priority = self._get_match_priority(file_path.name)
+        if my_priority is None:
+            self._logger.debug(
+                f"Skipping {file_path}: does not match any source_priority pattern"
+            )
             return False
 
-        master = self._config.master_suffix
-        if suffix != master:
-            master_name = file_path.name.replace(f".{suffix}.", f".{master}.")
-            master_candidate = file_path.with_name(master_name)
-            if master_candidate.exists():
-                self._logger.debug(f"Skipping {suffix} in favour of {master}: {file_path} (found {master_candidate})")
-                return False
+        # If a higher-priority source exists for the same shot, skip.
+        if my_priority > 0:
+            for sibling in file_path.parent.iterdir():
+                if sibling == file_path or not sibling.is_file():
+                    continue
+                sib_priority = self._get_match_priority(sibling.name)
+                if sib_priority is not None and sib_priority < my_priority:
+                    sib_parsed = self._formatter.parse(sibling.name)
+                    if sib_parsed and self._same_shot(parsed, sib_parsed):
+                        self._logger.debug(
+                            f"Skipping {file_path.name}: higher-priority source exists ({sibling.name})"
+                        )
+                        return False
 
         return True
 
@@ -117,29 +128,28 @@ class PreviewMaker:
         max_size: int = 2000,
         quality: int = 80,
     ) -> bool:
-        """Generate a PRV preview for a single master file.
+        """Generate a preview for a single source file.
 
         This is the core per-file logic used by both batch and watch modes.
         The caller is responsible for filtering (see :meth:`should_process`).
 
         Args:
-            src_path: Source master file (RAW or MSR).
-            archive_path: Resolved archive root for PRV destination routing.
-            overwrite: If True, regenerate existing PRV files.
+            src_path: Source file matching one of the ``source_priority`` patterns.
+            archive_path: Resolved archive root for preview destination routing.
+            overwrite: If True, regenerate existing previews.
             max_size: Maximum long edge in pixels.
             quality: JPEG quality (1-100).
 
         Returns:
-            True if a PRV was generated, False otherwise.
+            True if a preview was generated, False otherwise.
         """
-        parsed = self._parser.parse(src_path.name)
+        parsed = self._formatter.parse(src_path.name)
         if not parsed:
             raise ValueError(f"Cannot parse filename: {src_path.name}")
 
         # Verify that scan-batcher has registered this file before preview
         # generation. DocumentID/InstanceID are required for provenance metadata
-        # in the derivative PRV. This check belongs here (not in _convert_to_prv)
-        # so that _convert_to_prv remains usable independently of the archive workflow.
+        # in the derivative preview.
         tagger = Tagger(src_path, exifer=self._exifer)
         tagger.begin()
         tagger.read(KeyValueTag(TAG_XMP_XMPMM_DOCUMENT_ID))
@@ -147,44 +157,28 @@ class PreviewMaker:
         existing_ids = tagger.end() or {}
         if not existing_ids.get(TAG_XMP_XMPMM_DOCUMENT_ID) or not existing_ids.get(TAG_XMP_XMPMM_INSTANCE_ID):
             self._logger.warning(
-                f"Skipping PRV generation for {src_path.name}: missing DocumentID or InstanceID. "
+                f"Skipping preview generation for {src_path.name}: missing DocumentID or InstanceID. "
                 "These must be set by scan-batcher before processing."
             )
             raise ValueError(f"Missing DocumentID or InstanceID in {src_path.name}")
 
-        # Create preview parsed filename by replacing suffix with preview_suffix
-        prv_parsed = ParsedFilename(
-            year=parsed.year,
-            month=parsed.month,
-            day=parsed.day,
-            hour=parsed.hour,
-            minute=parsed.minute,
-            second=parsed.second,
-            modifier=parsed.modifier,
-            group=parsed.group,
-            subgroup=parsed.subgroup,
-            sequence=parsed.sequence,
-            side=parsed.side,
-            suffix=self._config.preview_suffix,
-            extension="jpg",
-        )
+        # Build preview filename from configured template
+        prv_filename = self._build_preview_filename(parsed)
 
-        # Use router to determine PRV output folder
-        prv_dir = self._router.get_target_folder(prv_parsed, archive_path)
-        prv_filename = self._router.get_normalized_filename(prv_parsed) + ".jpg"
+        # Use router to determine preview output folder
+        prv_dir = self._router.get_target_folder(parsed, archive_path, filename=prv_filename)
         prv_path = prv_dir / prv_filename
 
         if prv_path.exists() and not overwrite:
-            # Even without overwrite, regenerate preview when a better master
-            # appears: if the source is the master suffix and the existing
-            # preview was derived from a different master, upgrade it.
-            if parsed.suffix.upper() == self._config.master_suffix and self._should_upgrade_prv(prv_path, src_path):
-                self._logger.info(f"Upgrading {self._config.preview_suffix} from {self._config.master_suffix} (was derived from different master): {prv_path}")
+            # Even without overwrite, regenerate preview when the existing one
+            # was derived from a different source (e.g. RAW → MSR upgrade).
+            if self._should_upgrade_prv(prv_path, src_path):
+                self._logger.info(f"Upgrading preview from higher-priority source: {prv_path}")
             else:
-                self._logger.debug(f"Skipping existing {self._config.preview_suffix} (overwrite disabled): {prv_path}")
+                self._logger.debug(f"Skipping existing preview (overwrite disabled): {prv_path}")
                 return False
 
-        self._logger.info(f"Creating PRV: {src_path.name} -> {prv_path}")
+        self._logger.info(f"Creating preview: {src_path.name} -> {prv_path}")
 
         self._convert_to_prv(
             input_path=src_path,
@@ -194,15 +188,15 @@ class PreviewMaker:
         )
         return True
 
-    def _should_upgrade_prv(self, prv_path: Path, msr_path: Path) -> bool:
-        """Check whether an existing PRV should be regenerated from MSR.
+    def _should_upgrade_prv(self, prv_path: Path, src_path: Path) -> bool:
+        """Check whether an existing preview should be regenerated.
 
-        Returns True when the PRV's ``DerivedFromDocumentID`` does **not**
-        match the MSR's ``DocumentID``, meaning the PRV was created from a
-        different master (typically RAW) and should be upgraded.
+        Returns True when the preview's ``DerivedFromDocumentID`` does
+        **not** match *src_path*'s ``DocumentID``, meaning the preview
+        was created from a different source and should be upgraded.
 
-        If either ID cannot be read (e.g. the PRV has no metadata yet),
-        returns False to avoid accidental overwrites.
+        If either ID cannot be read (e.g. the preview has no metadata
+        yet), returns False to avoid accidental overwrites.
         """
         try:
             tagger = Tagger(prv_path, exifer=self._exifer)
@@ -210,18 +204,18 @@ class PreviewMaker:
             tagger.read(KeyValueTag(TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID))
             prv_tags = tagger.end() or {}
 
-            tagger = Tagger(msr_path, exifer=self._exifer)
+            tagger = Tagger(src_path, exifer=self._exifer)
             tagger.begin()
             tagger.read(KeyValueTag(TAG_XMP_XMPMM_DOCUMENT_ID))
-            msr_tags = tagger.end() or {}
+            src_tags = tagger.end() or {}
 
             prv_derived_from = prv_tags.get(TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID)
-            msr_doc_id = msr_tags.get(TAG_XMP_XMPMM_DOCUMENT_ID)
+            src_doc_id = src_tags.get(TAG_XMP_XMPMM_DOCUMENT_ID)
 
-            if not prv_derived_from or not msr_doc_id:
+            if not prv_derived_from or not src_doc_id:
                 return False
 
-            return prv_derived_from != msr_doc_id
+            return prv_derived_from != src_doc_id
         except Exception as exc:
             self._logger.debug(f"Cannot determine upgrade eligibility for {prv_path}: {exc}")
             return False
@@ -234,28 +228,22 @@ class PreviewMaker:
         max_size: int,
         quality: int,
     ) -> int:
-        """
-        Walk under ``path`` and generate PRV JPEGs for master files (RAW/MSR).
-        """
+        """Walk under *path* and generate previews for matching source files."""
 
         written = 0
 
         self._logger.debug(f"Starting batch preview generation under {path} (overwrite={overwrite}, max_size={max_size}, quality={quality})")
 
-        # Get folders where master files are stored according to routing rules
-        target_folders = self._router.get_folders_for_suffixes(self._config.source_suffixes)
+        # Get folders where source files are stored according to routing rules
+        target_folders = self._router.get_folders_for_patterns(self._config.source_priority)
 
         if not target_folders:
-            self._logger.warning("No target folders found for RAW/MSR files in routing configuration")
+            self._logger.warning("No target folders found for source patterns in routing configuration")
             return 0
 
-        self._logger.debug(f"Scanning for master files in folders: {target_folders}")
+        self._logger.debug(f"Scanning for source files in folders: {target_folders}")
 
-        # Determine archive base path:
-        # If path/processed exists, use it as the base (legacy organizer layout)
-        # Otherwise use path itself (already organized archive)
-        processed_path = path / "processed"
-        archive_path = processed_path if processed_path.exists() else path
+        archive_path = path
 
         # Scan only target folders (e.g., SOURCES/)
         for folder_name in target_folders:
@@ -263,7 +251,7 @@ class PreviewMaker:
                 if not dirpath.is_dir():
                     continue
 
-                self._logger.info(f"Scanning for master files in: {dirpath}")
+                self._logger.info(f"Scanning for source files in: {dirpath}")
 
                 for src_path in dirpath.iterdir():
                     if not src_path.is_file():
@@ -288,6 +276,46 @@ class PreviewMaker:
 
         return written
 
+    def _build_preview_filename(self, parsed: ParsedFilename) -> str:
+        """Build preview filename from configured template and parsed fields.
+
+        Uses :attr:`Config.preview_filename_template` for the stem and
+        :attr:`Config.preview_extension` for the extension.
+        """
+        kwargs = Formatter._template_kwargs(parsed)
+        stem = self._config.preview_filename_template.format_map(kwargs)
+        return f"{stem}.{self._config.preview_extension}"
+
+    def _get_match_priority(self, filename: str) -> int | None:
+        """Return the priority index of the first matching source pattern.
+
+        Returns *None* when the filename does not match any pattern.
+        """
+        for i, pattern in enumerate(self._config.source_priority):
+            if fnmatch.fnmatch(filename.upper(), pattern.upper()):
+                return i
+        return None
+
+    @staticmethod
+    def _same_shot(a: ParsedFilename, b: ParsedFilename) -> bool:
+        """Check whether two parsed filenames represent the same shot.
+
+        Compares all identity fields **except** suffix and extension.
+        """
+        return (
+            a.year == b.year
+            and a.month == b.month
+            and a.day == b.day
+            and a.hour == b.hour
+            and a.minute == b.minute
+            and a.second == b.second
+            and a.modifier == b.modifier
+            and a.group == b.group
+            and a.subgroup == b.subgroup
+            and a.sequence == b.sequence
+            and a.side == b.side
+        )
+
     def _convert_to_prv(
         self,
         *,
@@ -296,9 +324,7 @@ class PreviewMaker:
         max_size: int,
         quality: int,
     ) -> None:
-        """
-        Convert a single source image to a PRV JPEG.
-        """
+        """Convert a single source image to a preview JPEG."""
 
         if not input_path.exists():
             self._logger.error(f"Input file does not exist: {input_path}")
@@ -306,7 +332,7 @@ class PreviewMaker:
 
         Image.MAX_IMAGE_PIXELS = None
 
-        self._logger.debug(f"Opening source image for PRV conversion: {input_path} (max_size={max_size}, quality={quality})")
+        self._logger.debug(f"Opening source image for preview conversion: {input_path} (max_size={max_size}, quality={quality})")
 
         with Image.open(input_path) as img:
             img.load()
@@ -320,7 +346,7 @@ class PreviewMaker:
             img.save(output_path, format="JPEG", quality=quality, optimize=True)
 
         # After pixels are written, propagate archival metadata from source
-        # master (MSR/RAW) to the PRV derivative.
+        # to the preview derivative.
         if self._no_metadata:
             self._logger.info(f"Skipping metadata write for {output_path.name} (--no-metadata)")
         else:
@@ -328,25 +354,24 @@ class PreviewMaker:
                 self._write_derivative_metadata(input_path, output_path)
             except (FileNotFoundError, RuntimeError, ValueError) as exc:
                 # Treat metadata issues as errors in logs but keep the image.
-                self._logger.error(f"Failed to copy metadata to PRV {output_path}: {exc}")
+                self._logger.error(f"Failed to copy metadata to preview {output_path}: {exc}")
 
-        self._logger.info(f"Saved PRV: {output_path}")
+        self._logger.info(f"Saved preview: {output_path}")
 
     def _write_derivative_metadata(self, master_path: Path, prv_path: Path) -> None:
-        """
-        Write EXIF/XMP metadata to PRV derivative based on master.
-        
-        Copies ALL XMP and EXIF metadata from master to PRV (format-agnostic tags),
-        then overwrites derivative-specific tags (identifiers, DerivedFrom, Format)
-        and adds XMP History entries — all in a single exiftool call.
-        
-        This ensures any new tags added by batcher or scanner automatically propagate
-        to PRV without manual duplication. IFD0/TIFF tags are excluded as they're
-        TIFF-specific and don't transfer reliably to JPEG format.
-        
+        """Write EXIF/XMP metadata to preview derivative based on source.
+
+        Copies ALL XMP and EXIF metadata from source to preview (format-agnostic
+        tags), then overwrites derivative-specific tags (identifiers, DerivedFrom,
+        Format) and adds XMP History entries — all in a single exiftool call.
+
+        This ensures any new tags added by batcher or scanner automatically
+        propagate to the preview without manual duplication.  IFD0/TIFF tags are
+        excluded as they're TIFF-specific and don't transfer reliably to JPEG.
+
         Args:
-            master_path: Path to the master (MSR/RAW) file.
-            prv_path: Path to the PRV file.
+            master_path: Path to the source file.
+            prv_path: Path to the preview file.
         """
         # Read all XMP and EXIF tags from master, excluding History and
         # XMP-xmp:Identifier (bag type — exiftool accumulates instead of
@@ -370,7 +395,7 @@ class PreviewMaker:
         converted_instance_id = uuid.uuid4().hex
         edited_instance_id = uuid.uuid4().hex
 
-        # ── single batch write to PRV ─────────────────────────────────
+        # single batch write to PRV
         self._logger.debug(f"Writing metadata to PRV {prv_path} based on master {master_path}")
         tagger = Tagger(prv_path, exifer=self._exifer)
         tagger.begin()

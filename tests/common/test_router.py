@@ -1,23 +1,18 @@
 """
-Tests for common.router module.
+Tests for common.router module (pattern-based routing).
 """
 
-import pytest
 from pathlib import Path
 
 from common.router import Router
-from common.naming import ParsedFilename
+from common.formatter import ParsedFilename
 
 
 class TestRouter:
-    """
-    Tests for Router class.
-    """
-    
+    """Tests for Router with pattern-based routing rules."""
+
     def _create_parsed(self, suffix: str, extension: str = "tif") -> ParsedFilename:
-        """
-        Create a ParsedFilename for testing.
-        """
+        """Create a ParsedFilename for testing."""
         return ParsedFilename(
             year=2020,
             month=1,
@@ -31,103 +26,121 @@ class TestRouter:
             sequence="0001",
             side="A",
             suffix=suffix,
-            extension=extension
+            extension=extension,
         )
-    
+
     def test_default_routing_raw_to_sources(self):
-        """
-        RAW files should go to SOURCES/ with default routing.
-        """
+        """RAW files should go to SOURCES/ with default routing."""
         router = Router()
         parsed = self._create_parsed("RAW")
         base_path = Path("/archive")
-        
+
         target = router.get_target_folder(parsed, base_path)
-        
+
         assert target == Path("/archive/2020/2020.01.15/SOURCES")
-    
+
     def test_default_routing_msr_to_sources(self):
-        """
-        MSR files should go to SOURCES/ with default routing.
-        """
+        """MSR files should go to SOURCES/ with default routing."""
         router = Router()
         parsed = self._create_parsed("MSR")
         base_path = Path("/archive")
-        
+
         target = router.get_target_folder(parsed, base_path)
-        
+
         assert target == Path("/archive/2020/2020.01.15/SOURCES")
-    
+
     def test_default_routing_prv_to_date_root(self):
-        """
-        PRV files should go to date folder root with default routing.
-        """
+        """PRV files should go to date folder root with default routing."""
         router = Router()
         parsed = self._create_parsed("PRV", "jpg")
         base_path = Path("/archive")
-        
+
         target = router.get_target_folder(parsed, base_path)
-        
+
         assert target == Path("/archive/2020/2020.01.15")
-    
+
     def test_default_routing_unknown_to_derivatives(self):
-        """
-        Unknown suffix should default to DERIVATIVES/.
-        """
+        """Unknown suffix should fall through to catch-all DERIVATIVES/."""
         router = Router()
         parsed = self._create_parsed("UNKNOWN")
         base_path = Path("/archive")
-        
+
         target = router.get_target_folder(parsed, base_path)
-        
+
         assert target == Path("/archive/2020/2020.01.15/DERIVATIVES")
-    
+
     def test_custom_routing(self):
-        """
-        Custom routing rules should be respected.
-        """
-        custom_routing = {
-            "RAW": "SOURCES",
-            "MSR": "SOURCES",
-            "PRV": ".",
-            "COR": "MASTERS",
-            "EDT": "EXPORTS"
-        }
-        router = Router(suffix_routing=custom_routing)
-        
+        """Custom routing rules should be respected."""
+        custom_routes = {"rules": [
+            ["*.RAW.*", "SOURCES"],
+            ["*.MSR.*", "SOURCES"],
+            ["*.COR.*", "MASTERS"],
+            ["*.EDT.*", "EXPORTS"],
+            ["*.PRV.*", "."],
+            ["*", "DERIVATIVES"],
+        ]}
+        router = Router(routes=custom_routes)
+
         cor_parsed = self._create_parsed("COR")
         edt_parsed = self._create_parsed("EDT")
         base_path = Path("/archive")
-        
+
         cor_target = router.get_target_folder(cor_parsed, base_path)
         edt_target = router.get_target_folder(edt_parsed, base_path)
-        
+
         assert cor_target == Path("/archive/2020/2020.01.15/MASTERS")
         assert edt_target == Path("/archive/2020/2020.01.15/EXPORTS")
-    
-    def test_case_insensitive_suffix_matching(self):
-        """
-        Suffix matching should be case-insensitive.
-        """
+
+    def test_custom_catch_all(self):
+        """Router should use the catch-all rule for unmatched filenames."""
+        custom_routes = {"rules": [
+            ["*.RAW.*", "SOURCES"],
+            ["*.MSR.*", "SOURCES"],
+            ["*.PRV.*", "."],
+            ["*", "CUSTOM_DEFAULT"],
+        ]}
+        router = Router(routes=custom_routes)
+        parsed = self._create_parsed("UNKNOWN")
+        base_path = Path("/archive")
+
+        target = router.get_target_folder(parsed, base_path)
+
+        assert target == Path("/archive/2020/2020.01.15/CUSTOM_DEFAULT")
+
+    def test_case_insensitive_pattern_matching(self):
+        """Pattern matching should be case-insensitive."""
         router = Router()
-        
+
         raw_upper = self._create_parsed("RAW")
         raw_lower = self._create_parsed("raw")
         raw_mixed = self._create_parsed("Raw")
         base_path = Path("/archive")
-        
+
         target_upper = router.get_target_folder(raw_upper, base_path)
         target_lower = router.get_target_folder(raw_lower, base_path)
         target_mixed = router.get_target_folder(raw_mixed, base_path)
-        
+
         assert target_upper == Path("/archive/2020/2020.01.15/SOURCES")
         assert target_lower == Path("/archive/2020/2020.01.15/SOURCES")
         assert target_mixed == Path("/archive/2020/2020.01.15/SOURCES")
-    
+
+    def test_filename_parameter_overrides_reconstruction(self):
+        """When filename is provided, it is used for pattern matching."""
+        custom_routes = {"rules": [
+            ["scan_*.tif", "SCANS"],
+            ["*", "OTHER"],
+        ]}
+        router = Router(routes=custom_routes)
+        parsed = self._create_parsed("RAW")
+        base_path = Path("/archive")
+
+        # Pattern won't match the reconstructed name, but will match explicit filename
+        target = router.get_target_folder(parsed, base_path, filename="scan_001.tif")
+
+        assert target == Path("/archive/2020/2020.01.15/SCANS")
+
     def test_get_normalized_filename(self):
-        """
-        Normalized filename should have leading zeros.
-        """
+        """Normalized filename should have leading zeros."""
         router = Router()
         parsed = ParsedFilename(
             year=2020,
@@ -142,20 +155,17 @@ class TestRouter:
             sequence="1",
             side="A",
             suffix="RAW",
-            extension="tif"
+            extension="tif",
         )
-        
+
         normalized = router.get_normalized_filename(parsed)
-        
+
         assert normalized == "2020.01.05.09.08.07.E.FAM.POR.0001.A.RAW"
-    
+
     def test_year_month_day_folder_structure(self):
-        """
-        Target folder should follow YYYY/YYYY.MM.DD structure.
-        """
+        """Target folder should follow YYYY/YYYY.MM.DD structure."""
         router = Router()
-        
-        # Test different dates
+
         parsed_jan = self._create_parsed("RAW")
         parsed_dec = ParsedFilename(
             year=2020,
@@ -170,74 +180,78 @@ class TestRouter:
             sequence="0001",
             side="A",
             suffix="RAW",
-            extension="tif"
+            extension="tif",
         )
         base_path = Path("/archive")
-        
+
         target_jan = router.get_target_folder(parsed_jan, base_path)
         target_dec = router.get_target_folder(parsed_dec, base_path)
-        
+
         assert target_jan == Path("/archive/2020/2020.01.15/SOURCES")
         assert target_dec == Path("/archive/2020/2020.12.31/SOURCES")
-    
-    def test_get_folders_for_suffixes_default_routing(self):
-        """
-        get_folders_for_suffixes should return correct folders for default routing.
-        """
+
+    def test_get_folders_for_patterns_default(self):
+        """get_folders_for_patterns should return correct folders for default routes."""
         router = Router()
-        
-        # RAW and MSR should both be in SOURCES
-        folders = router.get_folders_for_suffixes(["RAW", "MSR"])
+
+        # MSR and RAW patterns → SOURCES
+        folders = router.get_folders_for_patterns(["*.MSR.*", "*.RAW.*"])
         assert folders == {"SOURCES"}
-        
-        # Unknown suffixes should be in DERIVATIVES
-        folders = router.get_folders_for_suffixes(["COR", "EDT"])
+
+        # Unknown pattern → catch-all (DERIVATIVES)
+        folders = router.get_folders_for_patterns(["*.COR.*"])
         assert folders == {"DERIVATIVES"}
-        
-        # PRV is in date root (.), should be excluded
-        folders = router.get_folders_for_suffixes(["PRV"])
+
+        # PRV pattern → "." (date root) → excluded from results
+        folders = router.get_folders_for_patterns(["*.PRV.*"])
         assert folders == set()
-    
-    def test_get_folders_for_suffixes_custom_routing(self):
-        """
-        get_folders_for_suffixes should respect custom routing rules.
-        """
-        custom_routing = {
-            "RAW": "SOURCES",
-            "MSR": "MASTERS",
-            "COR": "MASTERS",
-            "EDT": "DERIVATIVES",
-            "PRV": "."
-        }
-        router = Router(suffix_routing=custom_routing)
-        
-        # RAW and MSR are in different folders
-        folders = router.get_folders_for_suffixes(["RAW", "MSR"])
+
+    def test_get_folders_for_patterns_custom(self):
+        """get_folders_for_patterns should respect custom routing rules."""
+        custom_routes = {"rules": [
+            ["*.RAW.*", "SOURCES"],
+            ["*.MSR.*", "MASTERS"],
+            ["*.COR.*", "MASTERS"],
+            ["*.EDT.*", "DERIVATIVES"],
+            ["*.PRV.*", "."],
+            ["*", "OTHER"],
+        ]}
+        router = Router(routes=custom_routes)
+
+        folders = router.get_folders_for_patterns(["*.RAW.*", "*.MSR.*"])
         assert folders == {"SOURCES", "MASTERS"}
-        
-        # COR (corrected) and EDT (edited): both processed but in different folders
-        folders = router.get_folders_for_suffixes(["COR", "EDT"])
+
+        folders = router.get_folders_for_patterns(["*.COR.*", "*.EDT.*"])
         assert folders == {"MASTERS", "DERIVATIVES"}
-        
-        # PRV is in date root, should be excluded
-        folders = router.get_folders_for_suffixes(["PRV"])
+
+        folders = router.get_folders_for_patterns(["*.PRV.*"])
         assert folders == set()
-    
-    def test_custom_default_folder_for_unknown_suffixes(self):
-        """
-        Router should use '*' key from routing config as default for unknown suffixes.
-        """
-        custom_routing = {
-            "RAW": "SOURCES",
-            "MSR": "SOURCES",
-            "PRV": ".",
-            "*": "CUSTOM_DEFAULT"
-        }
-        router = Router(suffix_routing=custom_routing)
+
+    def test_first_matching_rule_wins(self):
+        """When multiple rules could match, the first one wins."""
+        custom_routes = {"rules": [
+            ["*.RAW.*", "RAW_FOLDER"],
+            ["*.*.*", "CATCH_MORE"],
+            ["*", "CATCH_ALL"],
+        ]}
+        router = Router(routes=custom_routes)
+        parsed = self._create_parsed("RAW")
+        base_path = Path("/archive")
+
+        target = router.get_target_folder(parsed, base_path)
+
+        assert target == Path("/archive/2020/2020.01.15/RAW_FOLDER")
+
+    def test_fallback_when_no_pattern_matches(self):
+        """When no rule matches, Router falls back to DERIVATIVES."""
+        routes_without_catchall = {"rules": [
+            ["*.RAW.*", "SOURCES"],
+        ]}
+        router = Router(routes=routes_without_catchall)
         parsed = self._create_parsed("UNKNOWN")
         base_path = Path("/archive")
-        
+
         target = router.get_target_folder(parsed, base_path)
-        
-        assert target == Path("/archive/2020/2020.01.15/CUSTOM_DEFAULT")
+
+        assert target == Path("/archive/2020/2020.01.15/DERIVATIVES")
 

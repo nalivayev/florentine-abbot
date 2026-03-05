@@ -6,18 +6,16 @@ import pytest
 import numpy as np
 from pathlib import Path
 
-from face_detector.store import (
-    FaceStore,
-    embedding_to_bytes,
-    bytes_to_embedding,
-)
+from face_detector.store import FaceStore
 
 
 # ── Embedding serialisation ────────────────────────────────────────────────────
 
 def test_embedding_round_trip():
     original = np.random.randn(512).astype(np.float32)
-    recovered = bytes_to_embedding(embedding_to_bytes(original))
+    recovered = FaceStore._bytes_to_embedding(
+        FaceStore._embedding_to_bytes(original)
+    )
     np.testing.assert_array_almost_equal(original, recovered)
 
 
@@ -38,31 +36,30 @@ def _make_embedding(seed: int = 0) -> np.ndarray:
 
 def test_add_and_retrieve_face(store):
     vec = _make_embedding()
-    record = store.add_face(
-        file_path="/archive/2020/img.PRV.jpg",
-        face_index=0,
+    img_file = store.get_or_create_file("/archive/2020/img.PRV.jpg")
+    face = store.add_face(
+        file=img_file,
         bbox=(10, 20, 100, 120),
         embedding=vec,
         confidence=0.97,
     )
-    assert record.id is not None
-    assert record.face_index == 0
-    assert record.confidence == pytest.approx(0.97)
+    assert face.id is not None
+    assert face.confidence == pytest.approx(0.97)
 
-    fetched = store.get_face(record.id)
+    fetched = store.get_face(face.id)
     assert fetched is not None
-    assert fetched.file_path == "/archive/2020/img.PRV.jpg"
+    assert fetched.file.file_path == "/archive/2020/img.PRV.jpg"
     np.testing.assert_array_almost_equal(
-        bytes_to_embedding(fetched.embedding), vec
+        FaceStore._bytes_to_embedding(fetched.embedding), vec
     )
 
 
 def test_file_already_processed(store):
     assert not store.file_already_processed("/archive/img.jpg")
 
+    img_file = store.get_or_create_file("/archive/img.jpg")
     store.add_face(
-        file_path="/archive/img.jpg",
-        face_index=0,
+        file=img_file,
         bbox=(0, 0, 50, 50),
         embedding=_make_embedding(),
     )
@@ -70,16 +67,16 @@ def test_file_already_processed(store):
 
 
 def test_get_faces_by_file(store):
+    img_file = store.get_or_create_file("/archive/group.jpg")
     for i in range(3):
         store.add_face(
-            file_path="/archive/group.jpg",
-            face_index=i,
+            file=img_file,
             bbox=(i * 10, 0, 50, 50),
             embedding=_make_embedding(i),
         )
+    other_file = store.get_or_create_file("/archive/other.jpg")
     store.add_face(
-        file_path="/archive/other.jpg",
-        face_index=0,
+        file=other_file,
         bbox=(0, 0, 50, 50),
         embedding=_make_embedding(99),
     )
@@ -88,55 +85,56 @@ def test_get_faces_by_file(store):
     assert len(faces) == 3
 
 
-def test_domain_lifecycle(store):
-    domain = store.create_domain(name="Alice", notes="Test person")
-    assert domain.id is not None
-    assert domain.name == "Alice"
+def test_person_lifecycle(store):
+    person = store.create_person(name="Alice", notes="Test person")
+    assert person.id is not None
+    assert person.name == "Alice"
 
-    same = store.get_or_create_domain("Alice")
-    assert same.id == domain.id
+    same = store.get_or_create_person("Alice")
+    assert same.id == person.id
 
-    new_domain = store.get_or_create_domain("Bob")
-    assert new_domain.id != domain.id
-    assert new_domain.name == "Bob"
+    new_person = store.get_or_create_person("Bob")
+    assert new_person.id != person.id
+    assert new_person.name == "Bob"
 
 
-def test_update_domain_assignment(store):
-    domain = store.create_domain()
+def test_assign_person(store):
+    person = store.create_person()
+    img_file = store.get_or_create_file("/img.jpg")
     face = store.add_face(
-        file_path="/img.jpg",
-        face_index=0,
+        file=img_file,
         bbox=(0, 0, 50, 50),
         embedding=_make_embedding(),
     )
-    assert face.domain_id is None
+    assert face.person_id is None
 
-    store.update_domain(face.id, domain.id)
+    store.assign_person(face.id, person.id)
     fetched = store.get_face(face.id)
-    assert fetched.domain_id == domain.id
+    assert fetched.person_id == person.id
 
 
-def test_get_faces_without_domain(store):
+def test_get_faces_without_cluster(store):
+    img_a = store.get_or_create_file("/a.jpg")
     face_a = store.add_face(
-        file_path="/a.jpg", face_index=0, bbox=(0, 0, 50, 50), embedding=_make_embedding(1)
+        file=img_a, bbox=(0, 0, 50, 50), embedding=_make_embedding(1)
     )
+    img_b = store.get_or_create_file("/b.jpg")
     face_b = store.add_face(
-        file_path="/b.jpg", face_index=0, bbox=(0, 0, 50, 50), embedding=_make_embedding(2)
+        file=img_b, bbox=(0, 0, 50, 50), embedding=_make_embedding(2)
     )
-    domain = store.create_domain()
-    store.update_domain(face_a.id, domain.id)
+    store.set_cluster(face_a.id, 0)
 
-    unassigned = store.get_faces_without_domain()
-    ids = [f.id for f in unassigned]
+    unclustered = store.get_faces_without_cluster()
+    ids = [f.id for f in unclustered]
     assert face_b.id in ids
     assert face_a.id not in ids
 
 
 def test_get_all_embeddings(store):
     for i in range(5):
+        img_file = store.get_or_create_file(f"/img{i}.jpg")
         store.add_face(
-            file_path=f"/img{i}.jpg", face_index=0,
-            bbox=(0, 0, 50, 50), embedding=_make_embedding(i)
+            file=img_file, bbox=(0, 0, 50, 50), embedding=_make_embedding(i)
         )
     pairs = store.get_all_embeddings()
     assert len(pairs) == 5

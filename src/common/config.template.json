@@ -1,0 +1,143 @@
+{
+
+  "help": [
+    "Unified project configuration for florentine-abbot.",
+    "This file combines format templates, routing rules,",
+    "and metadata configuration into a single file.",
+    "",
+    "Sections:",
+    "  formats  — filename parsing and archive formatting templates",
+    "  routes   — pattern-based file routing rules",
+    "  metadata — tag mapping + multi-language metadata texts"
+  ],
+
+  "formats": {
+
+    "help": [
+      "Templates for parsing incoming filenames and formatting archive files.",
+      "",
+      "source_filename_template:",
+      "  Defines the expected structure of incoming filenames.",
+      "  Each {field} placeholder becomes a regex capture group for parsing.",
+      "  Numeric fields (year, month, day, hour, minute, second, sequence) match digits.",
+      "  Extension matches alphanumeric characters.",
+      "  All other fields (modifier, group, subgroup, side, suffix) match any",
+      "  characters up to the next separator.",
+      "",
+      "  Examples:",
+      "    Default: '{year}.{month}.{day}.{hour}.{minute}.{second}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}'",
+      "    Without time: '{year}.{month}.{day}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}'",
+      "    Underscore-separated: '{year}_{month}_{day}_{modifier}_{group}_{sequence}.{extension}'",
+      "",
+      "archive_path_template / archive_filename_template:",
+      "  Define how files are organized and named in the archive structure.",
+      "  Use Python format specifiers: {month:02d}, {sequence:04d}, etc.",
+      "",
+      "  Available fields from parsed filename:",
+      "    {year}, {month}, {day}, {hour}, {minute}, {second}",
+      "    {modifier}, {group}, {subgroup}, {sequence}, {side}, {suffix}, {extension}",
+      "",
+      "  Archive path examples:",
+      "    Default (year/date): '{year:04d}/{year:04d}.{month:02d}.{day:02d}'",
+      "    Flat (date only): '{year:04d}.{month:02d}.{day:02d}'",
+      "    By month: '{year:04d}/{year:04d}.{month:02d}'",
+      "",
+      "  Archive filename examples:",
+      "    Default: '{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}'",
+      "    Compact: '{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}'",
+      "",
+      "Note: Extension is added automatically and should NOT be included in archive_filename_template."
+    ],
+
+    "source_filename_template": "{year}.{month}.{day}.{hour}.{minute}.{second}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}",
+    "archive_path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+    "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+
+  },
+
+  "routes": {
+
+    "help": [
+      "Pattern-based routing rules for file organization.",
+      "Determines which subfolder a file goes into based on its filename.",
+      "",
+      "rules: ordered list of [glob_pattern, subfolder] entries.",
+      "Each filename is tested against the patterns in order — first match wins.",
+      "Patterns use standard glob syntax: * (any chars), ? (single char), [seq] (char set).",
+      "Matching is case-insensitive.",
+      "",
+      "Subfolder values:",
+      "  'SOURCES': Files go to SOURCES/ subfolder",
+      "  'DERIVATIVES': Files go to DERIVATIVES/ subfolder",
+      "  '.': Files go directly to date folder root",
+      "  Any other string: custom subfolder name"
+    ],
+
+    "rules": [
+      ["*.RAW.*",  "SOURCES"],
+      ["*.MSR.*",  "SOURCES"],
+      ["*.PRV.*",  "."],
+      ["*",        "DERIVATIVES"]
+    ]
+
+  },
+
+  "metadata": {
+
+    "help": [
+      "Metadata configuration: tag mapping and multi-language texts.",
+      "",
+      "tags: maps friendly field names to XMP tags written to image files.",
+      "  To add custom fields:",
+      "    1. Add a new entry in tags: \"fieldname\": \"XMP-namespace:TagName\"",
+      "    2. Add the field to your languages below",
+      "",
+      "languages: keys are BCP-47 codes like 'ru-RU', 'en-US'.",
+      "Exactly one language SHOULD have 'default': true.",
+      "",
+      "Field types:",
+      "  creator — string or array of strings (author names)",
+      "  Other fields — string or array of strings (multi-line text)"
+    ],
+
+    "tags": {
+      "description": "XMP-dc:Description",
+      "creator": "XMP-dc:Creator",
+      "rights": "XMP-dc:Rights",
+      "source": "XMP-dc:Source",
+      "type": "XMP-dc:Type",
+      "credit": "XMP-photoshop:Credit",
+      "terms": "XMP-xmpRights:UsageTerms",
+      "marked": "XMP-xmpRights:Marked"
+    },
+
+    "languages": {
+
+      "ru-RU": {
+        "default": true,
+        "creator": ["Имя Фамилия", "Соавтор"],
+        "credit": ["Ваш семейный архив"],
+        "description": ["Краткое описание этого архива."],
+        "rights": ["Сканирование © 2025 Ваше имя"],
+        "terms": ["Только для личного использования."],
+        "source": ["Место хранения оригинального физического носителя."],
+        "type": "StillImage",
+        "marked": "True"
+      },
+
+      "en-US": {
+        "creator": ["Name Surname", "Co-author"],
+        "credit": ["Your Family Archive"],
+        "description": ["Short description of this archive."],
+        "rights": ["Scanning © 2025 Your Name"],
+        "terms": ["Personal use only."],
+        "source": ["Original physical item location."],
+        "type": "StillImage",
+        "marked": "True"
+      }
+
+    }
+
+  }
+
+}

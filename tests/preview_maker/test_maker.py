@@ -18,6 +18,8 @@ from common.constants import (
     TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID,
 )
 from common.exifer import Exifer
+from common.project_config import ProjectConfig
+from common.constants import DEFAULT_CONFIG
 from tests.common.test_utils import create_test_image, exiftool_available
 
 
@@ -420,6 +422,7 @@ class TestPreviewMakerCustomFormats:
         """
         Cleanup after each test method.
         """
+        ProjectConfig.instance(data=DEFAULT_CONFIG)
         if self.temp_dir and self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
     
@@ -430,8 +433,6 @@ class TestPreviewMakerCustomFormats:
         temp_dir = tempfile.mkdtemp()
         self.temp_dir = Path(temp_dir)
         return self.temp_dir
-    
-
     
     def test_generate_prv_with_flat_path_structure(self):
         """
@@ -449,18 +450,15 @@ class TestPreviewMakerCustomFormats:
         msr_path = sources_dir / msr_name
         create_test_image(msr_path, color="green", format="TIFF")
         
-        # Create custom formatter with flat structure
-        from common.formatter import Formatter
-        from common.router import Router
-        
-        formatter = Formatter(
-            path_template="{year:04d}.{month:02d}.{day:02d}",
-            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
-        )
-        
-        # Create PreviewMaker with custom router
+        # Re-initialize ProjectConfig with flat path structure
+        ProjectConfig.instance(data={
+            **DEFAULT_CONFIG,
+            "formats": {
+                "archive_path_template": "{year:04d}.{month:02d}.{day:02d}",
+                "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
+            },
+        })
         maker = PreviewMaker(logger=logger)
-        maker._router._formatter = formatter
         
         # Generate preview
         count = maker(path=temp_dir / "archive", overwrite=False, max_size=800)
@@ -488,15 +486,14 @@ class TestPreviewMakerCustomFormats:
         msr_path = sources_dir / msr_name
         create_test_image(msr_path, color="green", format="TIFF")
         
-        from common.formatter import Formatter
-        
-        formatter = Formatter(
-            path_template="{year:04d}/{year:04d}.{month:02d}",
-            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
-        )
-        
+        ProjectConfig.instance(data={
+            **DEFAULT_CONFIG,
+            "formats": {
+                "archive_path_template": "{year:04d}/{year:04d}.{month:02d}",
+                "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
+            },
+        })
         maker = PreviewMaker(logger=logger)
-        maker._router._formatter = formatter
         
         count = maker(path=temp_dir / "archive", overwrite=False, max_size=800)
         assert count == 1
@@ -523,15 +520,14 @@ class TestPreviewMakerCustomFormats:
         msr_path = sources_dir / msr_name
         create_test_image(msr_path, color="green", format="TIFF")
         
-        from common.formatter import Formatter
-        
-        formatter = Formatter(
-            path_template="{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}",
-            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
-        )
-        
+        ProjectConfig.instance(data={
+            **DEFAULT_CONFIG,
+            "formats": {
+                "archive_path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+                "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
+            },
+        })
         maker = PreviewMaker(logger=logger)
-        maker._router._formatter = formatter
         
         count = maker(path=temp_dir / "archive", overwrite=False, max_size=800)
         assert count == 1
@@ -545,6 +541,10 @@ class TestPreviewMakerCustomFormats:
     def test_generate_prv_with_compact_filename(self):
         """
         Test preview generation with compact filename format.
+        
+        When the archive uses a compact naming convention, the preview
+        filename template and routing patterns must also be customised
+        to match the alternative separator/field scheme.
         """
         temp_dir = self.create_temp_dir()
         logger = Logger("test", console=False)
@@ -554,20 +554,36 @@ class TestPreviewMakerCustomFormats:
         sources_dir = date_dir / "SOURCES"
         sources_dir.mkdir(parents=True, exist_ok=True)
         
-        # Master has standard name
+        # Master has standard name (source_filename_template may differ from archive)
         msr_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.MSR.tiff"
         msr_path = sources_dir / msr_name
         create_test_image(msr_path, color="green", format="TIFF")
         
-        from common.formatter import Formatter
+        ProjectConfig.instance(data={
+            **DEFAULT_CONFIG,
+            "formats": {
+                "archive_path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+                "archive_filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}",
+            },
+            "routes": {
+                "rules": [
+                    ["*.MSR.*", "SOURCES"],
+                    ["*.RAW.*", "SOURCES"],
+                    ["*_PRV.*", "."],
+                    ["*", "DERIVATIVES"],
+                ],
+            },
+        })
         
-        formatter = Formatter(
-            path_template="{year:04d}/{year:04d}.{month:02d}.{day:02d}",
-            filename_template="{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"
-        )
+        # Write preview-maker config with compact preview template
+        config_dir = temp_dir / "config"
+        config_dir.mkdir()
+        pm_config = config_dir / "config.json"
+        pm_config.write_text(json.dumps({
+            "preview_filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_PRV"
+        }), encoding="utf-8")
         
-        maker = PreviewMaker(logger=logger)
-        maker._router._formatter = formatter
+        maker = PreviewMaker(logger=logger, config_path=pm_config)
         
         count = maker(path=temp_dir / "archive", overwrite=False, max_size=800)
         assert count == 1

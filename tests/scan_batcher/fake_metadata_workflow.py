@@ -5,7 +5,7 @@ Exposes MetadataWorkflow's protected methods as public API so that
 test utilities (e.g. create_test_image) can simulate scan-batcher's
 metadata writing step without going through the full workflow pipeline.
 
-This follows the project's fake-class pattern (FakeExifer, FakeArchiveMetadata)
+This follows the project's fake-class pattern (FakeExifer)
 where test doubles inherit real classes and only override what is needed.
 """
 

@@ -19,9 +19,9 @@ from common.constants import (
     TAG_XMP_XMPRIGHTS_USAGE_TERMS,
 )
 from common.logger import Logger
-from common.naming import ParsedFilename
+from common.formatter import ParsedFilename
 
-from tests.common.fake_archive_metadata import FakeArchiveMetadata
+from common.metadata import ArchiveMetadata
 from tests.common.store_exifer import StoreExifer
 
 IDENTIFIER_TAGS = (TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER)
@@ -48,7 +48,7 @@ class TestMetadataFlow:
     @staticmethod
     def _simulate_file_processor_write(
         exifer: StoreExifer,
-        metadata: FakeArchiveMetadata,
+        metadata: ArchiveMetadata,
         file_path: Path,
         parsed: ParsedFilename,
     ) -> None:
@@ -83,7 +83,7 @@ class TestMetadataFlow:
     @staticmethod
     def _simulate_preview_maker_write(
         exifer: StoreExifer,
-        metadata: FakeArchiveMetadata,
+        metadata: ArchiveMetadata,
         master_path: Path,
         prv_path: Path,
     ) -> None:
@@ -151,9 +151,11 @@ class TestMetadataFlow:
         }
 
         logger = Logger("test_metadata_flow", console=False)
-        am = FakeArchiveMetadata(
-            metadata_config=metadata_config,
-            metadata_tags=metadata_tags,
+        am = ArchiveMetadata(
+            metadata={
+                "tags": metadata_tags,
+                "languages": metadata_config["languages"],
+            },
             logger=logger,
         )
 

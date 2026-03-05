@@ -19,6 +19,7 @@ from typing import Any
 from common.logger import Logger
 from common.router import Router
 from common.constants import SUPPORTED_IMAGE_EXTENSIONS
+from common.project_config import ProjectConfig
 from file_organizer.config import Config
 from file_organizer.processor import FileProcessor
 
@@ -70,8 +71,10 @@ class FileOrganizer:
             logger: Logger instance for this organizer.
         """
         self._logger = logger
+
+        cfg = ProjectConfig.instance()
         self._processor = FileProcessor(logger)
-        self._router = Router(logger=logger)
+        self._router = Router(routes=cfg.routes, logger=logger, formats=cfg.formats)
 
     def __call__(
         self,
@@ -358,13 +361,6 @@ class FileOrganizer:
 
         return True
 
-    def _parse_and_validate(self, filename: str):
-        """
-        Expose :meth:`FileProcessor._parse_and_validate` for tests.
-        """
-
-        return self._processor._parse_and_validate(filename)
-
     def _calculate_destination_paths(
         self,
         file_path: Path,
@@ -396,7 +392,7 @@ class FileOrganizer:
             dest_log_filename = f"{base_name}.log"
 
         # Get target folder from router
-        processed_dir = self._router.get_target_folder(parsed, processed_root)
+        processed_dir = self._router.get_target_folder(parsed, processed_root, filename=file_path.name)
 
         # Create processed directory if it doesn't exist
         processed_dir.mkdir(parents=True, exist_ok=True)

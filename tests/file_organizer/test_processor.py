@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from common.logger import Logger
-from common.naming import ParsedFilename
+from common.formatter import ParsedFilename
 from file_organizer.processor import FileProcessor
 from tests.common.test_utils import create_test_image
 
@@ -39,12 +39,6 @@ class TestFileProcessor:
         temp_dir = tempfile.mkdtemp()
         self.temp_dir = Path(temp_dir)
         return self.temp_dir
-
-    def create_dummy_image(self, path: Path):
-        """
-        Create a simple 100x100 RGB image with DocumentID/InstanceID.
-        """
-        create_test_image(path, color='red')
 
     def _minimal_config(self) -> dict:
         """

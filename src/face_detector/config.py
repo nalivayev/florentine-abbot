@@ -32,7 +32,7 @@ class Config:
 
     _DEFAULT_PROCESSING: dict[str, Any] = {
         "source_extensions": [".jpg", ".jpeg", ".tif", ".tiff", ".png", ".bmp"],
-        "source_suffixes": ["PRV", "MSR", "RAW"],
+        "source_priority": ["*.MSR.*"],
     }
 
     _DEFAULT_CLUSTERING: dict[str, Any] = {
@@ -115,12 +115,15 @@ class Config:
         return [e.lower() for e in raw]
 
     @property
-    def source_suffixes(self) -> list[str]:
-        """Filename suffixes (PRV, MSR, RAW, …) eligible for processing."""
-        raw = self._data.get("processing", {}).get(
-            "source_suffixes", self._DEFAULT_PROCESSING["source_suffixes"]
+    def source_priority(self) -> list[str]:
+        """Ordered glob patterns identifying master files eligible for face detection.
+
+        Patterns use ``fnmatch`` syntax and are matched case-insensitively.
+        The first pattern has the highest priority.
+        """
+        return self._data.get("processing", {}).get(
+            "source_priority", self._DEFAULT_PROCESSING["source_priority"]
         )
-        return [s.upper() for s in raw]
 
     @property
     def default_db_path(self) -> Path:

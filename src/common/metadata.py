@@ -1,8 +1,9 @@
 """Shared archival metadata configuration provider.
 
 This module provides :class:`ArchiveMetadata` which is a thin configuration
-provider for metadata tags and values. It loads tags.json and metadata.json
-and provides methods to retrieve tag lists and values.
+provider for metadata tags and values.  It receives the ``metadata`` section
+(from :class:`~common.project_config.ProjectConfig`) and provides methods
+to retrieve tag lists and values.
 
 Actual reading/writing of metadata is done by individual components
 (FileProcessor, PreviewMaker) using :class:`~common.tagger.Tagger`.
@@ -10,16 +11,15 @@ Actual reading/writing of metadata is done by individual components
 
 from typing import Any, Optional
 
-from common.constants import DEFAULT_TAGS, DEFAULT_METADATA
+from common.constants import DEFAULT_METADATA
 from common.logger import Logger
-from common.config_utils import get_config_dir, load_optional_config, ensure_config_exists, get_template_path
 
 
 class ArchiveMetadata:
     """
     Thin configuration provider for archival metadata.
 
-    Loads tags.json and metadata.json and provides methods to retrieve:
+    Provides methods to retrieve:
         - List of configurable tags (for reading/copying)
         - Dictionary of tag values with language variants (for writing)
 
@@ -27,26 +27,28 @@ class ArchiveMetadata:
     using :class:`~common.tagger.Tagger`.
     """
 
-    def __init__(self, logger: Optional[Logger] = None) -> None:
+    def __init__(
+        self,
+        metadata: Optional[dict[str, Any]] = None,
+        logger: Optional[Logger] = None,
+    ) -> None:
         """
         Initialize ArchiveMetadata configuration provider.
 
         Args:
-            logger (Optional[Logger]): Logger for config loading/debug output.
+            metadata: The ``metadata`` section from :class:`ProjectConfig`.
+                Contains ``tags`` (field→XMP mapping) and ``languages``
+                (per-language values).  Falls back to :data:`DEFAULT_METADATA`
+                when *None*.
+            logger: Logger for debug output.
         """
-        self._logger: Optional[Logger] = logger
-
-        # Load tags mapping (field names -> XMP tag names)
-        tags_path = get_config_dir() / "tags.json"
-        self._metadata_tags: dict[str, str] = load_optional_config(self._logger, tags_path, DEFAULT_TAGS)
-
-        # Ensure metadata.json exists, create from template if needed
-        metadata_path = get_config_dir() / "metadata.json"
-        template_path = get_template_path('common', 'metadata.template.json')
-        ensure_config_exists(self._logger, metadata_path, DEFAULT_METADATA, template_path)
-
-        # Load metadata configuration (languages and their values)
-        self._metadata_config: dict[str, Any] = load_optional_config(self._logger, metadata_path, DEFAULT_METADATA)
+        self._logger = logger
+        section = metadata if metadata is not None else DEFAULT_METADATA
+        self._tags: dict[str, str] = {
+            k: v for k, v in section.get("tags", {}).items()
+            if k != "help" and isinstance(v, str)
+        }
+        self._languages: dict[str, Any] = section.get("languages", {})
 
     def _normalize_text(self, value: Any) -> Optional[str]:
         """
@@ -70,15 +72,12 @@ class ArchiveMetadata:
 
     def get_configurable_tags(self) -> list[str]:
         """
-        Return list of XMP tags from tags.json for reading/copying.
+        Return list of XMP tags for reading/copying.
 
         Returns:
             list[str]: List of tag names like ["XMP-dc:Description", ...]
         """
-        if self._metadata_tags is None:
-            return list(DEFAULT_TAGS.values())
-        # Filter out _comment key and any non-string values
-        return [v for k, v in self._metadata_tags.items() if k != "help" and isinstance(v, str)]
+        return list(self._tags.values())
 
     def get_metadata_values(self, logger: Optional[Logger] = None) -> dict[str, Any]:
         """
@@ -100,41 +99,26 @@ class ArchiveMetadata:
         """
         tags: dict[str, Any] = {}
 
-        if self._metadata_config is None or not isinstance(self._metadata_config, dict):
+        if not self._languages:
             if logger:
-                logger.debug("No metadata config; skipping configurable metadata fields")
+                logger.debug("No languages in metadata config; skipping")
             return tags
 
-        if "languages" not in self._metadata_config:
-            if logger:
-                logger.debug("No 'languages' in metadata config; skipping configurable metadata fields")
-            return tags
-
-        languages = self._metadata_config["languages"]
-        if not isinstance(languages, dict) or not languages:
-            if logger:
-                logger.warning("Config 'languages' is empty or invalid; skipping configurable metadata fields")
-            return tags
-
-        # Choose default language block (first with default=True, else first in mapping)
+        # Choose default language block (first with default=True, else first)
         default_block: Optional[dict[str, Any]] = None
-        for lang_code, block in languages.items():
+        for lang_code, block in self._languages.items():
             if isinstance(block, dict) and block.get("default"):
                 default_block = block
                 break
 
         if default_block is None:
-            # Fallback: pick the first language deterministically
-            _, default_block = next(iter(languages.items()))
+            _, default_block = next(iter(self._languages.items()))
 
-        # Use provided metadata tags mapping, or fall back to defaults
-        text_field_map = self._metadata_tags if self._metadata_tags is not None else DEFAULT_TAGS
-
-        for lang_code, block in languages.items():
+        for lang_code, block in self._languages.items():
             if not isinstance(block, dict):
                 continue
 
-            for field_name, tag_base in text_field_map.items():
+            for field_name, tag_base in self._tags.items():
                 raw_value = block.get(field_name)
 
                 # Special handling for Creator: must be a list

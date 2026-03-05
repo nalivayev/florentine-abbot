@@ -3,8 +3,8 @@ Command Line Interface for Preview Maker.
 
 Provides two subcommands:
 
-* ``preview-maker batch`` — one-shot PRV generation for existing masters.
-* ``preview-maker watch`` — daemon mode that monitors for new masters.
+* ``preview-maker batch`` — one-shot preview generation for existing sources.
+* ``preview-maker watch`` — daemon mode that monitors for new source files.
 
 Global flags (``--verbose``, ``--log-path``, ``--version``)
 are shared across both subcommands.
@@ -50,13 +50,13 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--no-metadata",
         action="store_true",
-        help="Skip writing EXIF/XMP metadata to PRV files",
+        help="Skip writing EXIF/XMP metadata to preview files",
     )
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Preview Maker - Generate PRV JPEGs from master sources",
+        description="Preview Maker - Generate preview JPEGs from source files",
         epilog="Use 'preview-maker <command> --help' for subcommand details.",
     )
     parser.add_argument(
@@ -79,21 +79,21 @@ def _build_parser() -> argparse.ArgumentParser:
     # ── batch ──────────────────────────────────────────────────────────
     batch_parser = subparsers.add_parser(
         "batch",
-        help="One-shot PRV generation for existing master files",
-        description="Scan --path for RAW/MSR masters and generate PRV JPEGs.",
+        help="One-shot preview generation for existing source files",
+        description="Scan --path for source files and generate preview JPEGs.",
     )
     _add_common_arguments(batch_parser)
     batch_parser.add_argument(
         "--overwrite",
         action="store_true",
-        help="Overwrite existing PRV files instead of keeping them",
+        help="Overwrite existing preview files instead of keeping them",
     )
 
     # ── watch ──────────────────────────────────────────────────────────
     watch_parser = subparsers.add_parser(
         "watch",
-        help="Daemon mode — watch for new master files",
-        description="Watch --path for new RAW/MSR masters and generate PRVs continuously.",
+        help="Daemon mode — watch for new source files",
+        description="Watch --path for new source files and generate previews continuously.",
     )
     _add_common_arguments(watch_parser)
 
@@ -157,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_size=args.max_size,
                 quality=args.quality,
             )
-            logger.info(f"Generated {count} PRV file(s)")
+            logger.info(f"Generated {count} preview file(s)")
     except Exception as exc:  # pragma: no cover - generic CLI error reporting
         print(f"[preview_maker] Error: {exc}", file=sys.stderr)
         return 1

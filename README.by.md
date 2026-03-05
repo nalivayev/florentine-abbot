@@ -259,32 +259,42 @@ file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 - `"SOURCES"`, `"DERIVATIVES"` ці любое імя папкі — стварыць падпапку ў папцы даты (напрыклад, `{year}/{year}.{month}.{day}/SOURCES/`)
 - `"."` — пакласці файл прама ў корань папкі даты
 
-**Налада фарматаў шляхоў і імёнаў файлаў (`formats.json`):**
+**Налада шаблонаў (`formats.json`):**
 
-Вы можаце наладзіць фарматаванне шляхоў папак архіва і імёнаў файлаў з дапамогай шаблонаў фарматавання Python. Стварыце файл `formats.json` у папцы канфігурацыі:
+Вы можаце наладзіць, як парсяцца імёны ўваходных файлаў і як фарматуюцца шляхі/імёны файлаў у архіве. Стварыце файл `formats.json` у папцы канфігурацыі:
 
 ```json
 {
-  "path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
-  "filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+  "source_filename_template": "{year}.{month}.{day}.{hour}.{minute}.{second}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}",
+  "archive_path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+  "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
 }
 ```
 
-Даступныя палі з разабранага імя файла:
+- `source_filename_template` — вызначае чаканую структуру імёнаў уваходных файлаў. Кожны `{field}` ператвараецца ў групу захопу regex для парсінгу. Палі, адсутныя ў шаблоне, атрымліваюць значэнні па змаўчанні і не валідуюцца.
+- `archive_path_template` — структура папак у архіўным сховішчы.
+- `archive_filename_template` — нармалізаванае імя файла (без пашырэння) у архіве.
+
+Даступныя палі:
 - Дата/час: `{year}`, `{month}`, `{day}`, `{hour}`, `{minute}`, `{second}`
 - Кампаненты: `{modifier}`, `{group}`, `{subgroup}`, `{sequence}`, `{side}`, `{suffix}`, `{extension}`
 
-Спецыфікатары фармату (стандартнае фарматаванне Python):
+Спецыфікатары фармату (стандартнае фарматаванне Python, для архіўных шаблонаў):
 - `{year:04d}` — 4 лічбы з вядучымі нулямі (0000, 2024)
 - `{month:02d}` — 2 лічбы з вядучым нулём (01, 12)
 - `{sequence:04d}` — 4 лічбы з вядучымі нулямі (0001, 0042)
 
-Прыклады шаблонаў:
-- Плоская структура: `"path_template": "{year:04d}.{month:02d}.{day:02d}"`
-- Па месяцах: `"path_template": "{year:04d}/{year:04d}.{month:02d}"`
-- Па групах: `"path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}"`
-- Кампактнае імя: `"filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"`
-- ISO-стыль: `"filename_template": "{year:04d}-{month:02d}-{day:02d}_{hour:02d}-{minute:02d}-{second:02d}_{modifier}_{group}_{subgroup}_{sequence:04d}_{side}_{suffix}"`
+Прыклады шаблонаў імёнаў уваходных файлаў:
+- Па змаўчанні: `"{year}.{month}.{day}.{hour}.{minute}.{second}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}"`
+- Без часу: `"{year}.{month}.{day}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}"`
+- Праз падкрэсліванне: `"{year}_{month}_{day}_{modifier}_{group}_{sequence}.{extension}"`
+
+Прыклады архіўных шаблонаў:
+- Плоская структура: `"archive_path_template": "{year:04d}.{month:02d}.{day:02d}"`
+- Па месяцах: `"archive_path_template": "{year:04d}/{year:04d}.{month:02d}"`
+- Па групах: `"archive_path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}"`
+- Кампактнае імя: `"archive_filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"`
+- ISO-стыль: `"archive_filename_template": "{year:04d}-{month:02d}-{day:02d}_{hour:02d}-{minute:02d}-{second:02d}_{modifier}_{group}_{subgroup}_{sequence:04d}_{side}_{suffix}"`
 
 Усе файлы канфігурацыі апцыянальныя. Пры іх адсутнасці выкарыстоўваюцца ўбудаваныя значэнні па змаўчанні. Гэтыя налады ўплываюць як на арганізацыю файлаў (`file-organizer`), так і на генерацыю прэв'ю (`preview-maker`).
 

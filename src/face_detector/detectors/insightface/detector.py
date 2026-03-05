@@ -11,6 +11,7 @@ Install via the ``face-insightface`` extra::
     pip install "florentine-abbot[face-insightface]"
 """
 
+import fnmatch
 from pathlib import Path
 
 import numpy as np
@@ -71,11 +72,10 @@ class InsightFaceDetector(FaceDetector):
             )
             return False
 
-        upper_name = file_path.name.upper()
-        allowed_suffixes = self._config.source_suffixes
-        if allowed_suffixes and not any(f".{s}." in upper_name for s in allowed_suffixes):
+        patterns = self._config.source_priority
+        if patterns and not any(fnmatch.fnmatch(file_path.name, p) for p in patterns):
             self._logger.debug(
-                f"Skipping {file_path}: no matching source suffix in {allowed_suffixes}"
+                f"Skipping {file_path}: does not match any source_priority pattern"
             )
             return False
 

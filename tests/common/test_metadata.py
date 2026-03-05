@@ -3,10 +3,9 @@ Tests for ArchiveMetadata configuration provider.
 """
 
 
-from common.constants import DEFAULT_TAGS, DEFAULT_METADATA
+from common.constants import DEFAULT_METADATA
 from common.logger import Logger
-
-from tests.common.fake_archive_metadata import FakeArchiveMetadata
+from common.metadata import ArchiveMetadata
 
 
 class TestGetConfigurableTags:
@@ -18,11 +17,11 @@ class TestGetConfigurableTags:
         """
         Returns default tags when no tags.json loaded.
         """
-        am = FakeArchiveMetadata(metadata_tags=None)
-        
+        am = ArchiveMetadata()
+
         tags = am.get_configurable_tags()
-        
-        assert tags == list(DEFAULT_TAGS.values())
+
+        assert tags == list(DEFAULT_METADATA["tags"].values())
 
     def test_returns_custom_tags_from_config(self) -> None:
         """
@@ -32,10 +31,10 @@ class TestGetConfigurableTags:
             "description": "XMP-dc:Description",
             "custom_field": "XMP-custom:Field",
         }
-        am = FakeArchiveMetadata(metadata_tags=custom_tags)
-        
+        am = ArchiveMetadata(metadata={"tags": custom_tags})
+
         tags = am.get_configurable_tags()
-        
+
         assert "XMP-dc:Description" in tags
         assert "XMP-custom:Field" in tags
 
@@ -49,20 +48,20 @@ class TestGetMetadataValues:
         """
         Returns empty dict when no metadata.json loaded.
         """
-        am = FakeArchiveMetadata(metadata_config=None)
-        
+        am = ArchiveMetadata(metadata={"tags": DEFAULT_METADATA["tags"]})
+
         values = am.get_metadata_values()
-        
+
         assert values == {}
 
     def test_returns_defaults_when_using_default_metadata(self) -> None:
         """
         Returns default metadata values (terms, marked) when using DEFAULT_METADATA.
         """
-        am = FakeArchiveMetadata(metadata_config=DEFAULT_METADATA)
-        
+        am = ArchiveMetadata(metadata=DEFAULT_METADATA)
+
         values = am.get_metadata_values()
-        
+
         assert "XMP-xmpRights:UsageTerms" in values
         assert "XMP-xmpRights:Marked" in values
 
@@ -70,10 +69,10 @@ class TestGetMetadataValues:
         """
         Returns empty dict when config has no languages key.
         """
-        am = FakeArchiveMetadata(metadata_config={"other_key": "value"})
-        
+        am = ArchiveMetadata(metadata={"other_key": "value"})
+
         values = am.get_metadata_values()
-        
+
         assert values == {}
 
     def test_returns_empty_dict_when_languages_empty(self) -> None:
@@ -81,17 +80,18 @@ class TestGetMetadataValues:
         Returns empty dict when languages is empty.
         """
         logger = Logger("test", console=False)
-        am = FakeArchiveMetadata(metadata_config={"languages": {}}, logger=logger)
-        
+        am = ArchiveMetadata(metadata={"languages": {}}, logger=logger)
+
         values = am.get_metadata_values(logger=logger)
-        
+
         assert values == {}
 
     def test_returns_values_for_single_language(self) -> None:
         """
         Returns correct values for single language config.
         """
-        metadata_config = {
+        am = ArchiveMetadata(metadata={
+            "tags": DEFAULT_METADATA["tags"],
             "languages": {
                 "en-US": {
                     "default": True,
@@ -99,12 +99,11 @@ class TestGetMetadataValues:
                     "creator": "John Doe",
                     "rights": "© 2026",
                 }
-            }
-        }
-        am = FakeArchiveMetadata(metadata_config=metadata_config)
-        
+            },
+        })
+
         values = am.get_metadata_values()
-        
+
         # Default language gets base tag
         assert values["XMP-dc:Description"] == "Test description"
         assert values["XMP-dc:Creator"] == ["John Doe"]  # Creator is list
@@ -119,7 +118,8 @@ class TestGetMetadataValues:
         """
         Returns correct values with language variants.
         """
-        metadata_config = {
+        am = ArchiveMetadata(metadata={
+            "tags": DEFAULT_METADATA["tags"],
             "languages": {
                 "en-US": {
                     "default": True,
@@ -130,12 +130,11 @@ class TestGetMetadataValues:
                     "description": "Русское описание",
                     "rights": "© 2026 (RU)",
                 }
-            }
-        }
-        am = FakeArchiveMetadata(metadata_config=metadata_config)
-        
+            },
+        })
+
         values = am.get_metadata_values()
-        
+
         # Default language (en-US) gets base tags
         assert values["XMP-dc:Description"] == "English description"
         assert values["XMP-dc:Rights"] == "© 2026"
@@ -150,7 +149,8 @@ class TestGetMetadataValues:
         """
         Uses first language as default when none marked.
         """
-        metadata_config = {
+        am = ArchiveMetadata(metadata={
+            "tags": DEFAULT_METADATA["tags"],
             "languages": {
                 "ru-RU": {
                     "description": "Первый язык",
@@ -158,10 +158,9 @@ class TestGetMetadataValues:
                 "en-US": {
                     "description": "Second language",
                 }
-            }
-        }
-        am = FakeArchiveMetadata(metadata_config=metadata_config)
-        
+            },
+        })
+
         values = am.get_metadata_values()
         
         # First language becomes default
@@ -171,18 +170,18 @@ class TestGetMetadataValues:
         """
         Creator field is normalized to list.
         """
-        metadata_config = {
+        am = ArchiveMetadata(metadata={
+            "tags": DEFAULT_METADATA["tags"],
             "languages": {
                 "en-US": {
                     "default": True,
                     "creator": ["Alice", "Bob"],
                 }
-            }
-        }
-        am = FakeArchiveMetadata(metadata_config=metadata_config)
-        
+            },
+        })
+
         values = am.get_metadata_values()
-        
+
         assert values["XMP-dc:Creator"] == ["Alice", "Bob"]
         assert values["XMP-dc:Creator-en-US"] == ["Alice", "Bob"]
 
@@ -190,35 +189,35 @@ class TestGetMetadataValues:
         """
         Single creator string is converted to list.
         """
-        metadata_config = {
+        am = ArchiveMetadata(metadata={
+            "tags": DEFAULT_METADATA["tags"],
             "languages": {
                 "en-US": {
                     "default": True,
                     "creator": "Single Author",
                 }
-            }
-        }
-        am = FakeArchiveMetadata(metadata_config=metadata_config)
-        
+            },
+        })
+
         values = am.get_metadata_values()
-        
+
         assert values["XMP-dc:Creator"] == ["Single Author"]
 
     def test_skips_empty_values(self) -> None:
         """
         Empty values are not included in result.
         """
-        metadata_config = {
+        am = ArchiveMetadata(metadata={
+            "tags": DEFAULT_METADATA["tags"],
             "languages": {
                 "en-US": {
                     "default": True,
                     "description": "",  # empty
                     "rights": "© 2026",
                 }
-            }
-        }
-        am = FakeArchiveMetadata(metadata_config=metadata_config)
-        
+            },
+        })
+
         values = am.get_metadata_values()
         
         assert "XMP-dc:Description" not in values
@@ -229,23 +228,22 @@ class TestGetMetadataValues:
         """
         Uses custom tags mapping from tags.json.
         """
-        custom_tags = {
-            "description": "Custom:Description",
-            "rights": "Custom:Rights",
-        }
-        metadata_config = {
+        am = ArchiveMetadata(metadata={
+            "tags": {
+                "description": "Custom:Description",
+                "rights": "Custom:Rights",
+            },
             "languages": {
                 "en-US": {
                     "default": True,
                     "description": "Test",
                     "rights": "© 2026",
                 }
-            }
-        }
-        am = FakeArchiveMetadata(metadata_config=metadata_config, metadata_tags=custom_tags)
-        
+            },
+        })
+
         values = am.get_metadata_values()
-        
+
         assert values["Custom:Description"] == "Test"
         assert values["Custom:Rights"] == "© 2026"
         assert "XMP-dc:Description" not in values  # Not using default tag

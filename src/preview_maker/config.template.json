@@ -1,15 +1,31 @@
 {
 
-  "help": "Configuration for Preview Maker",
+  "help": [
+    "Configuration for Preview Maker.",
+    "",
+    "source_priority:",
+    "  Ordered glob patterns for source files.",
+    "  First match wins when multiple sources exist for the same shot.",
+    "",
+    "preview_filename_template:",
+    "  Template for preview filename stem. Uses {field} / {field:spec} syntax.",
+    "  The preview marker (e.g. PRV) is a literal part of the template.",
+    "",
+    "preview_extension:",
+    "  File extension for generated previews (without dot)."
+  ],
 
   "watch": {
     "path": null
   },
 
-  "suffixes": {
-    "master": "MSR",
-    "raw": "RAW",
-    "preview": "PRV"
-  }
+  "source_priority": [
+    "*.MSR.*",
+    "*.RAW.*"
+  ],
+
+  "preview_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.PRV",
+
+  "preview_extension": "jpg"
 
 }

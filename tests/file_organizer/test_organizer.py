@@ -13,9 +13,16 @@ from datetime import datetime, timezone
 import pytest
 
 from file_organizer.organizer import FileOrganizer
-from common.naming import FilenameParser
+from common.formatter import Formatter
+from common.project_config import ProjectConfig
+from common.constants import (
+    DEFAULT_CONFIG,
+    DEFAULT_METADATA,
+    TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID,
+    TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY,
+    XMP_ACTION_CREATED, XMP_ACTION_EDITED,
+)
 from common.exifer import Exifer
-from common.constants import TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED
 from common.tagger import Tagger
 from common.tags import HistoryTag
 from tests.common.test_utils import create_test_image
@@ -31,7 +38,7 @@ class TestFileOrganizer:
         Setup for each test method.
         """
         self.processor = None
-        self.parser = FilenameParser()
+        self.parser = Formatter()
 
     def test_should_process_delegation(self, logger):
         """
@@ -69,19 +76,6 @@ class TestFileOrganizer:
         with pytest.raises(ValueError, match="inside output path"):
             organizer(input_path=child, output_path=parent)
 
-    def test_parse_and_validate_delegation(self, logger):
-        """
-        Test that _parse_and_validate correctly delegates to FileProcessor.
-        """
-        organizer = FileOrganizer(logger)
-        # Smoke test: verify delegation works
-        result = organizer._parse_and_validate('1950.06.15.12.00.00.E.FAM.POR.000001.A.MSR.tiff')
-        assert result is not None
-        assert result.year == 1950
-        
-        result = organizer._parse_and_validate('invalid.jpg')
-        assert result is None
-
 
 class TestFileOrganizerIntegration:
     """
@@ -93,6 +87,7 @@ class TestFileOrganizerIntegration:
         Setup for each test method.
         """
         self.temp_dir = None
+        ProjectConfig.instance(data=DEFAULT_CONFIG)
 
     def teardown_method(self):
         """
@@ -114,12 +109,6 @@ class TestFileOrganizerIntegration:
         input_dir.mkdir()
         output_dir = root / "output"
         return input_dir, output_dir
-
-    def create_dummy_image(self, path: Path):
-        """
-        Create a simple 100x100 RGB image with DocumentID/InstanceID.
-        """
-        create_test_image(path, color='red')
 
     def get_exiftool_json(self, file_path: Path):
         """
@@ -169,7 +158,7 @@ class TestFileOrganizerIntegration:
         # 1. Setup
         filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
         
         organizer = FileOrganizer(logger)
 
@@ -219,7 +208,7 @@ class TestFileOrganizerIntegration:
         expected_filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
         
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
         
         organizer = FileOrganizer(logger)
 
@@ -248,7 +237,7 @@ class TestFileOrganizerIntegration:
         
         filename = "1950.00.00.00.00.00.C.FAM.POR.0002.A.WEB.jpg"
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
         
         organizer = FileOrganizer(logger)
 
@@ -285,7 +274,7 @@ class TestFileOrganizerIntegration:
         # Exact date preview (PRV) file
         filename = "1950.06.15.12.30.45.E.FAM.POR.0003.A.PRV.jpg"
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
 
         organizer = FileOrganizer(logger)
 
@@ -352,7 +341,7 @@ class TestFileOrganizerIntegration:
             file_path = input_dir / filename
             
             # Create test image
-            self.create_dummy_image(file_path)
+            create_test_image(file_path)
             
             # Write XMP identifiers and history entries
             ex = Exifer()
@@ -474,6 +463,7 @@ class TestFileOrganizerCustomFormats:
         """
         Cleanup after each test method.
         """
+        ProjectConfig.instance(data=DEFAULT_CONFIG)
         if self.temp_dir and self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
     
@@ -487,12 +477,6 @@ class TestFileOrganizerCustomFormats:
         input_dir.mkdir()
         output_dir = root / "output"
         return input_dir, output_dir
-    
-    def create_dummy_image(self, path: Path):
-        """
-        Create a simple 100x100 RGB image with DocumentID/InstanceID.
-        """
-        create_test_image(path, color='blue')
     
     def _write_config(self, dir_path: Path, config: dict | None) -> Path | None:
         """
@@ -524,13 +508,6 @@ class TestFileOrganizerCustomFormats:
             }
         }
     
-    def _create_custom_formatter(self, temp_dir: Path, path_template: str, filename_template: str):
-        """
-        Create a custom Formatter with specified templates.
-        """
-        from common.formatter import Formatter
-        return Formatter(path_template=path_template, filename_template=filename_template)
-    
     def test_process_with_flat_path_structure(self, logger):
         """
         Test file organization with flat path structure (no year folder).
@@ -539,20 +516,17 @@ class TestFileOrganizerCustomFormats:
         
         filename = "2024.03.15.14.30.00.E.TEST.GRP.0001.A.RAW.tif"
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
         
-        # Create custom formatter with flat structure
-        from common.formatter import Formatter
-        from common.router import Router
-        
-        formatter = Formatter(
-            path_template="{year:04d}.{month:02d}.{day:02d}",
-            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
-        )
-        
-        # Create FileOrganizer and inject custom formatter into its router
+        # Re-initialize ProjectConfig with custom formats for this test
+        ProjectConfig.instance(data={
+            **DEFAULT_CONFIG,
+            "formats": {
+                "archive_path_template": "{year:04d}.{month:02d}.{day:02d}",
+                "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
+            },
+        })
         organizer = FileOrganizer(logger)
-        organizer._router._formatter = formatter
         
         config_path = self._write_config(input_dir, self._minimal_config())
         
@@ -578,17 +552,16 @@ class TestFileOrganizerCustomFormats:
         
         filename = "2024.03.15.14.30.00.E.TEST.GRP.0001.A.MSR.tif"
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
         
-        from common.formatter import Formatter
-        
-        formatter = Formatter(
-            path_template="{year:04d}/{year:04d}.{month:02d}",
-            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
-        )
-        
+        ProjectConfig.instance(data={
+            **DEFAULT_CONFIG,
+            "formats": {
+                "archive_path_template": "{year:04d}/{year:04d}.{month:02d}",
+                "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
+            },
+        })
         organizer = FileOrganizer(logger)
-        organizer._router._formatter = formatter
         
         config_path = self._write_config(input_dir, self._minimal_config())
         processed_count = organizer(
@@ -612,17 +585,16 @@ class TestFileOrganizerCustomFormats:
         
         filename = "2024.03.15.14.30.00.E.FAM.POR.0001.A.RAW.tif"
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
         
-        from common.formatter import Formatter
-        
-        formatter = Formatter(
-            path_template="{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}",
-            filename_template="{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
-        )
-        
+        ProjectConfig.instance(data={
+            **DEFAULT_CONFIG,
+            "formats": {
+                "archive_path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+                "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
+            },
+        })
         organizer = FileOrganizer(logger)
-        organizer._router._formatter = formatter
         
         config_path = self._write_config(input_dir, self._minimal_config())
         processed_count = organizer(
@@ -646,17 +618,16 @@ class TestFileOrganizerCustomFormats:
         
         original_filename = "2024.03.15.14.30.00.E.TEST.GRP.0042.A.RAW.tif"
         file_path = input_dir / original_filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
         
-        from common.formatter import Formatter
-        
-        formatter = Formatter(
-            path_template="{year:04d}/{year:04d}.{month:02d}.{day:02d}",
-            filename_template="{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"
-        )
-        
+        ProjectConfig.instance(data={
+            **DEFAULT_CONFIG,
+            "formats": {
+                "archive_path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+                "archive_filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}",
+            },
+        })
         organizer = FileOrganizer(logger)
-        organizer._router._formatter = formatter
         
         config_path = self._write_config(input_dir, self._minimal_config())
         processed_count = organizer(
@@ -703,12 +674,6 @@ class TestExiftoolCompliance:
         output_dir = root / "output"
         return input_dir, output_dir
 
-    def create_dummy_image(self, path: Path):
-        """
-        Create a simple 100x100 RGB image with DocumentID/InstanceID.
-        """
-        create_test_image(path, color='blue')
-
     def get_exiftool_json(self, file_path: Path):
         """
         Helper to read metadata using exiftool.
@@ -753,11 +718,8 @@ class TestExiftoolCompliance:
         """
         Verify that all required metadata fields are written and visible to exiftool.
         """
-        # Create metadata.json FIRST before FileOrganizer loads it
-        from common.config_utils import get_config_dir
-        import json
-        
         metadata_config = {
+            "tags": DEFAULT_METADATA["tags"],
             "languages": {
                 "en-US": {
                     "default": True,
@@ -770,22 +732,22 @@ class TestExiftoolCompliance:
                 }
             }
         }
-        
-        metadata_path = get_config_dir() / "metadata.json"
-        metadata_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(metadata_path, 'w', encoding='utf-8') as f:
-            json.dump(metadata_config, f, indent=2)
-        
+
+        # Re-initialize ProjectConfig with custom metadata for this test
+        ProjectConfig.instance(data={
+            **DEFAULT_CONFIG,
+            "metadata": metadata_config,
+        })
+
         input_dir, output_dir = self.create_temp_dir()
 
         filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
 
-        # NOW create organizer - it will load metadata.json during init
         organizer = FileOrganizer(logger)
 
-        config = {}  # Empty config, metadata comes from metadata.json now
+        config = {}
         config_path = self._write_config(input_dir, config)
         
         try:
@@ -834,9 +796,8 @@ class TestExiftoolCompliance:
             assert meta.get("XMP:Source") == "Box 42" or meta.get("XMP-dc:Source") == "Box 42"
             # Title is no longer written (it just duplicated the filename)
         finally:
-            # Clean up test metadata.json
-            if metadata_path.exists():
-                metadata_path.unlink()
+            ProjectConfig.instance(data=DEFAULT_CONFIG)
+
     def test_partial_date_compliance(self, logger):
         """
         Verify partial date handling with exiftool.
@@ -845,7 +806,7 @@ class TestExiftoolCompliance:
 
         filename = "1950.00.00.00.00.00.C.FAM.POR.0002.A.WEB.jpg"
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
 
         organizer = FileOrganizer(logger)
 
@@ -883,7 +844,7 @@ class TestExiftoolCompliance:
 
         filename = "2025.11.29.14.00.00.C.001.001.0001.A.RAW.tiff"
         file_path = input_dir / filename
-        self.create_dummy_image(file_path)
+        create_test_image(file_path)
 
         # Set both
         subprocess.run([

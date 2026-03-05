@@ -273,32 +273,42 @@ Values:
 - `"SOURCES"`, `"DERIVATIVES"`, or any folder name — create a subfolder under the date folder (e.g., `{year}/{year}.{month}.{day}/SOURCES/`)
 - `"."` — place file directly in the date folder root
 
-**Customizing Path and Filename Formats (`formats.json`):**
+**Customizing Templates (`formats.json`):**
 
-You can customize how archive folder paths and filenames are formatted using Python string formatting templates. Create a `formats.json` file in your config directory:
+You can customize how incoming filenames are parsed and how archive paths/filenames are formatted. Create a `formats.json` file in your config directory:
 
 ```json
 {
-  "path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
-  "filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
+  "source_filename_template": "{year}.{month}.{day}.{hour}.{minute}.{second}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}",
+  "archive_path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+  "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}"
 }
 ```
 
-Available fields from parsed filename:
+- `source_filename_template` — defines expected structure of incoming filenames. Each `{field}` becomes a regex capture group for parsing. Fields not present in the template receive default values and are not validated.
+- `archive_path_template` — folder structure in the archive storage.
+- `archive_filename_template` — normalized filename (without extension) in archive.
+
+Available fields:
 - Date/time: `{year}`, `{month}`, `{day}`, `{hour}`, `{minute}`, `{second}`
 - Components: `{modifier}`, `{group}`, `{subgroup}`, `{sequence}`, `{side}`, `{suffix}`, `{extension}`
 
-Format specifiers (standard Python formatting):
+Format specifiers (standard Python formatting, for archive templates):
 - `{year:04d}` — 4 digits with leading zeros (0000, 2024)
 - `{month:02d}` — 2 digits with leading zero (01, 12)
 - `{sequence:04d}` — 4 digits with leading zeros (0001, 0042)
 
-Example templates:
-- Flat structure: `"path_template": "{year:04d}.{month:02d}.{day:02d}"`
-- By month: `"path_template": "{year:04d}/{year:04d}.{month:02d}"`
-- By group: `"path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}"`
-- Compact filename: `"filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"`
-- ISO-style: `"filename_template": "{year:04d}-{month:02d}-{day:02d}_{hour:02d}-{minute:02d}-{second:02d}_{modifier}_{group}_{subgroup}_{sequence:04d}_{side}_{suffix}"`
+Source filename template examples:
+- Default: `"{year}.{month}.{day}.{hour}.{minute}.{second}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}"`
+- Without time: `"{year}.{month}.{day}.{modifier}.{group}.{subgroup}.{sequence}.{side}.{suffix}.{extension}"`
+- Underscore-separated: `"{year}_{month}_{day}_{modifier}_{group}_{sequence}.{extension}"`
+
+Archive template examples:
+- Flat structure: `"archive_path_template": "{year:04d}.{month:02d}.{day:02d}"`
+- By month: `"archive_path_template": "{year:04d}/{year:04d}.{month:02d}"`
+- By group: `"archive_path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}"`
+- Compact filename: `"archive_filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}"`
+- ISO-style: `"archive_filename_template": "{year:04d}-{month:02d}-{day:02d}_{hour:02d}-{minute:02d}-{second:02d}_{modifier}_{group}_{subgroup}_{sequence:04d}_{side}_{suffix}"`
 
 All configuration files are optional. If absent, built-in defaults are used. These settings affect both file organization (`file-organizer`) and preview generation (`preview-maker`).
 
