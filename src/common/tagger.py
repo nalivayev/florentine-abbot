@@ -70,10 +70,6 @@ class Tagger:
         self._read_buffer: list[Tag] = []
         self._write_buffer: list[Tag] = []
 
-    # ------------------------------------------------------------------
-    # public API
-    # ------------------------------------------------------------------
-
     @property
     def file_path(self) -> Path:
         """
