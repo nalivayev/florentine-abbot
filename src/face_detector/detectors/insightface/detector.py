@@ -46,6 +46,7 @@ class InsightFaceDetector(FaceDetector):
         self._config = config
         self._app: object | None = None  # lazy: initialised on first detect()
 
+
     def _ensure_app(self) -> None:
         if _FaceAnalysis is None:
             raise RuntimeError(
@@ -58,8 +59,9 @@ class InsightFaceDetector(FaceDetector):
                 name=self._config.insightface_model_pack,
                 providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
             )
-            app.prepare(ctx_id=0, det_size=(det_size, det_size))
+            app.prepare(ctx_id=0, det_size=(det_size, det_size))  # type: ignore[union-attr]
             self._app = app
+
 
     def should_process(self, file_path: Path) -> bool:
         if file_path.is_symlink():
@@ -80,6 +82,7 @@ class InsightFaceDetector(FaceDetector):
             return False
 
         return True
+
 
     def detect(self, image_path: Path) -> list[DetectedFace]:
         """Detect faces and extract embeddings from *image_path*.
@@ -132,17 +135,17 @@ class InsightFaceDetector(FaceDetector):
         inv = 1.0 / scale if scale != 1.0 else 1.0
         faces: list[DetectedFace] = []
 
-        for f in raw_faces:
+        for f in raw_faces:  # type: ignore[union-attr]
             # bbox from insightface: [x1, y1, x2, y2] float array
-            x1, y1, x2, y2 = (float(v) * inv for v in f.bbox)
+            x1, y1, x2, y2 = [float(v) * inv for v in f.bbox]  # type: ignore[union-attr]
             bbox = (int(x1), int(y1), int(x2 - x1), int(y2 - y1))
 
-            emb = np.array(f.embedding, dtype=np.float32)
+            emb = np.array(f.embedding, dtype=np.float32)  # type: ignore[union-attr]
             norm = np.linalg.norm(emb)
             if norm > 0:
                 emb = emb / norm  # L2-normalise for cosine similarity
 
-            confidence: float | None = float(f.det_score) if hasattr(f, "det_score") else None
+            confidence: float | None = float(f.det_score) if hasattr(f, "det_score") else None  # type: ignore[union-attr]
 
             faces.append(DetectedFace(
                 bbox=bbox,

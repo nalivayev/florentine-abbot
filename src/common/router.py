@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from common.formatter import ParsedFilename, Formatter
+from common.logger import Logger
 from common.constants import DEFAULT_ROUTES
 
 
@@ -37,7 +38,7 @@ class Router:
     def __init__(
         self,
         routes: Optional[dict[str, Any]] = None,
-        logger=None,
+        logger: Logger | None = None,
         formats: Optional[dict[str, Any]] = None,
     ) -> None:
         """Initialize Router.

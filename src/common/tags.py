@@ -103,37 +103,6 @@ class KeyValueTag(Tag):
         return [(self._tag, self._value)]
 
 
-# Flattened tags that exiftool uses for History arrays
-_HISTORY_FLATTENED_TAGS = [
-    TAG_XMP_XMPMM_HISTORY_ACTION,
-    TAG_XMP_XMPMM_HISTORY_WHEN,
-    TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT,
-    TAG_XMP_XMPMM_HISTORY_CHANGED,
-    TAG_XMP_XMPMM_HISTORY_PARAMETERS,
-    TAG_XMP_XMPMM_HISTORY_INSTANCE_ID,
-]
-
-# Mapping: flattened exiftool tag → dict key in parsed entries
-_HISTORY_FIELD_MAP = {
-    TAG_XMP_XMPMM_HISTORY_ACTION: "action",
-    TAG_XMP_XMPMM_HISTORY_WHEN: "when",
-    TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT: "softwareAgent",
-    TAG_XMP_XMPMM_HISTORY_CHANGED: "changed",
-    TAG_XMP_XMPMM_HISTORY_PARAMETERS: "parameters",
-    TAG_XMP_XMPMM_HISTORY_INSTANCE_ID: "instanceID",
-}
-
-# Ordered fields for building exiftool struct strings
-_HISTORY_FIELDS_ORDER = (
-    XMP_FIELD_ACTION,
-    XMP_FIELD_WHEN,
-    XMP_FIELD_SOFTWARE_AGENT,
-    XMP_FIELD_INSTANCE_ID,
-    XMP_FIELD_CHANGED,
-    XMP_FIELD_PARAMETERS,
-)
-
-
 class HistoryTag(Tag):
     """
     Structured XMP-xmpMM:History entry.
@@ -153,6 +122,33 @@ class HistoryTag(Tag):
 
     Parameters match ``XMP_FIELD_*`` constants from :mod:`common.constants`.
     """
+
+    _FLATTENED_TAGS = [
+        TAG_XMP_XMPMM_HISTORY_ACTION,
+        TAG_XMP_XMPMM_HISTORY_WHEN,
+        TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT,
+        TAG_XMP_XMPMM_HISTORY_CHANGED,
+        TAG_XMP_XMPMM_HISTORY_PARAMETERS,
+        TAG_XMP_XMPMM_HISTORY_INSTANCE_ID,
+    ]
+
+    _FIELD_MAP = {
+        TAG_XMP_XMPMM_HISTORY_ACTION: "action",
+        TAG_XMP_XMPMM_HISTORY_WHEN: "when",
+        TAG_XMP_XMPMM_HISTORY_SOFTWARE_AGENT: "softwareAgent",
+        TAG_XMP_XMPMM_HISTORY_CHANGED: "changed",
+        TAG_XMP_XMPMM_HISTORY_PARAMETERS: "parameters",
+        TAG_XMP_XMPMM_HISTORY_INSTANCE_ID: "instanceID",
+    }
+
+    _FIELDS_ORDER = (
+        XMP_FIELD_ACTION,
+        XMP_FIELD_WHEN,
+        XMP_FIELD_SOFTWARE_AGENT,
+        XMP_FIELD_INSTANCE_ID,
+        XMP_FIELD_CHANGED,
+        XMP_FIELD_PARAMETERS,
+    )
 
     def __init__(
         self,
@@ -183,14 +179,14 @@ class HistoryTag(Tag):
         return TAG_XMP_XMPMM_HISTORY
 
     def read_tags(self) -> list[str]:
-        return list(_HISTORY_FLATTENED_TAGS)
+        return list(self._FLATTENED_TAGS)
 
     def parse(self, raw: dict[str, Any]) -> list[dict[str, Any]]:
         """
         Parse flattened History arrays into ``list[dict]``.
         """
         arrays: dict[str, list] = {}
-        for flat_tag, dict_key in _HISTORY_FIELD_MAP.items():
+        for flat_tag, dict_key in self._FIELD_MAP.items():
             val = raw.get(flat_tag, [])
             if not isinstance(val, list):
                 val = [val] if val else []
@@ -214,7 +210,7 @@ class HistoryTag(Tag):
         Return a single ``(TAG+, struct_str)`` pair for append.
         """
         parts: list[str] = []
-        for field in _HISTORY_FIELDS_ORDER:
+        for field in self._FIELDS_ORDER:
             val = self._fields.get(field)
             if val is None:
                 continue

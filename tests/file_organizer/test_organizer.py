@@ -10,10 +10,11 @@ import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 
+from typing import Any
+
 import pytest
 
 from file_organizer.organizer import FileOrganizer
-from common.formatter import Formatter
 from common.project_config import ProjectConfig
 from common.constants import (
     DEFAULT_CONFIG,
@@ -22,6 +23,7 @@ from common.constants import (
     TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY,
     XMP_ACTION_CREATED, XMP_ACTION_EDITED,
 )
+from common.logger import Logger
 from common.exifer import Exifer
 from common.tagger import Tagger
 from common.tags import HistoryTag
@@ -33,14 +35,7 @@ class TestFileOrganizer:
     Test cases for FileOrganizer processing API.
     """
 
-    def setup_method(self):
-        """
-        Setup for each test method.
-        """
-        self.processor = None
-        self.parser = Formatter()
-
-    def test_should_process_delegation(self, logger):
+    def test_should_process_delegation(self, logger: Logger) -> None:
         """
         Test that should_process checks extension and path filters.
         """
@@ -52,13 +47,13 @@ class TestFileOrganizer:
         # Invalid extension
         assert organizer.should_process(Path('file.txt'), output_path=output) is False
 
-    def test_rejects_same_input_output(self, logger, tmp_path):
+    def test_rejects_same_input_output(self, logger: Logger, tmp_path: Path) -> None:
         """Output equal to input must raise ValueError."""
         organizer = FileOrganizer(logger)
         with pytest.raises(ValueError, match="must not overlap"):
             organizer(input_path=tmp_path, output_path=tmp_path)
 
-    def test_rejects_output_inside_input(self, logger, tmp_path):
+    def test_rejects_output_inside_input(self, logger: Logger, tmp_path: Path) -> None:
         """Output that is a subdirectory of input must raise ValueError."""
         organizer = FileOrganizer(logger)
         nested = tmp_path / "sub" / "deep"
@@ -66,7 +61,7 @@ class TestFileOrganizer:
         with pytest.raises(ValueError, match="inside input path"):
             organizer(input_path=tmp_path, output_path=nested)
 
-    def test_rejects_input_inside_output(self, logger, tmp_path):
+    def test_rejects_input_inside_output(self, logger: Logger, tmp_path: Path) -> None:
         """Input that is a subdirectory of output must raise ValueError."""
         organizer = FileOrganizer(logger)
         parent = tmp_path / "archive"
@@ -82,14 +77,14 @@ class TestFileOrganizerIntegration:
     Integration tests for FileOrganizer with filesystem operations.
     """
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """
         Setup for each test method.
         """
-        self.temp_dir = None
+        self.temp_dir: Path | None = None
         ProjectConfig.instance(data=DEFAULT_CONFIG)
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """
         Cleanup after each test method.
         """
@@ -110,16 +105,16 @@ class TestFileOrganizerIntegration:
         output_dir = root / "output"
         return input_dir, output_dir
 
-    def get_exiftool_json(self, file_path: Path):
+    def get_exiftool_json(self, file_path: Path) -> dict[str, Any]:
         """
         Helper to read metadata using exiftool.
         """
         cmd = ["exiftool", "-json", "-G", str(file_path)]
         # Force UTF-8 encoding to avoid Windows charmap errors
         result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
-        return json.loads(result.stdout)[0]
+        return json.loads(result.stdout)[0]  # type: ignore[no-any-return]
 
-    def _minimal_config(self) -> dict:
+    def _minimal_config(self) -> dict[str, Any]:
         """
         Return minimal organizer config with required metadata languages.
         """
@@ -139,7 +134,7 @@ class TestFileOrganizerIntegration:
             }
         }
 
-    def _write_config(self, dir_path: Path, config: dict | None) -> Path | None:
+    def _write_config(self, dir_path: Path, config: dict[str, Any] | None) -> Path | None:
         """
         Helper: write config dict to dir_path/config.json and return its path.
         """
@@ -149,7 +144,14 @@ class TestFileOrganizerIntegration:
         cfg_path.write_text(json.dumps(config), encoding="utf-8")
         return cfg_path
 
-    def test_process_valid_tiff(self, logger):
+    @staticmethod
+    def _norm(v: object) -> str:
+        """Normalize a tag value for comparison: lowercase, strip uuid: prefix and dashes."""
+        if not isinstance(v, str):
+            return str(v)
+        return v.lower().replace('uuid:', '').replace('-', '')
+
+    def test_process_valid_tiff(self, logger: Logger) -> None:
         """
         Test processing valid TIFF file.
         """
@@ -197,7 +199,7 @@ class TestFileOrganizerIntegration:
         date_created = meta.get("XMP:DateCreated") or meta.get("XMP-photoshop:DateCreated")
         assert date_created == "1950:06:15 12:30:45" or date_created == "1950-06-15T12:30:45"
 
-    def test_process_normalization(self, logger):
+    def test_process_normalization(self, logger: Logger) -> None:
         """
         Test that filename is normalized (sequence 1 -> 0001).
         """
@@ -229,7 +231,7 @@ class TestFileOrganizerIntegration:
         expected_path = output_dir / "1950" / "1950.06.15" / "SOURCES" / expected_filename
         assert expected_path.exists()
 
-    def test_process_circa_date(self, logger):
+    def test_process_circa_date(self, logger: Logger) -> None:
         """
         Test processing of Circa date (no time in EXIF).
         """
@@ -265,7 +267,7 @@ class TestFileOrganizerIntegration:
         date_created = meta.get("XMP:DateCreated") or meta.get("XMP-photoshop:DateCreated")
         assert str(date_created) == "1950"
 
-    def test_process_preview_file_placed_in_date_root(self, logger):
+    def test_process_preview_file_placed_in_date_root(self, logger: Logger) -> None:
         """
         PRV preview files should be placed directly in the date folder root.
         """
@@ -300,14 +302,14 @@ class TestFileOrganizerIntegration:
         assert not (expected_dir / "SOURCES").exists()
         assert not (expected_dir / "DERIVATIVES").exists()
 
-    def test_date_modifier_scenarios(self, logger, require_exiftool):
+    def test_date_modifier_scenarios(self, logger: Logger, require_exiftool: None) -> None:
         """Test FileOrganizer with different date modifiers (E, C, B, F, A).
         
         This test validates that files with various date precision levels
         are correctly processed and placed in appropriate year folders.
         Also verifies XMP History tracking works across different scenarios.
         """
-        scenarios = [
+        scenarios: list[dict[str, str]] = [
             {
                 "name": "Exact Date",
                 "filename": "2023.10.27.12.00.00.E.Group.Sub.0001.A.Orig.jpg",
@@ -349,11 +351,11 @@ class TestFileOrganizerIntegration:
             # Check existing tags and only write missing ones
             existing = ex.read(file_path, [TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL])
             
-            instance = existing.get(TAG_XMP_XMPMM_INSTANCE_ID)
-            document = existing.get(TAG_XMP_XMPMM_DOCUMENT_ID)
-            creator = existing.get(TAG_XMP_XMP_CREATOR_TOOL)
+            instance: str | None = existing.get(TAG_XMP_XMPMM_INSTANCE_ID)
+            document: str | None = existing.get(TAG_XMP_XMPMM_DOCUMENT_ID)
+            creator: str | None = existing.get(TAG_XMP_XMP_CREATOR_TOOL)
             
-            to_write = {}
+            to_write: dict[str, str] = {}
             if not instance:
                 instance = uuid.uuid4().hex
                 to_write[TAG_XMP_XMPMM_INSTANCE_ID] = instance
@@ -388,15 +390,12 @@ class TestFileOrganizerIntegration:
             
             # Read back tags including history
             read_back = ex.read(file_path, [TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY])
-            
-            def _norm(v: str) -> str:
-                if not isinstance(v, str):
-                    return str(v)
-                return v.lower().replace('uuid:', '').replace('-', '')
-            
+
             # Verify identifiers and CreatorTool
-            assert _norm(read_back.get(TAG_XMP_XMPMM_INSTANCE_ID, '')) == instance, f"{scenario['name']}: InstanceID not written correctly"
-            assert _norm(read_back.get(TAG_XMP_XMPMM_DOCUMENT_ID, '')) == document, f"{scenario['name']}: DocumentID not written correctly"
+            assert instance is not None
+            assert document is not None
+            assert self._norm(read_back.get(TAG_XMP_XMPMM_INSTANCE_ID, '')) == instance, f"{scenario['name']}: InstanceID not written correctly"
+            assert self._norm(read_back.get(TAG_XMP_XMPMM_DOCUMENT_ID, '')) == document, f"{scenario['name']}: DocumentID not written correctly"
             assert read_back.get(TAG_XMP_XMP_CREATOR_TOOL) == creator, f"{scenario['name']}: CreatorTool not written correctly"
             
             # Verify history if present
@@ -405,11 +404,12 @@ class TestFileOrganizerIntegration:
                 history_text = str(history_raw).lower()
                 assert XMP_ACTION_CREATED in history_text, f"{scenario['name']}: Missing 'created' action in history"
                 assert XMP_ACTION_EDITED in history_text, f"{scenario['name']}: Missing 'edited' action in history"
+                assert instance is not None
                 assert instance in history_text, f"{scenario['name']}: Missing instance ID in history"
             
             # Process with FileOrganizer
             organizer = FileOrganizer(logger)
-            config = {
+            config: dict[str, Any] = {
                 "metadata": {
                     "languages": {
                         "en-US": {
@@ -444,6 +444,7 @@ class TestFileOrganizerIntegration:
             assert l1_folder == scenario["folder_l1"], f"{scenario['name']}: Expected folder {scenario['folder_l1']}, got {l1_folder}"
             
             # Cleanup for next scenario
+            assert self.temp_dir is not None
             shutil.rmtree(self.temp_dir)
             self.temp_dir = None
 
@@ -453,13 +454,13 @@ class TestFileOrganizerCustomFormats:
     Test FileOrganizer with custom path and filename formats.
     """
     
-    def setup_method(self):
+    def setup_method(self) -> None:
         """
         Setup for each test method.
         """
-        self.temp_dir = None
-    
-    def teardown_method(self):
+        self.temp_dir: Path | None = None
+
+    def teardown_method(self) -> None:
         """
         Cleanup after each test method.
         """
@@ -478,7 +479,7 @@ class TestFileOrganizerCustomFormats:
         output_dir = root / "output"
         return input_dir, output_dir
     
-    def _write_config(self, dir_path: Path, config: dict | None) -> Path | None:
+    def _write_config(self, dir_path: Path, config: dict[str, Any] | None) -> Path | None:
         """
         Helper: write config dict to dir_path/config.json and return its path.
         """
@@ -487,8 +488,8 @@ class TestFileOrganizerCustomFormats:
         cfg_path = dir_path / "config.json"
         cfg_path.write_text(json.dumps(config), encoding="utf-8")
         return cfg_path
-        
-    def _minimal_config(self) -> dict:
+
+    def _minimal_config(self) -> dict[str, Any]:
         """
         Minimal configuration for testing.
         """
@@ -508,7 +509,7 @@ class TestFileOrganizerCustomFormats:
             }
         }
     
-    def test_process_with_flat_path_structure(self, logger):
+    def test_process_with_flat_path_structure(self, logger: Logger) -> None:
         """
         Test file organization with flat path structure (no year folder).
         """
@@ -544,7 +545,7 @@ class TestFileOrganizerCustomFormats:
         expected_path = output_dir / "2024.03.15" / "SOURCES" / filename
         assert expected_path.exists(), f"File not found at {expected_path}"
     
-    def test_process_with_month_grouping(self, logger):
+    def test_process_with_month_grouping(self, logger: Logger) -> None:
         """
         Test file organization grouped by year and month.
         """
@@ -577,7 +578,7 @@ class TestFileOrganizerCustomFormats:
         expected_path = output_dir / "2024" / "2024.03" / "SOURCES" / filename
         assert expected_path.exists(), f"File not found at {expected_path}"
     
-    def test_process_with_group_in_path(self, logger):
+    def test_process_with_group_in_path(self, logger: Logger) -> None:
         """
         Test file organization with group component in path.
         """
@@ -610,7 +611,7 @@ class TestFileOrganizerCustomFormats:
         expected_path = output_dir / "FAM" / "2024" / "2024.03.15" / "SOURCES" / filename
         assert expected_path.exists(), f"File not found at {expected_path}"
     
-    def test_process_with_compact_filename(self, logger):
+    def test_process_with_compact_filename(self, logger: Logger) -> None:
         """
         Test file organization with compact filename format.
         """
@@ -650,13 +651,13 @@ class TestExiftoolCompliance:
     Tests for FileOrganizer metadata compliance with exiftool.
     """
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """
         Setup for each test method.
         """
-        self.temp_dir = None
+        self.temp_dir: Path | None = None
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """
         Cleanup after each test method.
         """
@@ -674,16 +675,16 @@ class TestExiftoolCompliance:
         output_dir = root / "output"
         return input_dir, output_dir
 
-    def get_exiftool_json(self, file_path: Path):
+    def get_exiftool_json(self, file_path: Path) -> dict[str, Any]:
         """
         Helper to read metadata using exiftool.
         """
         cmd = ["exiftool", "-json", "-G", str(file_path)]
         # Force UTF-8 encoding to avoid Windows charmap errors
         result = subprocess.run(cmd, capture_output=True, text=True, check=True, encoding='utf-8')
-        return json.loads(result.stdout)[0]
+        return json.loads(result.stdout)[0]  # type: ignore[no-any-return]
 
-    def _minimal_config(self) -> dict:
+    def _minimal_config(self) -> dict[str, Any]:
         """
         Return minimal organizer config with required metadata languages.
         """
@@ -703,7 +704,7 @@ class TestExiftoolCompliance:
             }
         }
 
-    def _write_config(self, dir_path: Path, config: dict | None) -> Path | None:
+    def _write_config(self, dir_path: Path, config: dict[str, Any] | None) -> Path | None:
         """Helper: write config dict to dir_path/config.json and return its path.
 
         If config is None, returns None so organizer uses its default config lookup.
@@ -714,11 +715,11 @@ class TestExiftoolCompliance:
         cfg_path.write_text(json.dumps(config), encoding="utf-8")
         return cfg_path
 
-    def test_full_metadata_compliance(self, logger):
+    def test_full_metadata_compliance(self, logger: Logger) -> None:
         """
         Verify that all required metadata fields are written and visible to exiftool.
         """
-        metadata_config = {
+        metadata_config: dict[str, Any] = {
             "tags": DEFAULT_METADATA["tags"],
             "languages": {
                 "en-US": {
@@ -747,7 +748,7 @@ class TestExiftoolCompliance:
 
         organizer = FileOrganizer(logger)
 
-        config = {}
+        config: dict[str, Any] = {}
         config_path = self._write_config(input_dir, config)
         
         try:
@@ -777,6 +778,7 @@ class TestExiftoolCompliance:
             # 3. Check XMP DateCreated
             assert "XMP:DateCreated" in meta or "XMP-photoshop:DateCreated" in meta
             date_created = meta.get("XMP:DateCreated") or meta.get("XMP-photoshop:DateCreated")
+            assert date_created is not None
             assert "1950:06:15 12:30:45" in date_created or "1950-06-15" in date_created
 
             # 4. Check Description
@@ -798,7 +800,7 @@ class TestExiftoolCompliance:
         finally:
             ProjectConfig.instance(data=DEFAULT_CONFIG)
 
-    def test_partial_date_compliance(self, logger):
+    def test_partial_date_compliance(self, logger: Logger) -> None:
         """
         Verify partial date handling with exiftool.
         """
@@ -836,7 +838,7 @@ class TestExiftoolCompliance:
                 break
         assert found_date, f"Could not find partial date 1950 in metadata: {meta}"
 
-    def test_datetimedigitized_not_overwritten(self, logger):
+    def test_datetimedigitized_not_overwritten(self, logger: Logger) -> None:
         """
         Verify that existing DateTimeDigitized is not overwritten.
         """

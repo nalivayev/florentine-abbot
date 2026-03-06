@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 from common.logger import Logger
+from common.utils import log_banner
 from common.version import get_version
 from file_organizer.organizer import FileOrganizer
 from file_organizer.config import Config
@@ -76,7 +77,6 @@ def _build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command")
 
-    # ── batch ──────────────────────────────────────────────────────────
     batch_parser = subparsers.add_parser(
         "batch",
         help="One-shot processing of existing files",
@@ -89,7 +89,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Process files recursively in subdirectories",
     )
 
-    # ── watch ──────────────────────────────────────────────────────────
     watch_parser = subparsers.add_parser(
         "watch",
         help="Daemon mode — monitor a directory for new files",
@@ -120,19 +119,18 @@ def main(argv: list[str] | None = None) -> int:
     input_path = Path(args.input_path)
     output_path = Path(args.output_path)
 
-    # ── summary banner ─────────────────────────────────────────────
     version = get_version()
-    logger.info("-" * 45)
-    logger.info("  file-organizer %s", version)
-    logger.info("  Mode:        %s", args.command)
-    logger.info("  Input:       %s", input_path)
-    logger.info("  Output:      %s", output_path)
-    logger.info("  Copy mode:   %s", "yes" if args.copy else "no")
+    fields: dict[str, str] = {
+        "Mode": args.command,
+        "Input": str(input_path),
+        "Output": str(output_path),
+        "Copy mode": "yes" if args.copy else "no",
+    }
     if args.command == "batch":
-        logger.info("  Recursive:   %s", "yes" if args.recursive else "no")
-    logger.info("  No metadata: %s", "yes" if args.no_metadata else "no")
-    logger.info("  Config:      %s", args.config or "default")
-    logger.info("-" * 45)
+        fields["Recursive"] = "yes" if args.recursive else "no"
+    fields["No metadata"] = "yes" if args.no_metadata else "no"
+    fields["Config"] = args.config or "default"
+    log_banner(logger, "file-organizer", version, fields)
 
     if not input_path.exists():
         logger.error(f"Input path does not exist: {input_path}")

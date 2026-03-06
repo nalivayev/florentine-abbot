@@ -2,7 +2,7 @@
 Command Line Interface for Face Detector.
 
 Provides a single ``batch`` subcommand that scans a directory tree,
-detects faces, extracts embeddings, and clusters results into identity domains.
+previews faces, extracts embeddings, and clusters results into identity domains.
 
 Usage::
 
@@ -13,20 +13,20 @@ Usage::
 
 import argparse
 import logging
+import sys
 from pathlib import Path
 
 from common.logger import Logger
+from common.utils import log_banner
 from common.version import get_version
-from face_detector.config import Config
 from face_detector.constants import DEFAULT_DETECTOR
 from face_detector.engine import FaceDetectorEngine
-from face_detector.store import FaceStore
-from face_detector.visualizer import FaceVisualizer
+from face_detector.previewer import FacePreviewer
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Face Detector — detect faces, extract embeddings, cluster identities",
+        description="Face Detector — preview faces, extract embeddings, cluster identities",
         epilog="Use 'face-detector <command> --help' for subcommand details.",
     )
     parser.add_argument(
@@ -51,7 +51,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "batch",
         help="Scan a directory tree for faces and cluster results",
         description=(
-            "Recursively scan --path for image files, detect faces using DeepFace, "
+            "Recursively scan --path for image files, preview faces using DeepFace, "
             "store embeddings in a SQLite database, and cluster results into identity domains."
         ),
     )
@@ -75,7 +75,7 @@ def _build_parser() -> argparse.ArgumentParser:
     batch.add_argument(
         "--no-cluster",
         action="store_true",
-        help="Skip DBSCAN clustering after detection",
+        help="Skip DBSCAN clustering after previewion",
     )
     batch.add_argument(
         "--detector",
@@ -90,40 +90,40 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Path to a custom config.json (default: from standard config directory)",
     )
 
-    viz = subparsers.add_parser(
-        "visualize",
-        help="Draw detected face bounding boxes on a preview image",
+    preview = subparsers.add_parser(
+        "preview",
+        help="Detect faces in a single image and save a preview with bounding boxes",
         description=(
-            "Load a source image and its face records from the database, "
-            "draw red bounding boxes and save a JPEG preview."
+            "Run face previewion on a single image and save a JPEG preview with "
+            "numbered bounding boxes.  No database required."
         ),
     )
-    viz.add_argument(
-        "--image", "-i",
+    preview.add_argument(
+        "--file", "-i",
         required=True,
-        metavar="IMAGE",
-        help="Source image file (the same path that was processed by 'batch')",
+        metavar="FILE",
+        help="Source image file",
     )
-    viz.add_argument(
-        "--db",
-        metavar="DB",
-        default=None,
-        help="Path to the SQLite database (default: from config)",
-    )
-    viz.add_argument(
+    preview.add_argument(
         "--output", "-o",
         metavar="OUTPUT",
         default=None,
-        help="Output JPEG path (default: <image_stem>_faces.jpg next to source)",
+        help="Output JPEG path (default: <file_stem>_preview.jpg next to source)",
     )
-    viz.add_argument(
+    preview.add_argument(
         "--max-size",
         type=int,
         default=3000,
         metavar="PX",
         help="Maximum long edge of the preview in pixels (default: 3000)",
     )
-    viz.add_argument(
+    preview.add_argument(
+        "--detector",
+        metavar="NAME",
+        default=None,
+        help=f"Detector plugin to use (default: from config or {DEFAULT_DETECTOR!r})",
+    )
+    preview.add_argument(
         "--config",
         metavar="CONFIG",
         default=None,
@@ -152,70 +152,54 @@ def main(argv: list[str] | None = None) -> int:
 
     version = get_version()
 
-    if args.command == "visualize":
-        image_path = Path(args.image)
-        db_path = Path(args.db) if args.db else None
-
-        logger.info("-" * 45)
-        logger.info("  face-detector %s", version)
-        logger.info("  Mode:    visualize")
-        logger.info("  Image:   %s", image_path)
-        logger.info("  DB:      %s", db_path or "default (from config)")
-        logger.info("  MaxSize: %spx", args.max_size)
-        logger.info("-" * 45)
-
-        if not image_path.exists():
-            logger.error("Image does not exist: %s", image_path)
-            return 1
-
-        config = Config(logger, args.config)
-        resolved_db = db_path or config.default_db_path
-
-        try:
-            with FaceStore(resolved_db) as store:
-                viz = FaceVisualizer(logger, max_size=args.max_size)
-                out = viz.draw(
-                    image_path=image_path,
-                    store=store,
-                    output_path=Path(args.output) if args.output else None,
-                )
-            print(str(out))
-            return 0
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Fatal error: %s", exc, exc_info=args.verbose)
-            return 1
-
-    path = Path(args.path)
-    db_path = Path(args.db) if args.db else None
-
-    logger.info("-" * 45)
-    logger.info("  face-detector %s", version)
-    logger.info("  Path:          %s", path)
-    logger.info("  Database:      %s", db_path or "default (from config)")
-    logger.info("  Overwrite:     %s", "yes" if args.overwrite else "no")
-    logger.info("  Cluster:       %s", "no" if args.no_cluster else "yes")
-    logger.info("  Detector:      %s", args.detector)
-    logger.info("  Config:        %s", args.config or "default")
-    logger.info("-" * 45)
-
-    if not path.exists():
-        logger.error("Path does not exist: %s", path)
-        return 1
-
     try:
-        engine = FaceDetectorEngine(logger, args.config, detector=args.detector)
-        total = engine(
-            path=path,
-            db_path=db_path,
-            overwrite=args.overwrite,
-            cluster=not args.no_cluster,
-        )
-        logger.info("Detected %d face(s) in total", total)
-        return 0
+        if args.command == "preview":
+            file_path = Path(args.file)
+            if not file_path.exists():
+                logger.error("Image does not exist: %s", file_path)
+                return 1
 
-    except Exception as exc:  # noqa: BLE001
-        logger.error("Fatal error: %s", exc, exc_info=args.verbose)
+            log_banner(logger, "face-detector", version, {
+                "Mode": "preview",
+                "File": str(file_path),
+                "Detector": args.detector or "from config",
+                "MaxSize": f"{args.max_size}px",
+            })
+
+            viz = FacePreviewer(logger, args.config, detector=args.detector, max_size=args.max_size)
+            out = viz(file_path, Path(args.output) if args.output else None)
+            print(str(out))
+
+        else:  # batch
+            path = Path(args.path)
+            if not path.exists():
+                logger.error("Path does not exist: %s", path)
+                return 1
+
+            log_banner(logger, "face-detector", version, {
+                "Mode": "batch",
+                "Path": str(path),
+                "Database": str(Path(args.db) if args.db else "default (from config)"),
+                "Overwrite": "yes" if args.overwrite else "no",
+                "Cluster": "no" if args.no_cluster else "yes",
+                "Detector": args.detector,
+                "Config": args.config or "default",
+            })
+
+            engine = FaceDetectorEngine(logger, args.config, detector=args.detector)
+            total = engine(
+                path=path,
+                db_path=Path(args.db) if args.db else None,
+                overwrite=args.overwrite,
+                cluster=not args.no_cluster,
+            )
+            logger.info("Detected %d face(s) in total", total)
+
+    except Exception as exc:
+        print(f"[face_detector] Error: {exc}", file=sys.stderr)
         return 1
+
+    return 0
 
 
 if __name__ == "__main__":  # pragma: no cover - manual invocation helper

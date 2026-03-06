@@ -12,7 +12,6 @@ import fnmatch
 import uuid
 import datetime
 from pathlib import Path
-from PIL import Image
 
 from common.logger import Logger
 from common.formatter import Formatter, ParsedFilename
@@ -24,6 +23,8 @@ from common.router import Router
 from common.version import get_version
 from common.project_config import ProjectConfig
 from preview_maker.config import Config
+from preview_maker.constants import FORMAT_MAP
+from preview_maker.converter import Converter
 
 
 class PreviewMaker:
@@ -38,6 +39,12 @@ class PreviewMaker:
     def __init__(self, logger: Logger, config_path: str | Path | None = None, no_metadata: bool = False) -> None:
         self._logger = logger
         self._config = Config(logger, config_path)
+        self._converter = Converter(
+            logger,
+            size=self._config.image_size,
+            image_format=self._config.image_format,
+            save_options=self._config.save_options,
+        )
 
         cfg = ProjectConfig.instance()
         self._exifer = Exifer()
@@ -45,13 +52,12 @@ class PreviewMaker:
         self._router = Router(routes=cfg.routes, logger=logger, formats=cfg.formats)
         self._no_metadata = no_metadata
 
+
     def __call__(
         self,
         *,
         path: Path,
         overwrite: bool = False,
-        max_size: int = 2000,
-        quality: int = 80,
     ) -> int:
         """
         Run batch preview generation under ``path``.
@@ -63,10 +69,9 @@ class PreviewMaker:
         return self._generate_previews_for_sources(
             path=path,
             overwrite=overwrite,
-            max_size=max_size,
-            quality=quality,
         )
 
+    
     def should_process(self, file_path: Path) -> bool:
         """Check whether a file is eligible for preview generation.
 
@@ -119,14 +124,13 @@ class PreviewMaker:
 
         return True
 
+    
     def process_single_file(
         self,
         src_path: Path,
         *,
         archive_path: Path,
         overwrite: bool = False,
-        max_size: int = 2000,
-        quality: int = 80,
     ) -> bool:
         """Generate a preview for a single source file.
 
@@ -137,8 +141,6 @@ class PreviewMaker:
             src_path: Source file matching one of the ``source_priority`` patterns.
             archive_path: Resolved archive root for preview destination routing.
             overwrite: If True, regenerate existing previews.
-            max_size: Maximum long edge in pixels.
-            quality: JPEG quality (1-100).
 
         Returns:
             True if a preview was generated, False otherwise.
@@ -183,11 +185,10 @@ class PreviewMaker:
         self._convert_to_prv(
             input_path=src_path,
             output_path=prv_path,
-            max_size=max_size,
-            quality=quality,
         )
         return True
 
+    
     def _should_upgrade_prv(self, prv_path: Path, src_path: Path) -> bool:
         """Check whether an existing preview should be regenerated.
 
@@ -220,19 +221,18 @@ class PreviewMaker:
             self._logger.debug(f"Cannot determine upgrade eligibility for {prv_path}: {exc}")
             return False
 
+    
     def _generate_previews_for_sources(
         self,
         *,
         path: Path,
         overwrite: bool,
-        max_size: int,
-        quality: int,
     ) -> int:
         """Walk under *path* and generate previews for matching source files."""
 
         written = 0
 
-        self._logger.debug(f"Starting batch preview generation under {path} (overwrite={overwrite}, max_size={max_size}, quality={quality})")
+        self._logger.debug(f"Starting batch preview generation under {path} (overwrite={overwrite}, size={self._config.image_size}, format={self._config.image_format})")
 
         # Get folders where source files are stored according to routing rules
         target_folders = self._router.get_folders_for_patterns(self._config.source_priority)
@@ -265,8 +265,6 @@ class PreviewMaker:
                             src_path,
                             archive_path=archive_path,
                             overwrite=overwrite,
-                            max_size=max_size,
-                            quality=quality,
                         ):
                             written += 1
                     except Exception as e:
@@ -276,16 +274,13 @@ class PreviewMaker:
 
         return written
 
+    
     def _build_preview_filename(self, parsed: ParsedFilename) -> str:
-        """Build preview filename from configured template and parsed fields.
+        """Build preview filename from configured template and parsed fields."""
+        stem = self._formatter.format_template(parsed, self._config.template)
+        return f"{stem}{FORMAT_MAP[self._config.image_format][1]}"
 
-        Uses :attr:`Config.preview_filename_template` for the stem and
-        :attr:`Config.preview_extension` for the extension.
-        """
-        kwargs = Formatter._template_kwargs(parsed)
-        stem = self._config.preview_filename_template.format_map(kwargs)
-        return f"{stem}.{self._config.preview_extension}"
-
+    
     def _get_match_priority(self, filename: str) -> int | None:
         """Return the priority index of the first matching source pattern.
 
@@ -296,6 +291,7 @@ class PreviewMaker:
                 return i
         return None
 
+    
     @staticmethod
     def _same_shot(a: ParsedFilename, b: ParsedFilename) -> bool:
         """Check whether two parsed filenames represent the same shot.
@@ -316,34 +312,20 @@ class PreviewMaker:
             and a.side == b.side
         )
 
+    
     def _convert_to_prv(
         self,
         *,
         input_path: Path,
         output_path: Path,
-        max_size: int,
-        quality: int,
     ) -> None:
-        """Convert a single source image to a preview JPEG."""
+        """Convert a single source image to a preview.
 
-        if not input_path.exists():
-            self._logger.error(f"Input file does not exist: {input_path}")
-            raise FileNotFoundError(f"Input file does not exist: {input_path}")
+        Delegates pixel conversion to :class:`Converter` and then
+        optionally writes archival metadata to the output file.
+        """
 
-        Image.MAX_IMAGE_PIXELS = None
-
-        self._logger.debug(f"Opening source image for preview conversion: {input_path} (max_size={max_size}, quality={quality})")
-
-        with Image.open(input_path) as img:
-            img.load()
-
-            if img.mode not in ("RGB", "L"):
-                img = img.convert("RGB")
-
-            img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
-
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            img.save(output_path, format="JPEG", quality=quality, optimize=True)
+        self._converter(input_path, output_path)
 
         # After pixels are written, propagate archival metadata from source
         # to the preview derivative.
@@ -358,6 +340,7 @@ class PreviewMaker:
 
         self._logger.info(f"Saved preview: {output_path}")
 
+    
     def _write_derivative_metadata(self, master_path: Path, prv_path: Path) -> None:
         """Write EXIF/XMP metadata to preview derivative based on source.
 

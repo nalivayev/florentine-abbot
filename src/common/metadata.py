@@ -71,12 +71,7 @@ class ArchiveMetadata:
         return str(value)
 
     def get_configurable_tags(self) -> list[str]:
-        """
-        Return list of XMP tags for reading/copying.
-
-        Returns:
-            list[str]: List of tag names like ["XMP-dc:Description", ...]
-        """
+        """Return list of XMP tags for reading/copying."""
         return list(self._tags.values())
 
     def get_metadata_values(self, logger: Optional[Logger] = None) -> dict[str, Any]:

@@ -29,7 +29,7 @@ class TestRouter:
             extension=extension,
         )
 
-    def test_default_routing_raw_to_sources(self):
+    def test_default_routing_raw_to_sources(self) -> None:
         """RAW files should go to SOURCES/ with default routing."""
         router = Router()
         parsed = self._create_parsed("RAW")
@@ -39,7 +39,7 @@ class TestRouter:
 
         assert target == Path("/archive/2020/2020.01.15/SOURCES")
 
-    def test_default_routing_msr_to_sources(self):
+    def test_default_routing_msr_to_sources(self) -> None:
         """MSR files should go to SOURCES/ with default routing."""
         router = Router()
         parsed = self._create_parsed("MSR")
@@ -49,7 +49,7 @@ class TestRouter:
 
         assert target == Path("/archive/2020/2020.01.15/SOURCES")
 
-    def test_default_routing_prv_to_date_root(self):
+    def test_default_routing_prv_to_date_root(self) -> None:
         """PRV files should go to date folder root with default routing."""
         router = Router()
         parsed = self._create_parsed("PRV", "jpg")
@@ -59,7 +59,7 @@ class TestRouter:
 
         assert target == Path("/archive/2020/2020.01.15")
 
-    def test_default_routing_unknown_to_derivatives(self):
+    def test_default_routing_unknown_to_derivatives(self) -> None:
         """Unknown suffix should fall through to catch-all DERIVATIVES/."""
         router = Router()
         parsed = self._create_parsed("UNKNOWN")
@@ -69,7 +69,7 @@ class TestRouter:
 
         assert target == Path("/archive/2020/2020.01.15/DERIVATIVES")
 
-    def test_custom_routing(self):
+    def test_custom_routing(self) -> None:
         """Custom routing rules should be respected."""
         custom_routes = {"rules": [
             ["*.RAW.*", "SOURCES"],
@@ -91,7 +91,7 @@ class TestRouter:
         assert cor_target == Path("/archive/2020/2020.01.15/MASTERS")
         assert edt_target == Path("/archive/2020/2020.01.15/EXPORTS")
 
-    def test_custom_catch_all(self):
+    def test_custom_catch_all(self) -> None:
         """Router should use the catch-all rule for unmatched filenames."""
         custom_routes = {"rules": [
             ["*.RAW.*", "SOURCES"],
@@ -107,7 +107,7 @@ class TestRouter:
 
         assert target == Path("/archive/2020/2020.01.15/CUSTOM_DEFAULT")
 
-    def test_case_insensitive_pattern_matching(self):
+    def test_case_insensitive_pattern_matching(self) -> None:
         """Pattern matching should be case-insensitive."""
         router = Router()
 
@@ -124,7 +124,7 @@ class TestRouter:
         assert target_lower == Path("/archive/2020/2020.01.15/SOURCES")
         assert target_mixed == Path("/archive/2020/2020.01.15/SOURCES")
 
-    def test_filename_parameter_overrides_reconstruction(self):
+    def test_filename_parameter_overrides_reconstruction(self) -> None:
         """When filename is provided, it is used for pattern matching."""
         custom_routes = {"rules": [
             ["scan_*.tif", "SCANS"],
@@ -139,7 +139,7 @@ class TestRouter:
 
         assert target == Path("/archive/2020/2020.01.15/SCANS")
 
-    def test_get_normalized_filename(self):
+    def test_get_normalized_filename(self) -> None:
         """Normalized filename should have leading zeros."""
         router = Router()
         parsed = ParsedFilename(
@@ -162,7 +162,7 @@ class TestRouter:
 
         assert normalized == "2020.01.05.09.08.07.E.FAM.POR.0001.A.RAW"
 
-    def test_year_month_day_folder_structure(self):
+    def test_year_month_day_folder_structure(self) -> None:
         """Target folder should follow YYYY/YYYY.MM.DD structure."""
         router = Router()
 
@@ -190,7 +190,7 @@ class TestRouter:
         assert target_jan == Path("/archive/2020/2020.01.15/SOURCES")
         assert target_dec == Path("/archive/2020/2020.12.31/SOURCES")
 
-    def test_get_folders_for_patterns_default(self):
+    def test_get_folders_for_patterns_default(self) -> None:
         """get_folders_for_patterns should return correct folders for default routes."""
         router = Router()
 
@@ -206,7 +206,7 @@ class TestRouter:
         folders = router.get_folders_for_patterns(["*.PRV.*"])
         assert folders == set()
 
-    def test_get_folders_for_patterns_custom(self):
+    def test_get_folders_for_patterns_custom(self) -> None:
         """get_folders_for_patterns should respect custom routing rules."""
         custom_routes = {"rules": [
             ["*.RAW.*", "SOURCES"],
@@ -227,7 +227,7 @@ class TestRouter:
         folders = router.get_folders_for_patterns(["*.PRV.*"])
         assert folders == set()
 
-    def test_first_matching_rule_wins(self):
+    def test_first_matching_rule_wins(self) -> None:
         """When multiple rules could match, the first one wins."""
         custom_routes = {"rules": [
             ["*.RAW.*", "RAW_FOLDER"],
@@ -242,7 +242,7 @@ class TestRouter:
 
         assert target == Path("/archive/2020/2020.01.15/RAW_FOLDER")
 
-    def test_fallback_when_no_pattern_matches(self):
+    def test_fallback_when_no_pattern_matches(self) -> None:
         """When no rule matches, Router falls back to DERIVATIVES."""
         routes_without_catchall = {"rules": [
             ["*.RAW.*", "SOURCES"],

@@ -3,6 +3,7 @@ from sys import exit
 from typing import Sequence
 
 from common.logger import Logger
+from common.utils import log_banner
 from scan_batcher.batch import Batch, Scan
 from scan_batcher.parser import Parser
 from common.version import get_version
@@ -102,17 +103,16 @@ def main() -> None:
     version = get_version()
     batch_type = args.batch[0] if args.batch else "scan"
     dpis_str = ", ".join(str(d) for d in args.dpis) if args.dpis else "auto"
-    logger.info("-" * 45)
-    logger.info("  scan-batcher %s", version)
-    logger.info("  Engine:      %s", args.engine)
-    logger.info("  Batch:       %s", batch_type)
-    logger.info("  Workflow:    %s", args.workflow or "none")
-    logger.info("  Min DPI:     %s", args.min_dpi or "auto")
-    logger.info("  Max DPI:     %s", args.max_dpi or "auto")
-    logger.info("  DPIs:        %s", dpis_str)
-    logger.info("  Rounding:    %s", args.rounding)
-    logger.info("  No metadata: %s", "yes" if args.no_metadata else "no")
-    logger.info("-" * 45)
+    log_banner(logger, "scan-batcher", version, {
+        "Engine": args.engine,
+        "Batch": batch_type,
+        "Workflow": args.workflow or "none",
+        "Min DPI": str(args.min_dpi or "auto"),
+        "Max DPI": str(args.max_dpi or "auto"),
+        "DPIs": dpis_str,
+        "Rounding": str(args.rounding),
+        "No metadata": "yes" if args.no_metadata else "no",
+    })
 
     logger.info("Script has been started")
     batch = _create_batch(logger, args.batch, args.min_dpi, args.max_dpi, args.dpis, args.rounding)

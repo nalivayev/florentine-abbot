@@ -7,6 +7,7 @@ from typing import Any
 
 from common.logger import Logger
 from common.config_utils import get_config_dir, ensure_config_exists, load_config, get_template_path
+from preview_maker.constants import DEFAULT_FORMAT_OPTIONS, DEFAULT_SIZE, DEFAULT_FORMAT
 
 
 class Config:
@@ -28,13 +29,12 @@ class Config:
         "*.MSR.*",
         "*.RAW.*",
     ]
-    _DEFAULT_PREVIEW_FILENAME_TEMPLATE: str = (
+    _DEFAULT_TEMPLATE: str = (
         "{year:04d}.{month:02d}.{day:02d}"
         ".{hour:02d}.{minute:02d}.{second:02d}"
         ".{modifier}.{group}.{subgroup}"
         ".{sequence:04d}.{side}.PRV"
     )
-    _DEFAULT_PREVIEW_EXTENSION: str = "jpg"
 
     def __init__(self, logger: Logger, config_path: str | Path | None = None) -> None:
         """Initialize configuration.
@@ -80,25 +80,43 @@ class Config:
         in a folder match different patterns, the one matching an earlier
         pattern is preferred as the preview source.
         """
-        return self._data.get("source_priority", self._DEFAULT_SOURCE_PRIORITY)
+        return self._data.get("priority", self._DEFAULT_SOURCE_PRIORITY)
 
     @property
-    def preview_filename_template(self) -> str:
-        """Template for preview filenames (without extension).
+    def template(self) -> str:
+        """Template for preview filename stem (without extension).
 
         Uses the same ``{field}`` syntax as ``archive_filename_template``.
         The literal preview marker (e.g. ``PRV``) should be embedded
         directly in the template string.
         """
-        return self._data.get(
-            "preview_filename_template",
-            self._DEFAULT_PREVIEW_FILENAME_TEMPLATE,
-        )
+        return self._data.get("template", self._DEFAULT_TEMPLATE)
 
     @property
-    def preview_extension(self) -> str:
-        """File extension for generated previews (without dot)."""
-        return self._data.get("preview_extension", self._DEFAULT_PREVIEW_EXTENSION)
+    def image_format(self) -> str:
+        """Output image format name (jpeg, png, webp, tiff)."""
+        image = self._data.get("image", {})
+        return image.get("format", DEFAULT_FORMAT)
+
+    @property
+    def image_size(self) -> int:
+        """Maximum long edge in pixels for preview images."""
+        image = self._data.get("image", {})
+        return int(image.get("size", DEFAULT_SIZE))
+
+    @property
+    def save_options(self) -> dict[str, Any]:
+        """PIL save keyword arguments for the configured image format.
+
+        Merges built-in defaults with user overrides from the
+        format-specific section (e.g. ``image.jpeg.quality``).
+        """
+        fmt = self.image_format
+        defaults = dict(DEFAULT_FORMAT_OPTIONS.get(fmt, {}))
+        image = self._data.get("image", {})
+        overrides = image.get(fmt, {})
+        defaults.update(overrides)
+        return defaults
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a raw configuration value by key.

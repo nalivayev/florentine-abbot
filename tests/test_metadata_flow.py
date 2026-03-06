@@ -128,7 +128,7 @@ class TestMetadataFlow:
         # Seed CreateDate so write derives DateTimeDigitized
         exifer.store[master] = {TAG_EXIFIFD_CREATE_DATE: "2026:01:15 10:00:00"}
 
-        metadata_config = {
+        metadata_config: dict[str, object] = {
             "languages": {
                 "en-US": {
                     "default": True,

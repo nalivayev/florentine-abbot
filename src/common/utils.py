@@ -6,6 +6,16 @@ import time
 from pathlib import Path
 
 from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
+from common.logger import Logger
+
+
+def log_banner(logger: Logger, app_name: str, version: str, fields: dict[str, str]) -> None:
+    """Log a startup banner with app name, version, and key/value fields."""
+    logger.info("-" * 45)
+    logger.info("  %s %s", app_name, version)
+    for label, value in fields.items():
+        logger.info("  %-14s %s", label + ":", value)
+    logger.info("-" * 45)
 
 
 def wait_for_stable(

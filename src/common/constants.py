@@ -5,6 +5,8 @@ Defines canonical directory names, tag names, and cross-package conventions
 so that tools like File Organizer and Preview Maker stay in sync.
 """
 
+from typing import Any
+
 # Common set of supported image file extensions (lowercase).
 # Used by File Organizer and Preview Maker to detect real image files
 # and skip sidecar/auxiliary artifacts such as .log, .icc, etc.
@@ -118,7 +120,7 @@ XMP_ACTION_SAVED = "saved"                  # File saved
 # Default metadata configuration (tags + languages)
 # Used by ArchiveMetadata.  The "tags" sub-dict maps friendly field names to
 # XMP tags; "languages" holds per-language values for those fields.
-DEFAULT_METADATA: dict = {
+DEFAULT_METADATA: dict[str, Any] = {
     "tags": {
         "description": TAG_XMP_DC_DESCRIPTION,
         "creator": TAG_XMP_DC_CREATOR,
@@ -149,7 +151,7 @@ DEFAULT_METADATA: dict = {
 #   Pattern is matched against the full filename using fnmatch (case-insensitive).
 #   Rules are evaluated in order — first match wins.
 #   "." = date root (no subfolder)
-DEFAULT_ROUTES: dict = {
+DEFAULT_ROUTES: dict[str, list[list[str]]] = {
     "rules": [
         ["*.RAW.*",  "SOURCES"],
         ["*.MSR.*",  "SOURCES"],
@@ -172,7 +174,7 @@ DEFAULT_FORMATS: dict[str, str] = {
 }
 
 # Complete default configuration — used as fallback when config.json is absent
-DEFAULT_CONFIG: dict = {
+DEFAULT_CONFIG: dict[str, Any] = {
     "formats": DEFAULT_FORMATS,
     "routes": DEFAULT_ROUTES,
     "metadata": DEFAULT_METADATA,

@@ -1,16 +1,15 @@
 """
 Visualise detected face bounding boxes on a scaled-down preview image.
 
-Reads bounding boxes from the :class:`FaceStore` database and draws them onto
-a JPEG preview of the source image.  The original file is never modified.
+Detects faces in the source image and draws numbered bounding boxes onto a
+JPEG preview.  The original file is never modified.
 
 Typical usage::
 
-    viz = FaceVisualizer(logger, max_size=3000)
-    out = viz.draw(
-        image_path=Path("D:/1925/1925.04.00.00.00.00.C.001.001.0001.A.RAW.tif"),
-        store=store,
-        output_path=Path("preview_faces.jpg"),
+    viz = FacePreviewer(logger, max_size=3000)
+    out = viz(
+        image_path=Path("photo.tif"),
+        output_path=Path("preview_detect.jpg"),
     )
 """
 
@@ -19,39 +18,47 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 from common.logger import Logger
-from face_detector.store import FaceStore
+from face_detector.config import Config
+from face_detector.detectors import get_detector
 
 
-class FaceVisualizer:
-    """Draw face bounding boxes on a downscaled preview image."""
-    
+class FacePreviewer:
+    """Detect faces and draw bounding boxes on a downscaled preview image."""
+
     _BOX_COLOUR = (220, 30, 30)       # red
     _BOX_WIDTH   = 3                  # px (after scaling to preview)
     _LABEL_FILL  = (220, 30, 30, 180) # semi-transparent red
     _LABEL_TEXT  = (255, 255, 255)
 
-    def __init__(self, logger: Logger, *, max_size: int = 3000) -> None:
+    def __init__(
+        self,
+        logger: Logger,
+        config_path: str | Path | None = None,
+        *,
+        detector: str | None = None,
+        max_size: int = 3000,
+    ) -> None:
         self._logger = logger
         self._max_size = max_size
+        config = Config(logger, config_path)
+        detector_cls = get_detector(detector or config.detector)
+        self._detector = detector_cls(logger, config)
 
-    def draw(
+    def __call__(
         self,
         image_path: Path,
-        store: FaceStore,
         output_path: Path | None = None,
     ) -> Path:
         """
-        Load *image_path*, draw bounding boxes for all faces stored in
-        *store*, save the result and return its path.
+        Detect faces in *image_path*, draw numbered bounding boxes, save and
+        return the output path.
 
         Parameters
         ----------
         image_path:
             Source image (original, possibly very large).
-        store:
-            Open :class:`FaceStore` — used to look up face records.
         output_path:
-            Destination JPEG.  Defaults to ``<stem>_faces.jpg`` next to
+            Destination JPEG.  Defaults to ``<stem>_detect.jpg`` next to
             the source file.
 
         Returns
@@ -59,9 +66,9 @@ class FaceVisualizer:
         Path
             Path to the saved preview image.
         """
-        faces = store.get_faces_by_file(image_path)
+        faces = self._detector.detect(image_path)
         if not faces:
-            self._logger.warning(f"No face records found for {image_path.name} in the database")
+            self._logger.warning(f"No faces detected in {image_path.name}")
 
         Image.MAX_IMAGE_PIXELS = None
         img = Image.open(image_path)
@@ -78,42 +85,30 @@ class FaceVisualizer:
             new_w = int(orig_w * scale)
             new_h = int(orig_h * scale)
             img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-            self._logger.debug(f"Downscaled {image_path.name} → {new_w}x{new_h} (scale={scale:.4f})")
+            self._logger.debug(f"Downscaled {image_path.name} -> {new_w}x{new_h} (scale={scale:.4f})")
 
         if img.mode == "RGBA":
             img = img.convert("RGB")
 
         draw = ImageDraw.Draw(img, "RGBA")
-        box_w = max(2, int(self._BOX_WIDTH / scale * scale))  # stay reasonable
-
+        box_w = self._BOX_WIDTH
         font = self._load_font(size=max(14, int(18 * scale)))
 
-        for face in faces:
-            # Scale bbox from original → preview coords
-            x = int(face.bbox_x * scale)
-            y = int(face.bbox_y * scale)
-            w = int(face.bbox_w * scale)
-            h = int(face.bbox_h * scale)
+        for i, face in enumerate(faces):
+            x = int(face.bbox[0] * scale)
+            y = int(face.bbox[1] * scale)
+            w = int(face.bbox[2] * scale)
+            h = int(face.bbox[3] * scale)
 
-            # Clamp to image bounds
             pw, ph = img.size
             x1, y1 = max(0, x), max(0, y)
             x2, y2 = min(pw, x + w), min(ph, y + h)
 
             draw.rectangle([x1, y1, x2, y2], outline=self._BOX_COLOUR, width=box_w)
 
-            # Label: person name > cluster id > face id
-            if face.person and face.person.name:
-                label = face.person.name
-            elif face.cluster is not None:
-                label = f"cluster-{face.cluster}"
-            else:
-                label = f"#{face.id}"
-
             conf_str = f" {face.confidence:.2f}" if face.confidence is not None else ""
-            text = f"{label}{conf_str}"
+            text = f"#{i + 1}{conf_str}"
 
-            # Draw small label background + text
             try:
                 bbox_text = font.getbbox(text)
                 tw = bbox_text[2] - bbox_text[0]
@@ -127,12 +122,12 @@ class FaceVisualizer:
             draw.text((tx + 3, ty + 2), text, fill=self._LABEL_TEXT, font=font)
 
         if output_path is None:
-            output_path = image_path.parent / (image_path.stem + "_faces.jpg")
+            output_path = image_path.parent / (image_path.stem + "_detect.jpg")
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         img.save(output_path, format="JPEG", quality=90)
 
-        self._logger.info(f"Saved preview with {len(faces)} face(s) → {output_path}")
+        self._logger.info(f"Saved preview with {len(faces)} face(s) -> {output_path}")
         return output_path
 
     @staticmethod

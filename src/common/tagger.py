@@ -70,13 +70,6 @@ class Tagger:
         self._read_buffer: list[Tag] = []
         self._write_buffer: list[Tag] = []
 
-    @property
-    def file_path(self) -> Path:
-        """
-        The file this tagger is bound to.
-        """
-        return self._file_path
-
     def begin(self) -> None:
         """
         Enter batch mode.

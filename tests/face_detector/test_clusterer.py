@@ -2,6 +2,9 @@
 Unit tests for FaceClusterer (requires scikit-learn but not DeepFace).
 """
 
+from collections.abc import Generator
+from pathlib import Path
+
 import pytest
 import numpy as np
 
@@ -9,6 +12,7 @@ pytest.importorskip("sklearn", reason="scikit-learn required for clustering test
 
 from face_detector.clusterer import FaceClusterer
 from face_detector.store import FaceStore
+from common.logger import Logger
 
 
 def _cluster_vec(center: np.ndarray, noise: float, seed: int) -> np.ndarray:
@@ -19,7 +23,7 @@ def _cluster_vec(center: np.ndarray, noise: float, seed: int) -> np.ndarray:
 
 
 @pytest.fixture
-def store(tmp_path):
+def store(tmp_path: Path) -> Generator[FaceStore, None, None]:
     db = tmp_path / "cluster_test.db"
     with FaceStore(db) as s:
         yield s
@@ -27,7 +31,7 @@ def store(tmp_path):
 
 # ── cluster() ─────────────────────────────────────────────────────────────────
 
-def test_cluster_separates_two_identities(logger):
+def test_cluster_separates_two_identities(logger: Logger) -> None:
     # Use explicitly orthogonal unit vectors as cluster centres so cosine
     # distance between groups is exactly 1.0 (>> eps=0.3).
     center_a = np.zeros(512, dtype=np.float32); center_a[0] = 1.0
@@ -52,7 +56,7 @@ def test_cluster_separates_two_identities(logger):
     assert labels[0] != labels[5]
 
 
-def test_cluster_empty_input(logger):
+def test_cluster_empty_input(logger: Logger) -> None:
     clusterer = FaceClusterer(logger)
     result = clusterer.cluster(np.zeros((0, 512), dtype=np.float32))
     assert len(result) == 0
@@ -60,7 +64,7 @@ def test_cluster_empty_input(logger):
 
 # ── assign_domains() ──────────────────────────────────────────────────────────
 
-def test_assign_domains_creates_domains(logger, store):
+def test_assign_domains_creates_domains(logger: Logger, store: FaceStore) -> None:
     rng = np.random.default_rng(42)
     center = rng.random(512).astype(np.float32)
     center /= np.linalg.norm(center)
@@ -82,7 +86,7 @@ def test_assign_domains_creates_domains(logger, store):
     assert len(unclustered) <= 4
 
 
-def test_assign_domains_no_faces(logger, store):
+def test_assign_domains_no_faces(logger: Logger, store: FaceStore) -> None:
     clusterer = FaceClusterer(logger)
     n = clusterer.assign_domains(store)
     assert n == 0

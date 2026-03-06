@@ -6,6 +6,8 @@ Uses create_test_image() which follows the real scanning workflow
 (VueScan tags -> FakeMetadataWorkflow for XMP).
 """
 
+from pathlib import Path
+
 import pytest
 
 from file_organizer.organizer import FileOrganizer
@@ -50,7 +52,7 @@ class TestPipeline:
     FILENAME_STEM = "1925.04.00.00.00.00.C.001.001.0001.A"
 
     @pytest.fixture(autouse=True)
-    def setup(self, tmp_path):
+    def setup(self, tmp_path: Path) -> None:
         self.root = tmp_path
         self.input_dir = tmp_path / "inbox"
         self.input_dir.mkdir()
@@ -58,7 +60,7 @@ class TestPipeline:
         self.logger = Logger("test-pipeline")
         self.exifer = Exifer()
 
-    def _create_scan(self):
+    def _create_scan(self) -> Path:
         """
         Create a test TIFF that mirrors real scan-batcher output.
         """
@@ -73,7 +75,7 @@ class TestPipeline:
         )
         return scan_file
 
-    def _find_file(self, root, pattern):
+    def _find_file(self, root: Path, pattern: str) -> Path:
         """
         Find a single file matching *pattern* under *root*.
         """
@@ -81,7 +83,7 @@ class TestPipeline:
         assert found, f"No file matching '{pattern}' found under {root}"
         return found[0]
 
-    def test_full_pipeline(self):
+    def test_full_pipeline(self) -> None:
         """
         create_test_image -> FileOrganizer -> PreviewMaker with full metadata checks.
         """
@@ -163,7 +165,7 @@ class TestPipeline:
 
         # === Step 2: PreviewMaker ===
         maker = PreviewMaker(self.logger)
-        prv_count = maker(path=self.output_dir, overwrite=False, max_size=800, quality=75)
+        prv_count = maker(path=self.output_dir, overwrite=False)
         assert prv_count == 1, "PreviewMaker should generate 1 PRV"
 
         prv = self._find_file(self.output_dir, "*.PRV.jpg")

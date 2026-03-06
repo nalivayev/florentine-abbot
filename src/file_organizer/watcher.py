@@ -52,41 +52,36 @@ class FileWatcher(FileSystemEventHandler):
         self._no_metadata = no_metadata
         self._output_path: Path = Path(output_path).resolve()
 
-        # Validate early — reuse the same check as batch mode.
-        FileOrganizer._validate_no_overlap(self._path, self._output_path)
-
         self._organizer = FileOrganizer(logger)
         self._observer = Observer()
         self._stop_event = threading.Event()
         self._setup_signal_handlers()
 
-    def _setup_signal_handlers(self) -> None:
-        """
-        Setup signal handlers for config reload.
-        """
-        def reload_config(signum, frame):
-            self._logger.info("Received SIGHUP, reloading configuration...")
-            if self._config.reload():
-                self._logger.info("Configuration reloaded successfully")
-            else:
-                self._logger.info("Configuration unchanged")
 
-        # SIGHUP for config reload (Unix only)
+    def _on_sighup(self, signum: int, frame: object) -> None:
+        self._logger.info("Received SIGHUP, reloading configuration...")
+        if self._config.reload():
+            self._logger.info("Configuration reloaded successfully")
+        else:
+            self._logger.info("Configuration unchanged")
+
+
+    def _setup_signal_handlers(self) -> None:
+        """Setup signal handlers for config reload (Unix only)."""
         try:
             sighup = getattr(signal, 'SIGHUP', None)
             if sighup:
-                signal.signal(sighup, reload_config)
+                signal.signal(sighup, self._on_sighup)
         except (AttributeError, OSError):
-            # Windows doesn't have SIGHUP
             self._logger.debug("SIGHUP not available on this platform")
 
-    # ── watchdog event handlers ────────────────────────────────────────
 
     def on_created(self, event: FileSystemEvent) -> None:
         """Handle file creation events."""
         if event.is_directory:
             return
         self._process_file(Path(str(event.src_path)), wait=True)
+
 
     def on_moved(self, event: FileSystemEvent) -> None:
         """Handle file movement events."""
@@ -95,7 +90,6 @@ class FileWatcher(FileSystemEventHandler):
         if isinstance(event, FileSystemMovedEvent):
             self._process_file(Path(str(event.dest_path)), wait=False)
 
-    # ── per-file processing ────────────────────────────────────────────
 
     def _process_file(self, file_path: Path, wait: bool = True) -> None:
         """Filter and delegate a single file to :class:`FileOrganizer`.
@@ -127,7 +121,6 @@ class FileWatcher(FileSystemEventHandler):
         except Exception as e:
             self._logger.error(f"Error processing {file_path}: {e}")
 
-    # ── lifecycle ──────────────────────────────────────────────────────
 
     def start(self) -> None:
         """
@@ -152,6 +145,7 @@ class FileWatcher(FileSystemEventHandler):
         self._observer.stop()
         self._observer.join()
         self._logger.info("Stopped monitoring")
+
 
     def stop(self) -> None:
         """

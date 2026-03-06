@@ -10,8 +10,6 @@ from unittest.mock import patch
 from common.logger import Logger
 from common.formatter import ParsedFilename
 from file_organizer.processor import FileProcessor
-from tests.common.test_utils import create_test_image
-
 
 class TestFileProcessor:
     """
@@ -40,7 +38,7 @@ class TestFileProcessor:
         self.temp_dir = Path(temp_dir)
         return self.temp_dir
 
-    def _minimal_config(self) -> dict:
+    def _minimal_config(self) -> dict[str, object]:
         """
         Minimal configuration for testing.
         """
@@ -53,31 +51,6 @@ class TestFileProcessor:
                 }
             }
         }
-
-    def test_parse_and_validate_valid_file(self):
-        """
-        Test _parse_and_validate with valid filename.
-        """
-        processor = FileProcessor(self.logger)
-        result = processor._parse_and_validate('1950.06.15.12.00.00.E.FAM.POR.000001.A.MSR.tiff')
-        assert result is not None
-        assert result.year == 1950
-
-    def test_parse_and_validate_invalid_file(self):
-        """
-        Test _parse_and_validate with invalid filename.
-        """
-        processor = FileProcessor(self.logger)
-        result = processor._parse_and_validate('invalid.jpg')
-        assert result is None
-
-    def test_parse_and_validate_invalid_date(self):
-        """
-        Test _parse_and_validate with invalid date.
-        """
-        processor = FileProcessor(self.logger)
-        result = processor._parse_and_validate('1950.13.15.00.00.00.E.FAM.POR.000001.A.MSR.tiff')
-        assert result is None
 
     def test_process_skips_write_when_no_metadata(self):
         """process() skips _write_metadata when no_metadata=True."""

@@ -13,7 +13,7 @@ from face_detector.detectors import get_detector, load_detectors, register_detec
 from face_detector.store import FaceStore
 from face_detector.clusterer import FaceClusterer
 from face_detector.engine import FaceDetectorEngine
-from face_detector.visualizer import FaceVisualizer
+from face_detector.previewer import FacePreviewer
 
 __all__ = [
     "Config",
@@ -25,5 +25,5 @@ __all__ = [
     "FaceStore",
     "FaceClusterer",
     "FaceDetectorEngine",
-    "FaceVisualizer",
+    "FacePreviewer",
 ]

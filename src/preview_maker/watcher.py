@@ -32,8 +32,6 @@ class PreviewWatcher(FileSystemEventHandler):
         path: str,
         *,
         config_path: str | Path | None = None,
-        max_size: int = 2000,
-        quality: int = 80,
         no_metadata: bool = False,
     ) -> None:
         """
@@ -43,20 +41,15 @@ class PreviewWatcher(FileSystemEventHandler):
             logger: Logger instance.
             path: Archive root to watch (recursively).
             config_path: Optional path to preview-maker config JSON.
-            max_size: Maximum long edge in pixels for preview.
-            quality: JPEG quality (1-100).
             no_metadata: If True, skip writing EXIF/XMP metadata.
         """
         super().__init__()
         self._path = Path(path).resolve()
         self._logger = logger
-        self._max_size = max_size
-        self._quality = quality
         self._maker = PreviewMaker(logger, config_path, no_metadata=no_metadata)
         self._observer = Observer()
         self._stop_event = threading.Event()
 
-    # ── watchdog event handlers ────────────────────────────────────────
 
     def on_created(self, event: FileSystemEvent) -> None:
         """
@@ -75,7 +68,6 @@ class PreviewWatcher(FileSystemEventHandler):
         if isinstance(event, FileSystemMovedEvent):
             self._process_file(Path(str(event.dest_path)), wait=False)
 
-    # ── per-file processing ────────────────────────────────────────────
 
     def _process_file(self, file_path: Path, wait: bool = True) -> None:
         """
@@ -100,13 +92,10 @@ class PreviewWatcher(FileSystemEventHandler):
             self._maker.process_single_file(
                 file_path,
                 archive_path=self._path,
-                max_size=self._max_size,
-                quality=self._quality,
             )
         except Exception as e:
             self._logger.error(f"Error processing {file_path}: {e}")
 
-    # ── lifecycle ──────────────────────────────────────────────────────
 
     def start(self) -> None:
         """

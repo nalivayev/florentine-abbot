@@ -2,16 +2,18 @@
 Unit tests for face_detector.store (no DeepFace dependency required).
 """
 
+from collections.abc import Generator
+from pathlib import Path
+
 import pytest
 import numpy as np
-from pathlib import Path
 
 from face_detector.store import FaceStore
 
 
 # ── Embedding serialisation ────────────────────────────────────────────────────
 
-def test_embedding_round_trip():
+def test_embedding_round_trip() -> None:
     original = np.random.randn(512).astype(np.float32)
     recovered = FaceStore._bytes_to_embedding(
         FaceStore._embedding_to_bytes(original)
@@ -22,7 +24,7 @@ def test_embedding_round_trip():
 # ── FaceStore ─────────────────────────────────────────────────────────────────
 
 @pytest.fixture
-def store(tmp_path):
+def store(tmp_path: Path) -> Generator[FaceStore, None, None]:
     db = tmp_path / "test_faces.db"
     with FaceStore(db) as s:
         yield s
@@ -34,7 +36,7 @@ def _make_embedding(seed: int = 0) -> np.ndarray:
     return vec / np.linalg.norm(vec)
 
 
-def test_add_and_retrieve_face(store):
+def test_add_and_retrieve_face(store: FaceStore) -> None:
     vec = _make_embedding()
     img_file = store.get_or_create_file("/archive/2020/img.PRV.jpg")
     face = store.add_face(
@@ -54,7 +56,7 @@ def test_add_and_retrieve_face(store):
     )
 
 
-def test_file_already_processed(store):
+def test_file_already_processed(store: FaceStore) -> None:
     assert not store.file_already_processed("/archive/img.jpg")
 
     img_file = store.get_or_create_file("/archive/img.jpg")
@@ -66,7 +68,7 @@ def test_file_already_processed(store):
     assert store.file_already_processed("/archive/img.jpg")
 
 
-def test_get_faces_by_file(store):
+def test_get_faces_by_file(store: FaceStore) -> None:
     img_file = store.get_or_create_file("/archive/group.jpg")
     for i in range(3):
         store.add_face(
@@ -85,7 +87,7 @@ def test_get_faces_by_file(store):
     assert len(faces) == 3
 
 
-def test_person_lifecycle(store):
+def test_person_lifecycle(store: FaceStore) -> None:
     person = store.create_person(name="Alice", notes="Test person")
     assert person.id is not None
     assert person.name == "Alice"
@@ -98,7 +100,7 @@ def test_person_lifecycle(store):
     assert new_person.name == "Bob"
 
 
-def test_assign_person(store):
+def test_assign_person(store: FaceStore) -> None:
     person = store.create_person()
     img_file = store.get_or_create_file("/img.jpg")
     face = store.add_face(
@@ -110,10 +112,11 @@ def test_assign_person(store):
 
     store.assign_person(face.id, person.id)
     fetched = store.get_face(face.id)
+    assert fetched is not None
     assert fetched.person_id == person.id
 
 
-def test_get_faces_without_cluster(store):
+def test_get_faces_without_cluster(store: FaceStore) -> None:
     img_a = store.get_or_create_file("/a.jpg")
     face_a = store.add_face(
         file=img_a, bbox=(0, 0, 50, 50), embedding=_make_embedding(1)
@@ -130,7 +133,7 @@ def test_get_faces_without_cluster(store):
     assert face_a.id not in ids
 
 
-def test_get_all_embeddings(store):
+def test_get_all_embeddings(store: FaceStore) -> None:
     for i in range(5):
         img_file = store.get_or_create_file(f"/img{i}.jpg")
         store.add_face(

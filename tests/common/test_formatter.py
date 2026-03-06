@@ -2,6 +2,8 @@
 Tests for common.formatter module: parsing, validation and formatting.
 """
 
+import pytest
+
 from common.formatter import Formatter, ParsedFilename
 
 
@@ -10,8 +12,8 @@ class TestParsing:
     Test cases for Formatter.parse().
     """
 
-    def setup_method(self):
-        self.formatter = Formatter()
+    def setup_method(self) -> None:
+        self.formatter: Formatter = Formatter()
 
     def test_parse_exact_date_with_time(self):
         """
@@ -134,6 +136,7 @@ class TestParsing:
         Test that modifier is converted to uppercase.
         """
         result = self.formatter.parse('1950.06.15.12.00.00.e.FAM.POR.000001.a.msr.tiff')
+        assert result is not None
         assert result.modifier == 'E'
         assert result.side == 'A'
         assert result.suffix == 'msr'
@@ -144,14 +147,15 @@ class TestValidation:
     Test cases for Formatter.validate().
     """
 
-    def setup_method(self):
-        self.formatter = Formatter()
+    def setup_method(self) -> None:
+        self.formatter: Formatter = Formatter()
 
     def test_valid_exact_date_with_time(self):
         """
         Test validation of valid exact date with time.
         """
         parsed = self.formatter.parse('1950.06.15.12.30.45.E.FAM.POR.000001.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) == 0
 
@@ -160,6 +164,7 @@ class TestValidation:
         Test validation of valid circa month.
         """
         parsed = self.formatter.parse('1950.06.00.00.00.00.C.FAM.POR.000002.R.WEB.jpg')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) == 0
 
@@ -168,6 +173,7 @@ class TestValidation:
         Test validation of valid circa year.
         """
         parsed = self.formatter.parse('1950.00.00.00.00.00.C.TRV.LND.000003.A.RAW.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) == 0
 
@@ -176,6 +182,7 @@ class TestValidation:
         Test validation rejects month > 12.
         """
         parsed = self.formatter.parse('1950.13.15.00.00.00.E.FAM.POR.000001.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) > 0
         assert any('month' in error.lower() for error in errors)
@@ -185,6 +192,7 @@ class TestValidation:
         Test validation rejects February 30.
         """
         parsed = self.formatter.parse('1950.02.30.00.00.00.E.FAM.POR.000002.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) > 0
         assert any('day' in error.lower() for error in errors)
@@ -194,6 +202,7 @@ class TestValidation:
         Test validation rejects day > 31.
         """
         parsed = self.formatter.parse('1950.06.32.00.00.00.E.FAM.POR.000003.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) > 0
         assert any('day' in error.lower() for error in errors)
@@ -203,6 +212,7 @@ class TestValidation:
         Test validation rejects month=0 with day!=0.
         """
         parsed = self.formatter.parse('1950.00.15.00.00.00.C.FAM.POR.000004.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) > 0
         assert any('month is 00 but day' in error.lower() for error in errors)
@@ -212,6 +222,7 @@ class TestValidation:
         Test validation rejects day=0 with time!=0.
         """
         parsed = self.formatter.parse('1950.06.00.12.00.00.C.FAM.POR.000005.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) > 0
         assert any('day is 00 but time' in error.lower() for error in errors)
@@ -221,6 +232,7 @@ class TestValidation:
         Test validation rejects hour > 23.
         """
         parsed = self.formatter.parse('1950.06.15.25.00.00.E.FAM.POR.000006.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) > 0
         assert any('hour' in error.lower() for error in errors)
@@ -230,6 +242,7 @@ class TestValidation:
         Test validation rejects minute > 59.
         """
         parsed = self.formatter.parse('1950.06.15.12.61.00.E.FAM.POR.000007.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) > 0
         assert any('minute' in error.lower() for error in errors)
@@ -239,6 +252,7 @@ class TestValidation:
         Test validation rejects second > 59.
         """
         parsed = self.formatter.parse('1950.06.15.12.30.61.E.FAM.POR.000008.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) > 0
         assert any('second' in error.lower() for error in errors)
@@ -279,6 +293,7 @@ class TestValidation:
         Test validation rejects sequence > 9999.
         """
         parsed = self.formatter.parse('1950.06.15.12.30.45.E.FAM.POR.010000.A.MSR.tiff')
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) > 0
         assert any('sequence' in error.lower() for error in errors)
@@ -314,6 +329,7 @@ class TestValidation:
         """
         filename = '2023.02.28.12.00.00.E.TST.GRP.0001.A.RAW.jpg'
         parsed = self.formatter.parse(filename)
+        assert parsed is not None
         errors = self.formatter.validate(parsed)
         assert len(errors) == 0
 
@@ -325,19 +341,19 @@ class TestFormatting:
 
     def _create_parsed(
         self,
-        year=2024,
-        month=1,
-        day=15,
-        hour=10,
-        minute=30,
-        second=45,
-        modifier="E",
-        group="FAM",
-        subgroup="POR",
-        sequence="0001",
-        side="A",
-        suffix="RAW",
-        extension="tif"
+        year: int = 2024,
+        month: int = 1,
+        day: int = 15,
+        hour: int = 10,
+        minute: int = 30,
+        second: int = 45,
+        modifier: str = "E",
+        group: str = "FAM",
+        subgroup: str = "POR",
+        sequence: str = "0001",
+        side: str = "A",
+        suffix: str = "RAW",
+        extension: str = "tif"
     ) -> ParsedFilename:
         """
         Create a ParsedFilename for testing.
@@ -628,8 +644,6 @@ class TestSourceTemplate:
         """
         Unknown field in source template should raise ValueError.
         """
-        import pytest
-
         with pytest.raises(ValueError, match="Unknown field 'camera'"):
             Formatter(source_filename_template="{year}.{camera}.{extension}")
 

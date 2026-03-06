@@ -63,6 +63,7 @@ class FileOrganizer:
                 f"({resolved_out}); they must not overlap"
             )
 
+
     def __init__(self, logger: Logger) -> None:
         """
         Initialize the organizer.
@@ -75,6 +76,7 @@ class FileOrganizer:
         cfg = ProjectConfig.instance()
         self._processor = FileProcessor(logger)
         self._router = Router(routes=cfg.routes, logger=logger, formats=cfg.formats)
+
 
     def __call__(
         self,
@@ -113,12 +115,14 @@ class FileOrganizer:
             no_metadata=no_metadata,
         )
 
+
     def _load_config(self, config_path: str | Path | None) -> Config:
         """
         Create a :class:`Config` instance bound to this organizer's logger.
         """
 
         return Config(self._logger, config_path)
+
 
     def _run_batch(
         self,
@@ -191,6 +195,7 @@ class FileOrganizer:
         self._logger.info(f"Batch processing complete. Processed {count} files, skipped {skipped} files.")
 
         return count
+
 
     def process_single_file(
         self,
@@ -322,6 +327,7 @@ class FileOrganizer:
 
         self._logger.info(f"Successfully processed: {dest_path.name}")
 
+
     def should_process(self, file_path: Path, output_path: Path | None = None) -> bool:
         """
         Check if a file should be processed.
@@ -360,6 +366,7 @@ class FileOrganizer:
             return False
 
         return True
+
 
     def _calculate_destination_paths(
         self,

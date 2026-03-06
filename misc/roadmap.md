@@ -62,3 +62,35 @@ equal in scope. Core functionality must be stable first.
 
 **When to revisit:** when core tools (file-organizer, preview-maker, face-detector) are
 stable and feature-complete.
+
+---
+
+### file-organizer: `sort` subcommand (lightweight mode without pipeline)
+
+Analogous to `preview-maker convert` — a low-level subcommand that sorts files by
+filename structure without requiring the full pipeline (no scan-batcher upstream,
+no metadata writing).
+
+**Motivation:** useful for ad-hoc sorting, testing routing rules, and importing files
+from outside the normal scan-batcher → file-organizer flow.
+
+**Key design question:** unlike `preview-maker convert`, file organization is inherently
+project-specific (filename parsing and destination routing both depend on Formatter and
+Router). There is no "pure" equivalent to `Converter`. The `sort` mode is therefore
+not a separate low-level class but rather `FileOrganizer` with optional pipeline stages
+disabled.
+
+**Proposed approach:**
+- Extend `FileOrganizer` with flags: `skip_id_check` (no DocumentID/InstanceID required)
+  and `no_metadata` (skip EXIF/XMP writing)
+- Move metadata writing out of `FileProcessor.process()` into `FileOrganizer` so that
+  the flag controls it at the orchestration level
+- `FileProcessor` is reduced to filename parsing + validation only (or merged into
+  `FileOrganizer` entirely)
+- CLI: `file-organizer sort --input <path> --output <path>` with no `--config` required
+  beyond project config (Formatter/Router are always needed for routing)
+
+**Prerequisite:** move metadata writing from `FileProcessor` up to `FileOrganizer`
+(clean separation of concerns, independently useful).
+
+**When to revisit:** after metadata writing is moved to `FileOrganizer`.

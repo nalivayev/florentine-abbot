@@ -46,6 +46,7 @@ class Config:
         self._data: dict[str, Any] = {}
         self._load()
     
+
     def _load(self) -> None:
         """
         Load configuration from file.
@@ -56,6 +57,7 @@ class Config:
         else:
             self._logger.warning("Using empty configuration")
     
+
     def reload(self) -> bool:
         """
         Reload configuration from file.
@@ -73,6 +75,7 @@ class Config:
             self._logger.debug("Configuration unchanged")
             return False
     
+
     def get(self, key: str, default: Any = None) -> Any:
         """
         Get configuration value by key.

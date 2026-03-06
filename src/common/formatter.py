@@ -282,8 +282,20 @@ class Formatter:
             self._logger.error(f"Failed to format filename: {e}")
             raise
 
+    def format_template(self, parsed: ParsedFilename, template: str) -> str:
+        """Format an arbitrary template string using parsed filename fields.
+
+        Args:
+            parsed: Parsed filename components.
+            template: A ``str.format()``-style template.
+
+        Returns:
+            The formatted string.
+        """
+        return template.format_map(self._template_kwargs(parsed))
+
     @staticmethod
-    def _template_kwargs(parsed: ParsedFilename) -> dict:
+    def _template_kwargs(parsed: ParsedFilename) -> dict[str, Any]:
         """Build keyword arguments dict for ``str.format()``."""
         return dict(
             year=parsed.year,

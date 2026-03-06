@@ -21,10 +21,15 @@ for module_name in ["common", "common.logger", "common.constants"]:
     sys.modules.pop(module_name, None)
 
 from common.logger import Logger
+from common.project_config import ProjectConfig
+from common.constants import DEFAULT_CONFIG
+
+# Ensure ProjectConfig singleton is always initialized for tests.
+ProjectConfig.instance(data=DEFAULT_CONFIG)
 
 
 @pytest.fixture
-def logger():
+def logger() -> Logger:
     """
     Create a logger for testing.
     """
@@ -32,7 +37,7 @@ def logger():
 
 
 @pytest.fixture
-def require_exiftool():
+def require_exiftool() -> None:
     """
     Skip the test if exiftool is not installed or not runnable.
     """

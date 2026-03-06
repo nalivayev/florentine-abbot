@@ -49,6 +49,7 @@ class FileProcessor:
         self._metadata = ArchiveMetadata(metadata=cfg.metadata, logger=logger)
         self._exifer = Exifer()
 
+
     def validate(self, file_path: Path) -> ParsedFilename:
         """
         Validate source file before processing.
@@ -86,6 +87,7 @@ class FileProcessor:
 
         return parsed
 
+
     def process(self, dest_path: Path, parsed: ParsedFilename, no_metadata: bool = False) -> None:
         """
         Write EXIF/XMP metadata to destination file.
@@ -106,6 +108,7 @@ class FileProcessor:
         self._write_metadata(dest_path, parsed)
         self._logger.info(f"Successfully processed: {dest_path.name}")
 
+
     def _parse_and_validate(self, filename: str) -> ParsedFilename | None:
         """
         Parse and validate a filename.
@@ -125,6 +128,7 @@ class FileProcessor:
             return None
 
         return parsed
+
 
     def _write_metadata(self, file_path: Path, parsed: ParsedFilename) -> None:
         """
@@ -170,10 +174,7 @@ class FileProcessor:
                 f"{parsed.hour:02d}:{parsed.minute:02d}:{parsed.second:02d}"
             )
             tagger.write(KeyValueTag(TAG_EXIF_DATETIME_ORIGINAL, dt_str))
-            tagger.write(KeyValueTag(
-                TAG_XMP_PHOTOSHOP_DATE_CREATED,
-                dt_str.replace(":", "-", 2).replace(" ", "T"),
-            ))
+            tagger.write(KeyValueTag(TAG_XMP_PHOTOSHOP_DATE_CREATED, dt_str.replace(":", "-", 2).replace(" ", "T")))
         else:
             # Partial date: clear EXIF DateTimeOriginal and encode partial
             # date in XMP-photoshop:DateCreated.

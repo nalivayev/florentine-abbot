@@ -1,10 +1,11 @@
 """
 Command Line Interface for Preview Maker.
 
-Provides two subcommands:
+Provides three subcommands:
 
-* ``preview-maker batch`` — one-shot preview generation for existing sources.
-* ``preview-maker watch`` — daemon mode that monitors for new source files.
+* ``preview-maker batch``    — one-shot preview generation for existing sources.
+* ``preview-maker watch``    — daemon mode that monitors for new source files.
+* ``preview-maker convert``  — convert a single file (no pipeline, no metadata).
 
 Global flags (``--verbose``, ``--log-path``, ``--version``)
 are shared across both subcommands.
@@ -16,8 +17,11 @@ import sys
 from pathlib import Path
 
 from common.logger import Logger
+from common.utils import log_banner
 from common.version import get_version
 from preview_maker.maker import PreviewMaker
+from preview_maker.converter import Converter
+from preview_maker.constants import FORMAT_MAP, DEFAULT_SIZE, DEFAULT_FORMAT
 from preview_maker.watcher import PreviewWatcher
 
 
@@ -34,18 +38,6 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         type=str,
         default=None,
         help="Path to preview-maker config JSON (default: ~/.config/florentine-abbot/preview-maker/config.json)",
-    )
-    parser.add_argument(
-        "--max-size",
-        type=int,
-        default=2000,
-        help="Maximum long edge in pixels for the preview (default: 2000)",
-    )
-    parser.add_argument(
-        "--quality",
-        type=int,
-        default=80,
-        help="JPEG quality (1-100, default: 80)",
     )
     parser.add_argument(
         "--no-metadata",
@@ -76,7 +68,6 @@ def _build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command")
 
-    # ── batch ──────────────────────────────────────────────────────────
     batch_parser = subparsers.add_parser(
         "batch",
         help="One-shot preview generation for existing source files",
@@ -89,7 +80,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Overwrite existing preview files instead of keeping them",
     )
 
-    # ── watch ──────────────────────────────────────────────────────────
     watch_parser = subparsers.add_parser(
         "watch",
         help="Daemon mode — watch for new source files",
@@ -97,7 +87,45 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     _add_common_arguments(watch_parser)
 
+    convert_parser = subparsers.add_parser(
+        "convert",
+        help="Convert a single file (no pipeline, no metadata)",
+        description="Pure image conversion — resize and format change. "
+                    "All parameters come from the command line.",
+    )
+    convert_parser.add_argument(
+        "--file",
+        required=True,
+        type=str,
+        help="Path to the source image file",
+    )
+    convert_parser.add_argument(
+        "--output",
+        type=str,
+        default=None,
+        help="Output file path (default: next to source, extension from --format)",
+    )
+    convert_parser.add_argument(
+        "--size",
+        type=int,
+        default=DEFAULT_SIZE,
+        help=f"Maximum long edge in pixels (default: {DEFAULT_SIZE})",
+    )
+    convert_parser.add_argument(
+        "--format",
+        choices=sorted(FORMAT_MAP),
+        default=DEFAULT_FORMAT,
+        help=f"Output image format (default: {DEFAULT_FORMAT})",
+    )
+    convert_parser.add_argument(
+        "--quality",
+        type=int,
+        default=None,
+        help="Image quality for jpeg/webp (default: 80)",
+    )
+
     return parser
+
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -116,48 +144,60 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         console=True,
     )
-
-    path = Path(args.path)
-
-    # ── summary banner ─────────────────────────────────────────────
     version = get_version()
-    logger.info("-" * 45)
-    logger.info("  preview-maker %s", version)
-    logger.info("  Mode:        %s", args.command)
-    logger.info("  Path:        %s", path)
-    logger.info("  Max size:    %spx", args.max_size)
-    logger.info("  Quality:     %s", args.quality)
-    if args.command == "batch":
-        logger.info("  Overwrite:   %s", "yes" if args.overwrite else "no")
-    logger.info("  No metadata: %s", "yes" if args.no_metadata else "no")
-    logger.info("  Config:      %s", args.config or "default")
-    logger.info("-" * 45)
-
-    if not path.exists():
-        logger.error(f"Path does not exist: {path}")
-        return 1
 
     try:
-        if args.command == "watch":
-            watcher = PreviewWatcher(
+        if args.command == "convert":
+            file_path = Path(args.file)
+            if not file_path.exists():
+                logger.error("File does not exist: %s", file_path)
+                return 1
+
+            save_options = {"quality": args.quality} if args.quality is not None else None
+            converter = Converter(
                 logger,
-                path=str(path),
-                config_path=args.config,
-                max_size=args.max_size,
-                quality=args.quality,
-                no_metadata=args.no_metadata,
+                size=args.size,
+                image_format=args.format,
+                save_options=save_options,
             )
-            watcher.start()
-        else:
-            # batch
-            maker = PreviewMaker(logger, args.config, no_metadata=args.no_metadata)
-            count = maker(
-                path=path,
-                overwrite=bool(args.overwrite),
-                max_size=args.max_size,
-                quality=args.quality,
-            )
-            logger.info(f"Generated {count} preview file(s)")
+            output_path = Path(args.output) if args.output else file_path.with_suffix(FORMAT_MAP[args.format][1])
+
+            log_banner(logger, "preview-maker", version,{
+                "Mode": "convert",
+                "File": str(file_path),
+                "Output": str(output_path),
+                "Format": args.format,
+                "Size": str(args.size),
+            })
+
+            converter(file_path, output_path)
+            logger.info("Saved: %s", output_path)
+
+        else:  # batch / watch
+            path = Path(args.path)
+            if not path.exists():
+                logger.error("Path does not exist: %s", path)
+                return 1
+
+            fields: dict[str, str] = {"Mode": args.command, "Path": str(path)}
+            if args.command == "batch":
+                fields["Overwrite"] = "yes" if args.overwrite else "no"
+            fields["No metadata"] = "yes" if args.no_metadata else "no"
+            fields["Config"] = args.config or "default"
+            log_banner(logger, "preview-maker", version,fields)
+
+            if args.command == "watch":
+                PreviewWatcher(
+                    logger,
+                    path=str(path),
+                    config_path=args.config,
+                    no_metadata=args.no_metadata,
+                ).start()
+            else:
+                maker = PreviewMaker(logger, args.config, no_metadata=args.no_metadata)
+                count = maker(path=path, overwrite=bool(args.overwrite))
+                logger.info("Generated %d preview file(s)", count)
+
     except Exception as exc:  # pragma: no cover - generic CLI error reporting
         print(f"[preview_maker] Error: {exc}", file=sys.stderr)
         return 1
