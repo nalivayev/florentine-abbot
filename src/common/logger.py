@@ -160,23 +160,3 @@ class Logger:
         Log an exception with traceback.
         """
         self._logger.exception(msg, *args, **kwargs)
-    
-    @property
-    def log_file(self) -> Path:
-        """
-        Get the path to the log file.
-
-        Returns:
-            Path: Absolute path to the log file.
-        """
-        return self._log_file
-
-    @property
-    def log_directory(self) -> Path:
-        """
-        Get the path to the log directory.
-
-        Returns:
-            Path: Absolute path to the log directory.
-        """
-        return self._log_directory

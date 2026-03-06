@@ -8,8 +8,8 @@ from pathlib import Path
 from PIL import Image
 
 from common.constants import TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_IFD0_SOFTWARE, TAG_EXIFIFD_CREATE_DATE
-from common.exifer import Exifer
 from common.logger import Logger
+from tests.common.fake_exifer import FakeExifer
 from tests.scan_batcher.fake_metadata_workflow import FakeMetadataWorkflow
 
 
@@ -17,17 +17,13 @@ def exiftool_available() -> bool:
     """
     Return True if exiftool is installed and runnable.
     """
-    try:
-        Exifer()._run(["-ver"])
-        return True
-    except (FileNotFoundError, RuntimeError):
-        return False
+    return FakeExifer.is_available()
 
 
 def create_test_image(
     path: Path,
     size: tuple[int, int] = (100, 100),
-    color: str | tuple = "red",
+    color: str | tuple[int, ...] = "red",
     format: str | None = None,
     add_ids: bool = True,
     scanner_make: str = "Test Scanner",
@@ -53,11 +49,10 @@ def create_test_image(
     """
     img = Image.new("RGB", size, color=color)
     
-    save_kwargs = {}
     if format:
-        save_kwargs["format"] = format
-    
-    img.save(path, **save_kwargs)
+        img.save(path, format=format)
+    else:
+        img.save(path)
     
     if add_ids:
         add_scanner_metadata(path, scanner_make=scanner_make, scanner_model=scanner_model)
@@ -95,7 +90,7 @@ def add_scanner_metadata(
         scanner_model: Scanner model (default: "Test Model").
         scanner_software: Scanner software (default: "VueScan 9 x64 (9.8.50)").
     """
-    exifer = Exifer()
+    exifer = FakeExifer()
     
     # === Phase 1: Simulate VueScan EXIF tags ===
     # VueScan writes CreateDate without timezone, in EXIF format

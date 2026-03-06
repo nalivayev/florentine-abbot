@@ -24,7 +24,7 @@ from common.logger import Logger
 
 
 @pytest.fixture
-def logger():
+def logger() -> Logger:
     """
     Create a logger for testing.
     """
@@ -32,7 +32,7 @@ def logger():
 
 
 @pytest.fixture
-def require_exiftool():
+def require_exiftool() -> None:
     """
     Skip the test if exiftool is not installed or not runnable.
     """
