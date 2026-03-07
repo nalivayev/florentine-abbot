@@ -315,14 +315,28 @@ Preview Maker выкарыстоўвае тыя ж правілы маршрут
 - кожны `PRV` атрымлівае ўласны ідэнтыфікатар;
 - у метаданых фіксуецца яўная сувязь (relation) паміж `PRV` і яго майстрам.
 
+Параметры выявы (памер, фармат, якасць) задаюцца ў канфігурацыйным файле (`config.json`), а не ў камандным радку. Падтрымліваецца шматфарматны вывад: JPEG, PNG, WebP, TIFF.
+
+Preview Maker падае тры падкаманды: `batch` (аднаразовая апрацоўка), `watch` (дэман) і `convert` (адзінкавы файл).
+
 **Пакетны рэжым (генерацыя прэв'ю для архіва):**
 ```sh
-preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES"
 ```
 
 **З перазапісам існуючых PRV:**
 ```sh
-preview-maker --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --overwrite
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
+```
+
+**Рэжым дэмана (адсочванне новых майстар-файлаў):**
+```sh
+preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES"
+```
+
+**Канвертацыя адзінкавага файла (без пайплайна, без метаданых):**
+```sh
+preview-maker convert --file "D:\photo.jpg" --size 2000 --format jpeg --quality 80
 ```
 
 Логі пішуцца па тых жа правілах, што і ў іншых утыліт:
@@ -388,9 +402,9 @@ python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluste
 python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
 ```
 
-**Візуалізацыя выяўленых твараў:**
+**Прэв'ю выяўленых твараў:**
 ```sh
-python -m face_detector.cli visualize --image "D:\Archive\2024\photo.jpg"
+python -m face_detector.cli preview --file "D:\Archive\2024\photo.jpg"
 ```
 
 Поўны спіс аргументаў:
@@ -427,19 +441,36 @@ setup-runner
 
 - `scan_batcher/cli.py` — асноўны CLI-модуль (выкарыстоўваецца для каманды `scan-batcher`).
 - `archive_keeper/cli.py` — CLI для ўтыліты `archive-keeper`.
-- `file_organizer/cli.py` — CLI для ўтыліты `file-organizer`.
-- `preview_maker/cli.py` — CLI для ўтыліты `preview-maker`.
+- `file_organizer/cli.py` — CLI для ўтыліты `file-organizer` (падкаманды: `batch`, `watch`).
+- `file_organizer/organizer.py` — ядро пакетнай апрацоўкі і пафайлавай логікі.
+- `file_organizer/watcher.py` — рэжым дэмана праз watchdog, дэлегуе `FileOrganizer`.
+- `preview_maker/cli.py` — CLI для ўтыліты `preview-maker` (падкаманды: `batch`, `watch`, `convert`).
 - `preview_maker/maker.py` — ядро Preview Maker (логіка генерацыі PRV-прэв'ю).
+- `preview_maker/converter.py` — чыстая канвертацыя выяў (рэсайз + фармат); выкарыстоўваецца і пайплайнам, і падкамандай `convert`.
+- `preview_maker/constants.py` — карты фарматаў, памеры па змаўчанні, аліасы фарматаў.
+- `preview_maker/watcher.py` — рэжым дэмана праз watchdog, дэлегуе `PreviewMaker`.
 - `scan_batcher/batch.py` — логіка пакетных і інтэрактыўных разлікаў DPI.
 - `scan_batcher/calculator.py` — алгарытмы разліку DPI.
 - `scan_batcher/parser.py` — парсінг і валідацыя аргументаў камандной радка.
 - `common/logger.py` — адзіная падсістэма лагіравання для ўсіх утыліт.
+- `common/naming.py` — агульны парсер і валідатар імёнаў файлаў.
+- `common/router.py` — наладжвальная маршрутызацыя файлаў (суфікс → папка).
+- `common/formatter.py` — наладжвальнае фарматаванне шляхоў і імёнаў файлаў.
+- `common/tagger.py` — абстракцыя пакетнага XMP/EXIF чытання/запісу паверх exiftool.
+- `common/metadata.py` — палітыка архіўных метаданых (шматмоўныя палі, мэпінг тэгаў).
 - `scan_batcher/constants.py` — цэнтралізаваныя канстанты і пералічэнні (напрыклад, `RoundingStrategy`).
 - `scan_batcher/workflow.py` — базавы клас для ўсіх workflow-плагінаў.
 - `scan_batcher/workflows/__init__.py` — рэгістрацыя і выяўленне плагінаў.
 - `scan_batcher/workflows/vuescan/workflow.py` — аўтаматызацыя працоўнага працэсу VueScan.
 - `common/exifer.py` — выманне і апрацоўка EXIF-метаданых, агульная для ўсіх утыліт.
-- `common/archive_metadata.py` — цэнтралізаваная палітыка архіўных метаданых для майстар‑ і вытворных файлаў.
+- `face_detector/cli.py` — CLI для ўтыліты `face-detector` (падкаманды: `batch`, `preview`).
+- `face_detector/engine.py` — аркестрацыя пакетнага выяўлення па дрэве каталогаў.
+- `face_detector/detector.py` — абстрактны базавы клас для дэтэктар-плагінаў.
+- `face_detector/store.py` — SQLite-сховішча для эмбедынгаў твараў.
+- `face_detector/clusterer.py` — кластарызацыя ідэнтычнасцяў на аснове DBSCAN.
+- `face_detector/previewer.py` — візуалізацыя выяўленых твараў на прэв'ю выяў.
+- `setup_runner/cli.py` — кропка ўваходу CLI для `setup-runner`.
+- `setup_runner/runner.py` — логіка інтэрактыўнай налады; платформенныя падкласы для Windows, macOS, Linux.
 
 ### Усталяванне
 

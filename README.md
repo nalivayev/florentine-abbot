@@ -331,21 +331,28 @@ Metadata for previews is derived from the corresponding master files:
 - each `PRV` receives its own identifier;
 - an explicit relation tag links the `PRV` back to its master.
 
-Preview Maker provides two subcommands: `batch` (one-shot) and `watch` (daemon).
+Image parameters (size, format, quality) are defined in the configuration file (`config.json`), not on the command line. Multi-format output is supported: JPEG, PNG, WebP, TIFF.
+
+Preview Maker provides three subcommands: `batch` (one-shot), `watch` (daemon), and `convert` (single file).
 
 **Batch Mode (generate previews for archive):**
 ```sh
-preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES"
 ```
 
 **Batch Mode with overwrite:**
 ```sh
-preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --overwrite
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
 ```
 
 **Daemon Mode (watch for new master files):**
 ```sh
-preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
+preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES"
+```
+
+**Convert a single file (no pipeline, no metadata):**
+```sh
+preview-maker convert --file "D:\photo.jpg" --size 2000 --format jpeg --quality 80
 ```
 
 Logging follows the same convention as other tools:
@@ -411,9 +418,9 @@ python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluste
 python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
 ```
 
-**Visualize detected faces on an image:**
+**Preview detected faces on an image:**
 ```sh
-python -m face_detector.cli visualize --image "D:\Archive\2024\photo.jpg"
+python -m face_detector.cli preview --file "D:\Archive\2024\photo.jpg"
 ```
 
 For a full list of arguments:
@@ -453,8 +460,10 @@ Config files are written to:
 - `file_organizer/cli.py` — CLI for the `file-organizer` tool (subcommands: `batch`, `watch`).
 - `file_organizer/organizer.py` — core batch workflow and per-file processing.
 - `file_organizer/watcher.py` — daemon mode via watchdog, delegates to `FileOrganizer`.
-- `preview_maker/cli.py` — CLI for the `preview-maker` tool (subcommands: `batch`, `watch`).
+- `preview_maker/cli.py` — CLI for the `preview-maker` tool (subcommands: `batch`, `watch`, `convert`).
 - `preview_maker/maker.py` — core implementation for Preview Maker (PRV generation logic).
+- `preview_maker/converter.py` — pure image conversion (resize + format); used by both the pipeline and the `convert` subcommand.
+- `preview_maker/constants.py` — format maps, default sizes, and format aliases.
 - `preview_maker/watcher.py` — daemon mode via watchdog, delegates to `PreviewMaker`.
 - `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
 - `scan_batcher/calculator.py` — DPI calculation algorithms.
@@ -470,11 +479,12 @@ Config files are written to:
 - `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
 - `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
 - `common/exifer.py` — EXIF metadata extraction and processing, shared across all tools.
-- `face_detector/cli.py` — CLI for the `face-detector` tool (subcommands: `batch`, `visualize`).
+- `face_detector/cli.py` — CLI for the `face-detector` tool (subcommands: `batch`, `preview`).
 - `face_detector/engine.py` — orchestrates batch detection over a directory tree.
 - `face_detector/detector.py` — abstract base class for detector plugins.
 - `face_detector/store.py` — SQLite persistence for face embeddings.
 - `face_detector/clusterer.py` — DBSCAN-based identity clustering.
+- `face_detector/previewer.py` — visualization of detected faces on image previews.
 - `setup_runner/cli.py` — CLI entry point for `setup-runner`.
 - `setup_runner/runner.py` — interactive setup logic; platform subclasses for Windows, macOS, Linux.
 

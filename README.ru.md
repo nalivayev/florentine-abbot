@@ -329,21 +329,28 @@ Preview Maker использует те же правила маршрутиза
 - каждый `PRV` получает собственный идентификатор;
 - в метаданных фиксируется явная связь (relation) между `PRV` и его мастером.
 
-Preview Maker предоставляет две подкоманды: `batch` (одноразовая обработка) и `watch` (демон).
+Параметры изображения (размер, формат, качество) задаются в конфигурационном файле (`config.json`), а не в командной строке. Поддерживается многоформатный вывод: JPEG, PNG, WebP, TIFF.
+
+Preview Maker предоставляет три подкоманды: `batch` (одноразовая обработка), `watch` (демон) и `convert` (одиночный файл).
 
 **Пакетный режим (генерация превью для архива):**
 ```sh
-preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES"
 ```
 
 **С перезаписью существующих PRV:**
 ```sh
-preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2400 --quality 85 --overwrite
+preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
 ```
 
 **Режим демона (отслеживание новых мастер-файлов):**
 ```sh
-preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES" --max-size 2000 --quality 80
+preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES"
+```
+
+**Конвертация одиночного файла (без пайплайна, без метаданных):**
+```sh
+preview-maker convert --file "D:\photo.jpg" --size 2000 --format jpeg --quality 80
 ```
 
 Логи пишутся по тем же правилам, что и у других утилит:
@@ -409,9 +416,9 @@ python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluste
 python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
 ```
 
-**Визуализация обнаруженных лиц:**
+**Превью обнаруженных лиц:**
 ```sh
-python -m face_detector.cli visualize --image "D:\Archive\2024\photo.jpg"
+python -m face_detector.cli preview --file "D:\Archive\2024\photo.jpg"
 ```
 
 Полный список аргументов:
@@ -451,8 +458,10 @@ setup-runner
 - `file_organizer/cli.py` — CLI для утилиты `file-organizer` (подкоманды: `batch`, `watch`).
 - `file_organizer/organizer.py` — ядро пакетной обработки и пофайловой логики.
 - `file_organizer/watcher.py` — режим демона через watchdog, делегирует `FileOrganizer`.
-- `preview_maker/cli.py` — CLI для утилиты `preview-maker` (подкоманды: `batch`, `watch`).
+- `preview_maker/cli.py` — CLI для утилиты `preview-maker` (подкоманды: `batch`, `watch`, `convert`).
 - `preview_maker/maker.py` — ядро Preview Maker (логика генерации PRV-превью).
+- `preview_maker/converter.py` — чистая конвертация изображений (ресайз + формат); используется и пайплайном, и подкомандой `convert`.
+- `preview_maker/constants.py` — карты форматов, размеры по умолчанию, алиасы форматов.
 - `preview_maker/watcher.py` — режим демона через watchdog, делегирует `PreviewMaker`.
 - `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
 - `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
@@ -468,11 +477,12 @@ setup-runner
 - `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.
 - `scan_batcher/workflows/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
 - `common/exifer.py` — извлечение и обработка EXIF-метаданных, общая для всех утилит.
-- `face_detector/cli.py` — CLI для утилиты `face-detector` (подкоманды: `batch`, `visualize`).
+- `face_detector/cli.py` — CLI для утилиты `face-detector` (подкоманды: `batch`, `preview`).
 - `face_detector/engine.py` — оркестрация пакетного обнаружения по дереву каталогов.
 - `face_detector/detector.py` — абстрактный базовый класс для детектор-плагинов.
 - `face_detector/store.py` — SQLite-хранилище для эмбеддингов лиц.
 - `face_detector/clusterer.py` — кластеризация идентичностей на основе DBSCAN.
+- `face_detector/previewer.py` — визуализация обнаруженных лиц на превью изображений.
 - `setup_runner/cli.py` — точка входа CLI для `setup-runner`.
 - `setup_runner/runner.py` — логика интерактивной настройки; платформенные подклассы для Windows, macOS, Linux.
 
