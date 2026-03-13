@@ -14,7 +14,7 @@ from datetime import datetime
 from common.logger import Logger
 from common.formatter import Formatter, ParsedFilename
 from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, XMP_ACTION_EDITED
-from common.metadata import ArchiveMetadata
+from file_organizer.metadata import ArchiveMetadata
 from common.exifer import Exifer
 from common.tagger import Tagger
 from common.tags import KeyValueTag, HistoryTag
@@ -35,18 +35,20 @@ class FileProcessor:
     - File organization/movement (handled by FileOrganizer)
     """
 
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: Logger, metadata_config: dict | None = None) -> None:
         """
         Initialize FileProcessor.
 
         Args:
             logger: Logger instance.
+            metadata_config: The ``metadata`` section from file-organizer config.
+                Falls back to :data:`~file_organizer.constants.DEFAULT_METADATA` when *None*.
         """
         self._logger = logger
 
         cfg = ProjectConfig.instance()
         self._formatter = Formatter(logger=logger, formats=cfg.formats)
-        self._metadata = ArchiveMetadata(metadata=cfg.metadata, logger=logger)
+        self._metadata = ArchiveMetadata(metadata=metadata_config or None, logger=logger)
         self._exifer = Exifer()
 
 

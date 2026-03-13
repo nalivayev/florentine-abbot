@@ -21,7 +21,7 @@ from common.constants import (
 from common.logger import Logger
 from common.formatter import ParsedFilename
 
-from common.metadata import ArchiveMetadata
+from file_organizer.metadata import ArchiveMetadata
 from tests.common.store_exifer import StoreExifer
 
 IDENTIFIER_TAGS = (TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER)

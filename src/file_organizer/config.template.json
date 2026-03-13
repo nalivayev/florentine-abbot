@@ -1,10 +1,81 @@
 {
 
-  "help": ["Configuration for File Organizer"],
+  "help": [
+    "Configuration for File Organizer.",
+    "",
+    "Sections:",
+    "  watch    — input/output paths for batch and watch mode",
+    "  metadata — XMP tag mapping and per-language metadata texts written to image files"
+  ],
 
   "watch": {
+    "help": [
+      "Paths used by the File Organizer.",
+      "",
+      "path:   source folder to watch or process (required).",
+      "output: destination archive root (required)."
+    ],
     "path": null,
     "output": null
+  },
+
+  "metadata": {
+
+    "help": [
+      "Metadata configuration: tag mapping and multi-language texts.",
+      "Written to image files by the File Organizer during processing.",
+      "",
+      "tags: maps friendly field names to XMP tags written to image files.",
+      "  To add custom fields:",
+      "    1. Add a new entry in tags: \"fieldname\": \"XMP-namespace:TagName\"",
+      "    2. Add the field to your languages below",
+      "",
+      "languages: keys are BCP-47 codes like 'ru-RU', 'en-US'.",
+      "Exactly one language SHOULD have 'default': true.",
+      "",
+      "Field types:",
+      "  creator — string or array of strings (author names)",
+      "  Other fields — string or array of strings (multi-line text)"
+    ],
+
+    "tags": {
+      "description": "XMP-dc:Description",
+      "creator": "XMP-dc:Creator",
+      "rights": "XMP-dc:Rights",
+      "source": "XMP-dc:Source",
+      "type": "XMP-dc:Type",
+      "credit": "XMP-photoshop:Credit",
+      "terms": "XMP-xmpRights:UsageTerms",
+      "marked": "XMP-xmpRights:Marked"
+    },
+
+    "languages": {
+
+      "ru-RU": {
+        "default": true,
+        "creator": ["Имя Фамилия", "Соавтор"],
+        "credit": ["Ваш семейный архив"],
+        "description": ["Краткое описание этого архива."],
+        "rights": ["Сканирование © 2025 Ваше имя"],
+        "terms": ["Только для личного использования."],
+        "source": ["Место хранения оригинального физического носителя."],
+        "type": "StillImage",
+        "marked": "True"
+      },
+
+      "en-US": {
+        "creator": ["Name Surname", "Co-author"],
+        "credit": ["Your Family Archive"],
+        "description": ["Short description of this archive."],
+        "rights": ["Scanning © 2025 Your Name"],
+        "terms": ["Personal use only."],
+        "source": ["Original physical item location."],
+        "type": "StillImage",
+        "marked": "True"
+      }
+
+    }
+
   }
 
 }

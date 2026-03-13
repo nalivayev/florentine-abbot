@@ -11,8 +11,6 @@ import numpy as np
 from face_detector.store import FaceStore
 
 
-# ── Embedding serialisation ────────────────────────────────────────────────────
-
 def test_embedding_round_trip() -> None:
     original = np.random.randn(512).astype(np.float32)
     recovered = FaceStore._bytes_to_embedding(
@@ -20,8 +18,6 @@ def test_embedding_round_trip() -> None:
     )
     np.testing.assert_array_almost_equal(original, recovered)
 
-
-# ── FaceStore ─────────────────────────────────────────────────────────────────
 
 @pytest.fixture
 def store(tmp_path: Path) -> Generator[FaceStore, None, None]:

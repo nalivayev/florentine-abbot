@@ -22,7 +22,6 @@ from pathlib import Path
 import numpy as np
 
 from common.logger import Logger
-from face_detector.config import Config
 
 
 @dataclass
@@ -42,16 +41,17 @@ class DetectedFace:
 class FaceDetector(ABC):
     """Abstract base class for all face detector plugins.
 
-    All detector classes must inherit from this class and implement
-    :meth:`should_process` and :meth:`detect`.
+    Each detector is responsible for its own configuration — it reads
+    ``get_config_dir() / "face-detector" / "detectors" / <name> / "config.json"``
+    directly in ``__init__``.
+
+    The engine handles file filtering (extensions, priority patterns).
+    The detector receives a :class:`pathlib.Path` to an eligible file
+    and returns the detected faces.
     """
 
-    def __init__(self, logger: Logger, config: Config) -> None:
+    def __init__(self, logger: Logger) -> None:
         ...
-
-    @abstractmethod
-    def should_process(self, file_path: Path) -> bool:
-        """Return True if *file_path* is eligible for face detection."""
 
     @abstractmethod
     def detect(self, image_path: Path) -> list[DetectedFace]:

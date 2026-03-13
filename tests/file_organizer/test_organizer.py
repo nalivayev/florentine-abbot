@@ -3,6 +3,7 @@ Tests for FileOrganizer class.
 """
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -15,10 +16,10 @@ from typing import Any
 import pytest
 
 from file_organizer.organizer import FileOrganizer
+from file_organizer.constants import DEFAULT_METADATA
 from common.project_config import ProjectConfig
 from common.constants import (
     DEFAULT_CONFIG,
-    DEFAULT_METADATA,
     TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID,
     TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY,
     XMP_ACTION_CREATED, XMP_ACTION_EDITED,
@@ -27,6 +28,14 @@ from common.logger import Logger
 from common.exifer import Exifer
 from common.tagger import Tagger
 from common.tags import HistoryTag
+
+
+def _rmtree_force(path: Path) -> None:
+    """Remove a directory tree, resetting read-only flags when necessary."""
+    def _on_rm_error(_func: Any, p: str, _exc_info: Any) -> None:
+        os.chmod(p, 0o700)
+        os.unlink(p)
+    shutil.rmtree(path, onerror=_on_rm_error)
 from tests.common.test_utils import create_test_image
 
 
@@ -89,7 +98,7 @@ class TestFileOrganizerIntegration:
         Cleanup after each test method.
         """
         if self.temp_dir and self.temp_dir.exists():
-            shutil.rmtree(self.temp_dir)
+            _rmtree_force(self.temp_dir)
 
     def create_temp_dir(self) -> tuple[Path, Path]:
         """
@@ -302,6 +311,64 @@ class TestFileOrganizerIntegration:
         assert not (expected_dir / "SOURCES").exists()
         assert not (expected_dir / "DERIVATIVES").exists()
 
+    def test_protected_files_are_read_only(self, logger: Logger) -> None:
+        """Files matched by a routing rule with protect=true should be read-only."""
+        import stat
+
+        input_dir, output_dir = self.create_temp_dir()
+
+        # MSR → SOURCES with protect=true (default routes)
+        filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
+        file_path = input_dir / filename
+        create_test_image(file_path)
+
+        organizer = FileOrganizer(logger)
+        config_path = self._write_config(input_dir, self._minimal_config())
+        processed_count = organizer(
+            input_path=input_dir,
+            output_path=output_dir,
+            config_path=config_path,
+            recursive=False,
+            copy_mode=False,
+        )
+        assert processed_count == 1
+
+        dest = output_dir / "1950" / "1950.06.15" / "SOURCES" / filename
+        assert dest.exists()
+
+        mode = dest.stat().st_mode
+        assert not (mode & stat.S_IWUSR), "Owner write bit should be cleared"
+        assert not (mode & stat.S_IWGRP), "Group write bit should be cleared"
+        assert not (mode & stat.S_IWOTH), "Other write bit should be cleared"
+
+    def test_unprotected_files_stay_writable(self, logger: Logger) -> None:
+        """Files matched by a rule without protect flag should remain writable."""
+        import stat
+
+        input_dir, output_dir = self.create_temp_dir()
+
+        # WEB → DERIVATIVES, no protect flag (default routes)
+        filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.WEB.jpg"
+        file_path = input_dir / filename
+        create_test_image(file_path)
+
+        organizer = FileOrganizer(logger)
+        config_path = self._write_config(input_dir, self._minimal_config())
+        processed_count = organizer(
+            input_path=input_dir,
+            output_path=output_dir,
+            config_path=config_path,
+            recursive=False,
+            copy_mode=False,
+        )
+        assert processed_count == 1
+
+        dest = output_dir / "1950" / "1950.06.15" / "DERIVATIVES" / filename
+        assert dest.exists()
+
+        mode = dest.stat().st_mode
+        assert mode & stat.S_IWUSR, "Owner write bit should still be set"
+
     def test_date_modifier_scenarios(self, logger: Logger, require_exiftool: None) -> None:
         """Test FileOrganizer with different date modifiers (E, C, B, F, A).
         
@@ -445,7 +512,7 @@ class TestFileOrganizerIntegration:
             
             # Cleanup for next scenario
             assert self.temp_dir is not None
-            shutil.rmtree(self.temp_dir)
+            _rmtree_force(self.temp_dir)
             self.temp_dir = None
 
 
@@ -466,7 +533,7 @@ class TestFileOrganizerCustomFormats:
         """
         ProjectConfig.instance(data=DEFAULT_CONFIG)
         if self.temp_dir and self.temp_dir.exists():
-            shutil.rmtree(self.temp_dir)
+            _rmtree_force(self.temp_dir)
     
     def create_temp_dir(self) -> tuple[Path, Path]:
         """
@@ -662,7 +729,7 @@ class TestExiftoolCompliance:
         Cleanup after each test method.
         """
         if self.temp_dir and self.temp_dir.exists():
-            shutil.rmtree(self.temp_dir)
+            _rmtree_force(self.temp_dir)
 
     def create_temp_dir(self) -> tuple[Path, Path]:
         """
@@ -718,6 +785,9 @@ class TestExiftoolCompliance:
     def test_full_metadata_compliance(self, logger: Logger) -> None:
         """
         Verify that all required metadata fields are written and visible to exiftool.
+
+        Metadata is read from file-organizer/config.json (the ``metadata`` section),
+        not from ProjectConfig.
         """
         metadata_config: dict[str, Any] = {
             "tags": DEFAULT_METADATA["tags"],
@@ -734,12 +804,6 @@ class TestExiftoolCompliance:
             }
         }
 
-        # Re-initialize ProjectConfig with custom metadata for this test
-        ProjectConfig.instance(data={
-            **DEFAULT_CONFIG,
-            "metadata": metadata_config,
-        })
-
         input_dir, output_dir = self.create_temp_dir()
 
         filename = "1950.06.15.12.30.45.E.FAM.POR.0001.A.MSR.tiff"
@@ -748,7 +812,8 @@ class TestExiftoolCompliance:
 
         organizer = FileOrganizer(logger)
 
-        config: dict[str, Any] = {}
+        # Metadata lives in file-organizer config, not in ProjectConfig
+        config: dict[str, Any] = {"metadata": metadata_config}
         config_path = self._write_config(input_dir, config)
         
         try:
@@ -798,7 +863,7 @@ class TestExiftoolCompliance:
             assert meta.get("XMP:Source") == "Box 42" or meta.get("XMP-dc:Source") == "Box 42"
             # Title is no longer written (it just duplicated the filename)
         finally:
-            ProjectConfig.instance(data=DEFAULT_CONFIG)
+            pass  # ProjectConfig is not modified in this test
 
     def test_partial_date_compliance(self, logger: Logger) -> None:
         """

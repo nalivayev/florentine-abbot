@@ -16,19 +16,10 @@ class Config:
 
     Falls back to sensible defaults when no config file is present so the tool
     is usable out-of-the-box.
+
+    Plugin-specific settings are stored in separate config files under
+    ``detectors/<name>/config.json``, mirroring the source-tree layout.
     """
-
-    _DEFAULT_DETECTION: dict[str, Any] = {
-        "backend": "retinaface",
-        "model": "ArcFace",
-        "enforce_detection": False,
-        "align": True,
-    }
-
-    _DEFAULT_INSIGHTFACE: dict[str, Any] = {
-        "model_pack": "buffalo_l",
-        "det_size": 640,
-    }
 
     _DEFAULT_PROCESSING: dict[str, Any] = {
         "source_extensions": [".jpg", ".jpeg", ".tif", ".tiff", ".png", ".bmp"],
@@ -69,42 +60,6 @@ class Config:
     def detector(self) -> str:
         """Symbolic name of the detector plugin to use (e.g. ``'insightface'``)."""
         return str(self._data.get("detector", DEFAULT_DETECTOR))
-
-    @property
-    def insightface_model_pack(self) -> str:
-        """InsightFace model pack name (default: ``'buffalo_l'``)."""
-        return str(
-            self._data.get("insightface", {}).get("model_pack", self._DEFAULT_INSIGHTFACE["model_pack"])
-        )
-
-    @property
-    def insightface_det_size(self) -> int:
-        """InsightFace detection input size in pixels (default: 640)."""
-        return int(
-            self._data.get("insightface", {}).get("det_size", self._DEFAULT_INSIGHTFACE["det_size"])
-        )
-
-    @property
-    def detection_backend(self) -> str:
-        """DeepFace detector backend (retinaface, mtcnn, opencv, mediapipe, …)."""
-        return str(self._data.get("detection", {}).get("backend", self._DEFAULT_DETECTION["backend"]))
-
-    @property
-    def embedding_model(self) -> str:
-        """Embedding model name recognised by DeepFace (ArcFace, VGG-Face, …)."""
-        return str(self._data.get("detection", {}).get("model", self._DEFAULT_DETECTION["model"]))
-
-    @property
-    def enforce_detection(self) -> bool:
-        """If False, return empty list instead of raising when no face is found."""
-        return bool(
-            self._data.get("detection", {}).get("enforce_detection", self._DEFAULT_DETECTION["enforce_detection"])
-        )
-
-    @property
-    def align(self) -> bool:
-        """Align detected faces before embedding extraction."""
-        return bool(self._data.get("detection", {}).get("align", self._DEFAULT_DETECTION["align"]))
 
     @property
     def source_extensions(self) -> list[str]:

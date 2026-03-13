@@ -9,6 +9,7 @@ configured with parameters and then executed via :meth:`__call__`.
 """
 
 import fnmatch
+import stat
 import uuid
 import datetime
 from pathlib import Path
@@ -168,7 +169,7 @@ class PreviewMaker:
         prv_filename = self._build_preview_filename(parsed)
 
         # Use router to determine preview output folder
-        prv_dir = self._router.get_target_folder(parsed, archive_path, filename=prv_filename)
+        prv_dir, protect = self._router.get_target_folder(parsed, archive_path, filename=prv_filename)
         prv_path = prv_dir / prv_filename
 
         if prv_path.exists() and not overwrite:
@@ -186,6 +187,15 @@ class PreviewMaker:
             input_path=src_path,
             output_path=prv_path,
         )
+
+        if protect and prv_path.exists():
+            try:
+                mode = prv_path.stat().st_mode
+                prv_path.chmod(mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+                self._logger.info(f"  Protected (read-only): {prv_path.name}")
+            except OSError as e:
+                self._logger.warning(f"Failed to set read-only on {prv_path}: {e}")
+
         return True
 
     

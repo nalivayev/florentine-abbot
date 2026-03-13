@@ -1,13 +1,12 @@
 {
-  
+
   "help": [
     "Configuration for Face Detector.",
     "",
-    "detection:",
-    "  backend:            Detector backend (retinaface, mtcnn, opencv, mediapipe).",
-    "  model:              Embedding model (ArcFace, VGG-Face, etc.).",
-    "  enforce_detection:  If false, return empty list when no face found.",
-    "  align:              Align faces before embedding extraction.",
+    "detector:",
+    "  Symbolic name of the detector plugin to use (e.g. 'insightface').",
+    "  Plugin-specific settings live in a separate config file:",
+    "  detectors/<name>/config.json (created from the plugin's template).",
     "",
     "processing:",
     "  source_extensions:  File extensions eligible for face detection.",
@@ -22,15 +21,10 @@
     "  min_samples:  Minimum faces to form a cluster."
   ],
 
+  "detector": "insightface",
+
   "watch": {
     "path": null
-  },
-
-  "detection": {
-    "backend": "retinaface",
-    "model": "ArcFace",
-    "enforce_detection": false,
-    "align": true
   },
 
   "processing": {

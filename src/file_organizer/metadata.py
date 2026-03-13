@@ -1,9 +1,10 @@
-"""Shared archival metadata configuration provider.
+"""Archival metadata configuration provider for :mod:`file_organizer`.
 
-This module provides :class:`ArchiveMetadata` which is a thin configuration
-provider for metadata tags and values.  It receives the ``metadata`` section
-(from :class:`~common.project_config.ProjectConfig`) and provides methods
-to retrieve tag lists and values.
+This module provides :class:`ArchiveMetadata` — a thin configuration provider
+for metadata tags and values used by the File Organizer pipeline.
+
+The built-in fallback constant :data:`~file_organizer.constants.DEFAULT_METADATA`
+lives in :mod:`file_organizer.constants` and is re-exported here for convenience.
 
 Actual reading/writing of metadata is done by individual components
 (FileProcessor, PreviewMaker) using :class:`~common.tagger.Tagger`.
@@ -11,7 +12,7 @@ Actual reading/writing of metadata is done by individual components
 
 from typing import Any, Optional
 
-from common.constants import DEFAULT_METADATA
+from file_organizer.constants import DEFAULT_METADATA  # noqa: F401  (re-exported)
 from common.logger import Logger
 
 

@@ -13,6 +13,7 @@ Responsibilities are split as follows:
 """
 
 import shutil
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -64,18 +65,33 @@ class FileOrganizer:
             )
 
 
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: Logger, config_path: str | Path | None = None) -> None:
         """
         Initialize the organizer.
 
         Args:
             logger: Logger instance for this organizer.
+            config_path: Optional path to ``file-organizer/config.json``.
+                When *None* the standard config location is used.
         """
         self._logger = logger
 
+        self._config = Config(logger, config_path)
         cfg = ProjectConfig.instance()
-        self._processor = FileProcessor(logger)
+        self._processor = FileProcessor(logger, metadata_config=self._config.metadata)
         self._router = Router(routes=cfg.routes, logger=logger, formats=cfg.formats)
+
+
+    def reload_config(self) -> bool:
+        """Reload file-organizer config and rebuild processor with updated metadata.
+
+        Returns:
+            True if the config changed, False if it was identical.
+        """
+        changed = self._config.reload()
+        if changed:
+            self._processor = FileProcessor(self._logger, metadata_config=self._config.metadata)
+        return changed
 
 
     def __call__(
@@ -116,14 +132,6 @@ class FileOrganizer:
         )
 
 
-    def _load_config(self, config_path: str | Path | None) -> Config:
-        """
-        Create a :class:`Config` instance bound to this organizer's logger.
-        """
-
-        return Config(self._logger, config_path)
-
-
     def _run_batch(
         self,
         *,
@@ -155,6 +163,11 @@ class FileOrganizer:
 
         resolved_input = Path(input_path).resolve()
         resolved_output = Path(output_path).resolve()
+
+        # If a per-run config path is provided, reload processor with its metadata.
+        if config_path is not None:
+            run_config = Config(self._logger, config_path)
+            self._processor = FileProcessor(self._logger, metadata_config=run_config.metadata)
 
         # Guard: input and output must not overlap.
         self._validate_no_overlap(resolved_input, resolved_output)
@@ -228,7 +241,7 @@ class FileOrganizer:
         parsed = self._processor.validate(file_path)
 
         # Get destination paths using Router
-        dest_path, dest_log_path, log_file_path = self._calculate_destination_paths(
+        dest_path, dest_log_path, log_file_path, protect = self._calculate_destination_paths(
             file_path, parsed, output_path
         )
 
@@ -313,6 +326,17 @@ class FileOrganizer:
                 except OSError:
                     pass
 
+        # Make destination read-only when the routing rule requests protection
+        if protect:
+            for p in (dest_path, dest_log_path):
+                if p and p.exists():
+                    try:
+                        mode = p.stat().st_mode
+                        p.chmod(mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+                        self._logger.info(f"  Protected (read-only): {p.name}")
+                    except OSError as e:
+                        self._logger.warning(f"Failed to set read-only on {p}: {e}")
+
         # If move mode, delete source files
         if not copy_mode:
             try:
@@ -373,7 +397,7 @@ class FileOrganizer:
         file_path: Path,
         parsed: Any,  # ParsedFilename
         processed_root: Path
-    ) -> tuple[Path, Path | None, Path | None]:
+    ) -> tuple[Path, Path | None, Path | None, bool]:
         """
         Calculate destination paths for file and optional log file using Router.
         
@@ -383,7 +407,7 @@ class FileOrganizer:
             processed_root: Root directory for processed files.
             
         Returns:
-            Tuple (dest_path, dest_log_path, source_log_path).
+            Tuple (dest_path, dest_log_path, source_log_path, protect).
         """
         # Check for associated log file
         source_log_path = file_path.with_suffix('.log')
@@ -399,7 +423,7 @@ class FileOrganizer:
             dest_log_filename = f"{base_name}.log"
 
         # Get target folder from router
-        processed_dir = self._router.get_target_folder(parsed, processed_root, filename=file_path.name)
+        processed_dir, protect = self._router.get_target_folder(parsed, processed_root, filename=file_path.name)
 
         # Create processed directory if it doesn't exist
         processed_dir.mkdir(parents=True, exist_ok=True)
@@ -408,4 +432,4 @@ class FileOrganizer:
         dest_path = processed_dir / dest_filename
         dest_log_path = processed_dir / dest_log_filename if dest_log_filename else None
 
-        return dest_path, dest_log_path, source_log_path
+        return dest_path, dest_log_path, source_log_path, protect

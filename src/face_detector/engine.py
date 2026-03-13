@@ -43,7 +43,7 @@ class FaceDetectorEngine:
         self._config = Config(logger, config_path)
         detector_name = detector or self._config.detector
         detector_cls = get_detector(detector_name)
-        self._detector: FaceDetector = detector_cls(logger, self._config)
+        self._detector: FaceDetector = detector_cls(logger)
 
     def __call__(
         self,
@@ -141,6 +141,28 @@ class FaceDetectorEngine:
         self._logger.debug(f"Stored {len(faces)} face(s) from {file_path.name}")
         return len(faces)
 
+    def _is_eligible(self, file_path: Path) -> bool:
+        """Return True if *file_path* passes the engine-level filters."""
+        if file_path.is_symlink():
+            self._logger.debug(f"Skipping {file_path}: is symlink")
+            return False
+
+        if file_path.suffix.lower() not in self._config.source_extensions:
+            self._logger.debug(
+                f"Skipping {file_path}: extension {file_path.suffix!r} not in source_extensions"
+            )
+            return False
+
+        import fnmatch
+        patterns = self._config.source_priority
+        if patterns and not any(fnmatch.fnmatch(file_path.name, p) for p in patterns):
+            self._logger.debug(
+                f"Skipping {file_path}: does not match any source_priority pattern"
+            )
+            return False
+
+        return True
+
     def _scan_path(
         self,
         path: Path,
@@ -157,7 +179,7 @@ class FaceDetectorEngine:
         for file_path in sorted(path.rglob("*")):
             if not file_path.is_file():
                 continue
-            if not self._detector.should_process(file_path):
+            if not self._is_eligible(file_path):
                 continue
 
             count = self.process_single_file(file_path, store, overwrite=overwrite)

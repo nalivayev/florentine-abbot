@@ -117,44 +117,17 @@ XMP_ACTION_PRODUCED = "produced"            # File produced/rendered
 XMP_ACTION_RESIZED = "resized"              # Image resized
 XMP_ACTION_SAVED = "saved"                  # File saved
 
-# Default metadata configuration (tags + languages)
-# Used by ArchiveMetadata.  The "tags" sub-dict maps friendly field names to
-# XMP tags; "languages" holds per-language values for those fields.
-DEFAULT_METADATA: dict[str, Any] = {
-    "tags": {
-        "description": TAG_XMP_DC_DESCRIPTION,
-        "creator": TAG_XMP_DC_CREATOR,
-        "credit": TAG_XMP_PHOTOSHOP_CREDIT,
-        "rights": TAG_XMP_DC_RIGHTS,
-        "terms": TAG_XMP_XMPRIGHTS_USAGE_TERMS,
-        "marked": TAG_XMP_XMPRIGHTS_MARKED,
-        "source": TAG_XMP_DC_SOURCE,
-    },
-    "languages": {
-        "en-US": {
-            "default": True,
-            "creator": [],
-            "credit": [],
-            "description": [],
-            "rights": [],
-            "terms": ["All rights reserved."],
-            "source": [],
-            "type": "StillImage",
-            "marked": "True",
-        }
-    },
-}
-
 # Default routing rules (pattern-based)
 # Used by Router when routes.json is not present.
-# Each entry is [glob_pattern, subfolder]:
+# Each entry is [glob_pattern, subfolder, protect?]:
 #   Pattern is matched against the full filename using fnmatch (case-insensitive).
 #   Rules are evaluated in order — first match wins.
 #   "." = date root (no subfolder)
-DEFAULT_ROUTES: dict[str, list[list[str]]] = {
+#   protect (optional, default false) = make the file read-only after placement
+DEFAULT_ROUTES: dict[str, list[list[Any]]] = {
     "rules": [
-        ["*.RAW.*",  "SOURCES"],
-        ["*.MSR.*",  "SOURCES"],
+        ["*.RAW.*",  "SOURCES",     True],
+        ["*.MSR.*",  "SOURCES",     True],
         ["*.PRV.*",  "."],
         ["*",        "DERIVATIVES"],
     ],
@@ -177,5 +150,4 @@ DEFAULT_FORMATS: dict[str, str] = {
 DEFAULT_CONFIG: dict[str, Any] = {
     "formats": DEFAULT_FORMATS,
     "routes": DEFAULT_ROUTES,
-    "metadata": DEFAULT_METADATA,
 }

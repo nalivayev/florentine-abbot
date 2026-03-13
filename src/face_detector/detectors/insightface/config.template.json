@@ -1,0 +1,14 @@
+{
+
+  "help": [
+    "Configuration for the InsightFace detector plugin.",
+    "",
+    "model_pack:  Model pack name downloaded to ~/.insightface/",
+    "             (default: buffalo_l — RetinaFace + ArcFace R100).",
+    "det_size:    Detection input size in pixels (default: 640)."
+  ],
+
+  "model_pack": "buffalo_l",
+  "det_size": 640
+
+}

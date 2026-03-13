@@ -59,7 +59,6 @@ class Config:
 
         if ensure_config_exists(self._logger, self._config_path, default_config, template_path):
             self._logger.info(f"Created new config at {self._config_path}")
-            self._logger.info("Please edit the configuration file and restart")
 
         self._data: dict[str, Any] = {}
         self._load()
@@ -118,14 +117,3 @@ class Config:
         defaults.update(overrides)
         return defaults
 
-    def get(self, key: str, default: Any = None) -> Any:
-        """Get a raw configuration value by key.
-
-        Args:
-            key: Configuration key.
-            default: Default value if key not found.
-
-        Returns:
-            Configuration value or default.
-        """
-        return self._data.get(key, default)

@@ -11,14 +11,13 @@ Install via the ``face-insightface`` extra::
     pip install "florentine-abbot[face-insightface]"
 """
 
-import fnmatch
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
 from common.logger import Logger
-from face_detector.config import Config
+from common.config_utils import get_config_dir, ensure_config_exists, load_optional_config, get_template_path
 from face_detector.detector import DetectedFace, FaceDetector
 from face_detector.detectors import register_detector
 
@@ -41,10 +40,19 @@ class InsightFaceDetector(FaceDetector):
     ``~/.insightface/`` on first use.
     """
 
-    def __init__(self, logger: Logger, config: Config) -> None:
+    def __init__(self, logger: Logger) -> None:
         self._logger = logger
-        self._config = config
         self._app: object | None = None  # lazy: initialised on first detect()
+
+        config_path = (
+            get_config_dir() / "face-detector" / "detectors" / "insightface" / "config.json"
+        )
+        template_path = get_template_path("face_detector.detectors.insightface", "config.template.json")
+        ensure_config_exists(self._logger, config_path, {}, template_path)
+        opts = load_optional_config(self._logger, config_path, {})
+
+        self._model_pack: str = str(opts.get("model_pack", "buffalo_l"))
+        self._det_size: int = int(opts.get("det_size", 640))
 
 
     def _ensure_app(self) -> None:
@@ -54,34 +62,13 @@ class InsightFaceDetector(FaceDetector):
                 "Install it with: pip install insightface onnxruntime"
             )
         if self._app is None:
-            det_size = self._config.insightface_det_size
+            det_size = self._det_size
             app = _FaceAnalysis(
-                name=self._config.insightface_model_pack,
+                name=self._model_pack,
                 providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
             )
             app.prepare(ctx_id=0, det_size=(det_size, det_size))  # type: ignore[union-attr]
             self._app = app
-
-
-    def should_process(self, file_path: Path) -> bool:
-        if file_path.is_symlink():
-            self._logger.debug(f"Skipping {file_path}: is symlink")
-            return False
-
-        if file_path.suffix.lower() not in self._config.source_extensions:
-            self._logger.debug(
-                f"Skipping {file_path}: extension {file_path.suffix!r} not in source_extensions"
-            )
-            return False
-
-        patterns = self._config.source_priority
-        if patterns and not any(fnmatch.fnmatch(file_path.name, p) for p in patterns):
-            self._logger.debug(
-                f"Skipping {file_path}: does not match any source_priority pattern"
-            )
-            return False
-
-        return True
 
 
     def detect(self, image_path: Path) -> list[DetectedFace]:
@@ -97,7 +84,7 @@ class InsightFaceDetector(FaceDetector):
         self._ensure_app()
 
         self._logger.debug(
-            f"Detecting faces in {image_path} (model={self._config.insightface_model_pack}, det_size={self._config.insightface_det_size})"
+            f"Detecting faces in {image_path} (model={self._model_pack}, det_size={self._det_size})"
         )
 
         Image.MAX_IMAGE_PIXELS = None  # allow large archival scans

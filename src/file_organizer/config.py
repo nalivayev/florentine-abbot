@@ -40,7 +40,6 @@ class Config:
 
         if ensure_config_exists(self._logger, self._config_path, default_config, template_path):
             self._logger.info(f"Created new config at {self._config_path}")
-            self._logger.info("Please edit the configuration file and restart")
 
         # Load configuration
         self._data: dict[str, Any] = {}
@@ -55,7 +54,7 @@ class Config:
         if self._data:
             self._logger.info(f"Loaded configuration from {self._config_path}")
         else:
-            self._logger.warning("Using empty configuration")
+            self._logger.debug("Config not found or empty — using defaults")
     
 
     def reload(self) -> bool:
@@ -76,14 +75,7 @@ class Config:
             return False
     
 
-    def get(self, key: str, default: Any = None) -> Any:
-        """
-        Get configuration value by key.
-
-        Args:
-            key (str): Configuration key.
-            default (Any): Default value if key not found.
-        Returns:
-            Any: Configuration value or default.
-        """
-        return self._data.get(key, default)
+    @property
+    def metadata(self) -> dict:
+        """The ``metadata`` section (tag mapping + per-language texts)."""
+        return self._data.get("metadata", {})

@@ -144,6 +144,17 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 {digitization_year:8:>:0}
 ```
 
+### Ключевые модули
+
+- `scan_batcher/cli.py` — точка входа CLI (команда `scan-batcher`).
+- `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
+- `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
+- `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
+- `scan_batcher/constants.py` — централизованные константы и перечисления (напр., `RoundingStrategy`).
+- `scan_batcher/workflow.py` — базовый класс для всех workflow-плагинов.
+- `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.
+- `scan_batcher/workflows/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
+
 ## Автоматическая организация (File Organizer)
 
 > **⚠️ Статус**: В разработке. Пока не полностью протестирована или документирована.
@@ -312,6 +323,16 @@ file-organizer "D:\Scans\Inbox" --config "D:\Configs\file-organizer.json"
 
 Все файлы конфигурации опциональны. При их отсутствии используются встроенные значения по умолчанию. Эти настройки влияют как на организацию файлов (`file-organizer`), так и на генерацию превью (`preview-maker`).
 
+### Ключевые модули
+
+- `file_organizer/cli.py` — CLI (подкоманды `batch`, `watch`).
+- `file_organizer/organizer.py` — ядро пакетной обработки и пофайловой оркестрации.
+- `file_organizer/processor.py` — парсинг имён файлов, валидация и запись метаданных.
+- `file_organizer/watcher.py` — режим демона через watchdog, делегирует `FileOrganizer`.
+- `file_organizer/metadata.py` — `ArchiveMetadata`: разрешение многоязычных XMP-полей.
+- `file_organizer/constants.py` — конфигурация метаданных по умолчанию (`DEFAULT_METADATA`).
+- `file_organizer/config.py` — загрузка конфига из `file-organizer/config.json`.
+
 ## Preview Maker (генератор PRV)
 
 > **⚠️ Статус**: В разработке. Пока не полностью протестирована или документирована.
@@ -357,6 +378,14 @@ preview-maker convert --file "D:\photo.jpg" --size 2000 --format jpeg --quality 
 - по умолчанию: `~/.florentine-abbot/logs/preview_maker.log`;
 - каталог можно переопределить через `--log-path` или переменную окружения `FLORENTINE_LOG_DIR`.
 
+### Ключевые модули
+
+- `preview_maker/cli.py` — CLI (подкоманды `batch`, `watch`, `convert`).
+- `preview_maker/maker.py` — ядро логики генерации PRV.
+- `preview_maker/converter.py` — чистая конвертация изображений (ресайз + формат); используется и пайплайном, и подкомандой `convert`.
+- `preview_maker/constants.py` — карты форматов, размеры по умолчанию, алиасы форматов.
+- `preview_maker/watcher.py` — режим демона через watchdog, делегирует `PreviewMaker`.
+
 ## Целостность архива (Archive Keeper)
 
 > **⚠️ Статус**: В разработке. Пока не полностью протестирован или документирован. Не входит в устанавливаемый пакет; запускать из исходников.
@@ -377,6 +406,12 @@ python -m archive_keeper.cli "D:\Archive\Photos"
 ```
 
 Это создаст файл `archive.db` и заполнит его текущим состоянием архива. Последующие запуски будут сравнивать файловую систему с этой базой данных.
+
+### Ключевые модули
+
+- `archive_keeper/cli.py` — точка входа CLI (команда `archive-keeper`).
+- `archive_keeper/engine.py` — логика сканирования, хеширования и сравнения.
+- `archive_keeper/scanner.py` — обход файловой системы и вычисление SHA-256.
 
 ## Распознавание лиц (Face Detector)
 
@@ -427,6 +462,15 @@ python -m face_detector.cli preview --file "D:\Archive\2024\photo.jpg"
 python -m face_detector.cli --help
 ```
 
+### Ключевые модули
+
+- `face_detector/cli.py` — CLI (подкоманды `batch`, `preview`).
+- `face_detector/engine.py` — оркестрация пакетного обнаружения по дереву каталогов.
+- `face_detector/detector.py` — абстрактный базовый класс для детектор-плагинов.
+- `face_detector/store.py` — SQLite-хранилище для эмбеддингов лиц.
+- `face_detector/clusterer.py` — кластеризация идентичностей на основе DBSCAN.
+- `face_detector/visualizer.py` — визуализация обнаруженных лиц на превью изображений.
+
 ## Настройка (Setup Runner)
 
 Интерактивный инструмент первоначальной настройки. Запустите один раз после установки, чтобы задать пути и создать файлы конфигурации для всех демонов.
@@ -449,42 +493,24 @@ setup-runner
 - Windows: `%APPDATA%\florentine-abbot\`
 - Linux/macOS: `~/.config/florentine-abbot/`
 
+### Ключевые модули
+
+- `setup_runner/cli.py` — точка входа CLI (команда `setup-runner`).
+- `setup_runner/runner.py` — логика интерактивной настройки; платформенные подклассы для Windows, macOS, Linux.
+
 ## Технические детали
 
-### Основные модули
+### Общие модули
 
-- `scan_batcher/cli.py` — основной CLI-модуль (используется для команды `scan-batcher`).
-- `archive_keeper/cli.py` — CLI для утилиты `archive-keeper`.
-- `file_organizer/cli.py` — CLI для утилиты `file-organizer` (подкоманды: `batch`, `watch`).
-- `file_organizer/organizer.py` — ядро пакетной обработки и пофайловой логики.
-- `file_organizer/watcher.py` — режим демона через watchdog, делегирует `FileOrganizer`.
-- `preview_maker/cli.py` — CLI для утилиты `preview-maker` (подкоманды: `batch`, `watch`, `convert`).
-- `preview_maker/maker.py` — ядро Preview Maker (логика генерации PRV-превью).
-- `preview_maker/converter.py` — чистая конвертация изображений (ресайз + формат); используется и пайплайном, и подкомандой `convert`.
-- `preview_maker/constants.py` — карты форматов, размеры по умолчанию, алиасы форматов.
-- `preview_maker/watcher.py` — режим демона через watchdog, делегирует `PreviewMaker`.
-- `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
-- `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
-- `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
-- `common/logger.py` — единая подсистема логирования для всех утилит.
+Используются всеми утилитами:
+
+- `common/logger.py` — единая подсистема логирования.
 - `common/naming.py` — общий парсер и валидатор имён файлов.
-- `common/router.py` — настраиваемая маршрутизация файлов (суффикс → папка).
-- `common/formatter.py` — настраиваемое форматирование путей и имён файлов.
+- `common/router.py` — настраиваемая маршрутизация файлов (паттерн имени → папка).
+- `common/formatter.py` — настраиваемое форматирование путей и имён файлов архива.
 - `common/tagger.py` — абстракция пакетного XMP/EXIF чтения/записи поверх exiftool.
-- `common/metadata.py` — политика архивных метаданных (многоязычные поля, мэппинг тегов).
-- `scan_batcher/constants.py` — централизованные константы и перечисления (например, `RoundingStrategy`).
-- `scan_batcher/workflow.py` — базовый класс для всех workflow-плагинов.
-- `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.
-- `scan_batcher/workflows/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
-- `common/exifer.py` — извлечение и обработка EXIF-метаданных, общая для всех утилит.
-- `face_detector/cli.py` — CLI для утилиты `face-detector` (подкоманды: `batch`, `preview`).
-- `face_detector/engine.py` — оркестрация пакетного обнаружения по дереву каталогов.
-- `face_detector/detector.py` — абстрактный базовый класс для детектор-плагинов.
-- `face_detector/store.py` — SQLite-хранилище для эмбеддингов лиц.
-- `face_detector/clusterer.py` — кластеризация идентичностей на основе DBSCAN.
-- `face_detector/previewer.py` — визуализация обнаруженных лиц на превью изображений.
-- `setup_runner/cli.py` — точка входа CLI для `setup-runner`.
-- `setup_runner/runner.py` — логика интерактивной настройки; платформенные подклассы для Windows, macOS, Linux.
+- `common/exifer.py` — извлечение и обработка EXIF-метаданных.
+- `common/constants.py` — имена тегов, константы действий и конфигурация по умолчанию.
 
 ### Установка
 

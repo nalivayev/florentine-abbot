@@ -23,9 +23,11 @@ class Router:
             ├── DERIVATIVES/  - Processed derivatives
             └── (date folder)  - Preview files stored directly here
 
-    Routing is configured via an ordered list of ``[glob_pattern, subfolder]``
-    rules.  Each filename is tested against the patterns in order; the first
-    match determines the subfolder:
+    Routing is configured via an ordered list of
+    ``[glob_pattern, subfolder, protect?]`` rules.  Each filename is tested
+    against the patterns in order; the first match determines the subfolder.
+    The optional third element *protect* (default ``False``) indicates whether
+    the destination file should be made read-only after placement:
 
     - ``"SOURCES"`` → ``date_folder/SOURCES/``
     - ``"."`` → ``date_folder/`` (date root)
@@ -53,11 +55,11 @@ class Router:
         self._logger = logger
         self._formatter = Formatter(logger=logger, formats=formats)
         section = routes if routes is not None else DEFAULT_ROUTES
-        self._routes = section.get("rules", [])
+        self._routes: list[list[Any]] = section.get("rules", [])
 
     def get_target_folder(
         self, parsed: ParsedFilename, base_path: Path, filename: str | None = None,
-    ) -> Path:
+    ) -> tuple[Path, bool]:
         """Determine target folder for a file.
 
         Builds the date-based path from *parsed* via :class:`Formatter`,
@@ -73,7 +75,7 @@ class Router:
                 if omitted, derived from *parsed*.
 
         Returns:
-            Full path to target folder.
+            Tuple of (target_folder_path, protect_flag).
         """
         formatted_path = self._formatter.format_path(parsed)
         date_root_dir = base_path / formatted_path
@@ -81,10 +83,10 @@ class Router:
         if filename is None:
             filename = self._formatter.format_filename(parsed) + f".{parsed.extension}"
 
-        subfolder = self._match_route(filename)
+        subfolder, protect = self._match_route(filename)
         if subfolder == ".":
-            return date_root_dir
-        return date_root_dir / subfolder
+            return date_root_dir, protect
+        return date_root_dir / subfolder, protect
 
     def get_normalized_filename(self, parsed: ParsedFilename) -> str:
         """Format filename according to the configured archive template.
@@ -120,10 +122,10 @@ class Router:
         folders: set[str] = set()
         for pattern in patterns:
             # Direct lookup: find the route whose pattern matches ours.
-            for route_pattern, subfolder in self._routes:
-                if route_pattern == pattern:
-                    if subfolder != ".":
-                        folders.add(subfolder)
+            for rule in self._routes:
+                if rule[0] == pattern:
+                    if rule[1] != ".":
+                        folders.add(rule[1])
                     break
             else:
                 # Fallback: last route (catch-all).
@@ -133,14 +135,22 @@ class Router:
                         folders.add(last_subfolder)
         return folders
 
-    def _match_route(self, filename: str) -> str:
-        """Return the subfolder for the first matching route.
+    def _match_route(self, filename: str) -> tuple[str, bool]:
+        """Return ``(subfolder, protect)`` for the first matching route.
 
-        Falls back to ``"DERIVATIVES"`` when no rule matches (should not
-        happen if a catch-all ``"*"`` rule is present).
+        The *protect* flag is the optional third element of the rule
+        (defaults to ``False``).
+
+        Raises:
+            ValueError: If no rule matches — indicates a missing catch-all
+                (e.g. ``["*", "DERIVATIVES"]``) in the routing configuration.
         """
         filename_lower = filename.lower()
-        for pattern, subfolder in self._routes:
-            if fnmatch.fnmatch(filename_lower, pattern.lower()):
-                return subfolder
-        return "DERIVATIVES"
+        for rule in self._routes:
+            if fnmatch.fnmatch(filename_lower, rule[0].lower()):
+                protect = rule[2] if len(rule) > 2 else False
+                return rule[1], protect
+        raise ValueError(
+            f"No routing rule matched '{filename}'. "
+            f"Add a catch-all rule like [\"*\", \"DERIVATIVES\"] to your routes."
+        )

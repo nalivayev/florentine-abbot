@@ -42,7 +42,7 @@ class FacePreviewer:
         self._max_size = max_size
         config = Config(logger, config_path)
         detector_cls = get_detector(detector or config.detector)
-        self._detector = detector_cls(logger, config)
+        self._detector = detector_cls(logger)
 
     def __call__(
         self,

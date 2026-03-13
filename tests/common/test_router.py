@@ -3,6 +3,7 @@ Tests for common.router module (pattern-based routing).
 """
 
 from pathlib import Path
+from typing import Any
 
 from common.router import Router
 from common.formatter import ParsedFilename
@@ -35,9 +36,10 @@ class TestRouter:
         parsed = self._create_parsed("RAW")
         base_path = Path("/archive")
 
-        target = router.get_target_folder(parsed, base_path)
+        target, protect = router.get_target_folder(parsed, base_path)
 
         assert target == Path("/archive/2020/2020.01.15/SOURCES")
+        assert protect is True
 
     def test_default_routing_msr_to_sources(self) -> None:
         """MSR files should go to SOURCES/ with default routing."""
@@ -45,9 +47,10 @@ class TestRouter:
         parsed = self._create_parsed("MSR")
         base_path = Path("/archive")
 
-        target = router.get_target_folder(parsed, base_path)
+        target, protect = router.get_target_folder(parsed, base_path)
 
         assert target == Path("/archive/2020/2020.01.15/SOURCES")
+        assert protect is True
 
     def test_default_routing_prv_to_date_root(self) -> None:
         """PRV files should go to date folder root with default routing."""
@@ -55,9 +58,10 @@ class TestRouter:
         parsed = self._create_parsed("PRV", "jpg")
         base_path = Path("/archive")
 
-        target = router.get_target_folder(parsed, base_path)
+        target, protect = router.get_target_folder(parsed, base_path)
 
         assert target == Path("/archive/2020/2020.01.15")
+        assert protect is False
 
     def test_default_routing_unknown_to_derivatives(self) -> None:
         """Unknown suffix should fall through to catch-all DERIVATIVES/."""
@@ -65,9 +69,10 @@ class TestRouter:
         parsed = self._create_parsed("UNKNOWN")
         base_path = Path("/archive")
 
-        target = router.get_target_folder(parsed, base_path)
+        target, protect = router.get_target_folder(parsed, base_path)
 
         assert target == Path("/archive/2020/2020.01.15/DERIVATIVES")
+        assert protect is False
 
     def test_custom_routing(self) -> None:
         """Custom routing rules should be respected."""
@@ -85,8 +90,8 @@ class TestRouter:
         edt_parsed = self._create_parsed("EDT")
         base_path = Path("/archive")
 
-        cor_target = router.get_target_folder(cor_parsed, base_path)
-        edt_target = router.get_target_folder(edt_parsed, base_path)
+        cor_target, _ = router.get_target_folder(cor_parsed, base_path)
+        edt_target, _ = router.get_target_folder(edt_parsed, base_path)
 
         assert cor_target == Path("/archive/2020/2020.01.15/MASTERS")
         assert edt_target == Path("/archive/2020/2020.01.15/EXPORTS")
@@ -103,7 +108,7 @@ class TestRouter:
         parsed = self._create_parsed("UNKNOWN")
         base_path = Path("/archive")
 
-        target = router.get_target_folder(parsed, base_path)
+        target, _ = router.get_target_folder(parsed, base_path)
 
         assert target == Path("/archive/2020/2020.01.15/CUSTOM_DEFAULT")
 
@@ -116,9 +121,9 @@ class TestRouter:
         raw_mixed = self._create_parsed("Raw")
         base_path = Path("/archive")
 
-        target_upper = router.get_target_folder(raw_upper, base_path)
-        target_lower = router.get_target_folder(raw_lower, base_path)
-        target_mixed = router.get_target_folder(raw_mixed, base_path)
+        target_upper, _ = router.get_target_folder(raw_upper, base_path)
+        target_lower, _ = router.get_target_folder(raw_lower, base_path)
+        target_mixed, _ = router.get_target_folder(raw_mixed, base_path)
 
         assert target_upper == Path("/archive/2020/2020.01.15/SOURCES")
         assert target_lower == Path("/archive/2020/2020.01.15/SOURCES")
@@ -135,7 +140,7 @@ class TestRouter:
         base_path = Path("/archive")
 
         # Pattern won't match the reconstructed name, but will match explicit filename
-        target = router.get_target_folder(parsed, base_path, filename="scan_001.tif")
+        target, _ = router.get_target_folder(parsed, base_path, filename="scan_001.tif")
 
         assert target == Path("/archive/2020/2020.01.15/SCANS")
 
@@ -184,8 +189,8 @@ class TestRouter:
         )
         base_path = Path("/archive")
 
-        target_jan = router.get_target_folder(parsed_jan, base_path)
-        target_dec = router.get_target_folder(parsed_dec, base_path)
+        target_jan, _ = router.get_target_folder(parsed_jan, base_path)
+        target_dec, _ = router.get_target_folder(parsed_dec, base_path)
 
         assert target_jan == Path("/archive/2020/2020.01.15/SOURCES")
         assert target_dec == Path("/archive/2020/2020.12.31/SOURCES")
@@ -238,12 +243,14 @@ class TestRouter:
         parsed = self._create_parsed("RAW")
         base_path = Path("/archive")
 
-        target = router.get_target_folder(parsed, base_path)
+        target, _ = router.get_target_folder(parsed, base_path)
 
         assert target == Path("/archive/2020/2020.01.15/RAW_FOLDER")
 
-    def test_fallback_when_no_pattern_matches(self) -> None:
-        """When no rule matches, Router falls back to DERIVATIVES."""
+    def test_raises_when_no_pattern_matches(self) -> None:
+        """When no rule matches, Router should raise ValueError."""
+        import pytest
+
         routes_without_catchall = {"rules": [
             ["*.RAW.*", "SOURCES"],
         ]}
@@ -251,7 +258,30 @@ class TestRouter:
         parsed = self._create_parsed("UNKNOWN")
         base_path = Path("/archive")
 
-        target = router.get_target_folder(parsed, base_path)
+        with pytest.raises(ValueError, match="No routing rule matched"):
+            router.get_target_folder(parsed, base_path)
 
-        assert target == Path("/archive/2020/2020.01.15/DERIVATIVES")
+    def test_protect_flag_from_rule(self) -> None:
+        """Rules with a third element should propagate the protect flag."""
+        routes: dict[str, list[list[Any]]] = {"rules": [
+            ["*.RAW.*", "SOURCES", True],
+            ["*.PRV.*", ".", False],
+            ["*", "DERIVATIVES"],
+        ]}
+        router = Router(routes=routes)
+        base_path = Path("/archive")
+
+        _, protect_raw = router.get_target_folder(
+            self._create_parsed("RAW"), base_path,
+        )
+        _, protect_prv = router.get_target_folder(
+            self._create_parsed("PRV", "jpg"), base_path,
+        )
+        _, protect_other = router.get_target_folder(
+            self._create_parsed("EDT"), base_path,
+        )
+
+        assert protect_raw is True
+        assert protect_prv is False
+        assert protect_other is False
 

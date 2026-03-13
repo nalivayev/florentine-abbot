@@ -3,9 +3,9 @@ Tests for ArchiveMetadata configuration provider.
 """
 
 
-from common.constants import DEFAULT_METADATA
+from file_organizer.constants import DEFAULT_METADATA
 from common.logger import Logger
-from common.metadata import ArchiveMetadata
+from file_organizer.metadata import ArchiveMetadata
 
 
 class TestGetConfigurableTags:

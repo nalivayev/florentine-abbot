@@ -28,7 +28,7 @@ class TestInMemoryData:
         cfg = ProjectConfig.instance(data={})
         assert cfg.formats == {}
         assert cfg.routes == {}
-        assert cfg.metadata == {}
+        assert cfg.data.get("metadata") is None
 
     def test_custom_formats(self):
         cfg = ProjectConfig.instance(data={
@@ -61,8 +61,8 @@ class TestInMemoryData:
         cfg = ProjectConfig.instance(data={
             "metadata": {"tags": tags, "languages": langs}
         })
-        assert cfg.metadata["tags"] == tags
-        assert cfg.metadata["languages"] == langs
+        assert cfg.data.get("metadata", {})["tags"] == tags
+        assert cfg.data.get("metadata", {})["languages"] == langs
 
     def test_raw_data(self):
         raw = {"formats": {"archive_path_template": "X"}, "custom": 42}
@@ -95,8 +95,8 @@ class TestFileLoading:
         cfg = ProjectConfig.instance(config_path=config_file)
         assert cfg.formats["source_filename_template"] == "{year}.{extension}"
         assert cfg.routes == {"rules": [["*", "ALL"]]}
-        assert cfg.metadata["tags"] == {"description": "XMP-dc:Description"}
-        assert cfg.metadata["languages"] == {"en-US": {"default": True}}
+        assert cfg.data.get("metadata", {})["tags"] == {"description": "XMP-dc:Description"}
+        assert cfg.data.get("metadata", {})["languages"] == {"en-US": {"default": True}}
 
     def test_missing_file_creates_from_defaults(self, tmp_path: Path):
         config_file = tmp_path / "nonexistent" / "config.json"

@@ -125,11 +125,6 @@ class ProjectConfig:
         return self._data.get("routes", {})
 
     @property
-    def metadata(self) -> dict[str, Any]:
-        """The ``metadata`` section (tags mapping + languages)."""
-        return self._data.get("metadata", {})
-
-    @property
     def data(self) -> dict[str, Any]:
         """Full raw config dict (read-only intent)."""
         return self._data

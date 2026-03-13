@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -34,7 +35,10 @@ class TestPreviewMakerBatch:
         Cleanup after each test method.
         """
         if self.temp_dir and self.temp_dir.exists():
-            shutil.rmtree(self.temp_dir)
+            def _on_rm_error(_func, path, _exc_info):
+                os.chmod(path, 0o700)
+                os.unlink(path)
+            shutil.rmtree(self.temp_dir, onerror=_on_rm_error)
 
     def create_temp_dir(self) -> Path:
         """

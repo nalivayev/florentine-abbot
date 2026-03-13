@@ -2,13 +2,14 @@
 
   "help": [
     "Unified project configuration for florentine-abbot.",
-    "This file combines format templates, routing rules,",
-    "and metadata configuration into a single file.",
+    "This file combines format templates and routing rules.",
     "",
     "Sections:",
     "  formats  — filename parsing and archive formatting templates",
     "  routes   — pattern-based file routing rules",
-    "  metadata — tag mapping + multi-language metadata texts"
+    "",
+    "Metadata configuration (tag mapping + multi-language texts) is defined",
+    "separately in file-organizer/config.json (see file_organizer/config.template.json)."
   ],
 
   "formats": {
@@ -61,7 +62,7 @@
       "Pattern-based routing rules for file organization.",
       "Determines which subfolder a file goes into based on its filename.",
       "",
-      "rules: ordered list of [glob_pattern, subfolder] entries.",
+      "rules: ordered list of [glob_pattern, subfolder, protect?] entries.",
       "Each filename is tested against the patterns in order — first match wins.",
       "Patterns use standard glob syntax: * (any chars), ? (single char), [seq] (char set).",
       "Matching is case-insensitive.",
@@ -70,73 +71,18 @@
       "  'SOURCES': Files go to SOURCES/ subfolder",
       "  'DERIVATIVES': Files go to DERIVATIVES/ subfolder",
       "  '.': Files go directly to date folder root",
-      "  Any other string: custom subfolder name"
+      "  Any other string: custom subfolder name",
+      "",
+      "protect (optional third element, default false):",
+      "  When true, the destination file is made read-only after placement."
     ],
 
     "rules": [
-      ["*.RAW.*",  "SOURCES"],
-      ["*.MSR.*",  "SOURCES"],
+      ["*.RAW.*",  "SOURCES",     true],
+      ["*.MSR.*",  "SOURCES",     true],
       ["*.PRV.*",  "."],
       ["*",        "DERIVATIVES"]
     ]
-
-  },
-
-  "metadata": {
-
-    "help": [
-      "Metadata configuration: tag mapping and multi-language texts.",
-      "",
-      "tags: maps friendly field names to XMP tags written to image files.",
-      "  To add custom fields:",
-      "    1. Add a new entry in tags: \"fieldname\": \"XMP-namespace:TagName\"",
-      "    2. Add the field to your languages below",
-      "",
-      "languages: keys are BCP-47 codes like 'ru-RU', 'en-US'.",
-      "Exactly one language SHOULD have 'default': true.",
-      "",
-      "Field types:",
-      "  creator — string or array of strings (author names)",
-      "  Other fields — string or array of strings (multi-line text)"
-    ],
-
-    "tags": {
-      "description": "XMP-dc:Description",
-      "creator": "XMP-dc:Creator",
-      "rights": "XMP-dc:Rights",
-      "source": "XMP-dc:Source",
-      "type": "XMP-dc:Type",
-      "credit": "XMP-photoshop:Credit",
-      "terms": "XMP-xmpRights:UsageTerms",
-      "marked": "XMP-xmpRights:Marked"
-    },
-
-    "languages": {
-
-      "ru-RU": {
-        "default": true,
-        "creator": ["Имя Фамилия", "Соавтор"],
-        "credit": ["Ваш семейный архив"],
-        "description": ["Краткое описание этого архива."],
-        "rights": ["Сканирование © 2025 Ваше имя"],
-        "terms": ["Только для личного использования."],
-        "source": ["Место хранения оригинального физического носителя."],
-        "type": "StillImage",
-        "marked": "True"
-      },
-
-      "en-US": {
-        "creator": ["Name Surname", "Co-author"],
-        "credit": ["Your Family Archive"],
-        "description": ["Short description of this archive."],
-        "rights": ["Scanning © 2025 Your Name"],
-        "terms": ["Personal use only."],
-        "source": ["Original physical item location."],
-        "type": "StillImage",
-        "marked": "True"
-      }
-
-    }
 
   }
 

@@ -19,7 +19,6 @@ from common.logger import Logger
 from common.utils import log_banner
 from common.version import get_version
 from file_organizer.organizer import FileOrganizer
-from file_organizer.config import Config
 from file_organizer.watcher import FileWatcher
 
 
@@ -138,11 +137,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "watch":
-            config = Config(logger, args.config)
             watcher = FileWatcher(
                 logger,
                 path=str(input_path),
-                config=config,
+                config_path=args.config,
                 output_path=output_path,
                 copy_mode=args.copy,
                 no_metadata=args.no_metadata,

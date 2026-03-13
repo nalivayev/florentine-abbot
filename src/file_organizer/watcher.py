@@ -16,7 +16,6 @@ from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileSystemM
 
 from common.logger import Logger
 from common.utils import wait_for_stable
-from file_organizer.config import Config
 from file_organizer.organizer import FileOrganizer
 
 
@@ -28,14 +27,23 @@ class FileWatcher(FileSystemEventHandler):
     using :class:`FileOrganizer`.  Supports config reloading via SIGHUP.
     """
 
-    def __init__(self, logger: Logger, path: str, config: Config, output_path: Path, copy_mode: bool = False, no_metadata: bool = False) -> None:
+    def __init__(
+        self,
+        logger: Logger,
+        path: str,
+        *,
+        config_path: str | Path | None = None,
+        output_path: Path,
+        copy_mode: bool = False,
+        no_metadata: bool = False,
+    ) -> None:
         """
         Initialize the monitor.
 
         Args:
             logger: Logger instance for this monitor.
             path: Directory path to monitor (input / inbox).
-            config: Config instance for file processing.
+            config_path: Optional path to ``file-organizer/config.json``.
             output_path: Destination archive root.
             copy_mode: If True, copy files instead of moving them.
             no_metadata: If True, skip writing EXIF/XMP metadata.
@@ -46,13 +54,12 @@ class FileWatcher(FileSystemEventHandler):
         """
         super().__init__()
         self._path = Path(path).resolve()
-        self._config = config
         self._logger = logger
         self._copy_mode = copy_mode
         self._no_metadata = no_metadata
         self._output_path: Path = Path(output_path).resolve()
 
-        self._organizer = FileOrganizer(logger)
+        self._organizer = FileOrganizer(logger, config_path)
         self._observer = Observer()
         self._stop_event = threading.Event()
         self._setup_signal_handlers()
@@ -60,7 +67,7 @@ class FileWatcher(FileSystemEventHandler):
 
     def _on_sighup(self, signum: int, frame: object) -> None:
         self._logger.info("Received SIGHUP, reloading configuration...")
-        if self._config.reload():
+        if self._organizer.reload_config():
             self._logger.info("Configuration reloaded successfully")
         else:
             self._logger.info("Configuration unchanged")

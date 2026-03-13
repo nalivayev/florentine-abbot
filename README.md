@@ -144,6 +144,17 @@ If EXIF metadata is missing, date/time variables are filled with the file's modi
 {digitization_year:8:>:0}
 ```
 
+### Key modules
+
+- `scan_batcher/cli.py` — main CLI entry point (`scan-batcher` command).
+- `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
+- `scan_batcher/calculator.py` — DPI calculation algorithms.
+- `scan_batcher/parser.py` — command-line argument parsing and validation.
+- `scan_batcher/constants.py` — centralized constants and enumerations (e.g., `RoundingStrategy`).
+- `scan_batcher/workflow.py` — base class for all workflow plugins.
+- `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
+- `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
+
 ## Automatic Organization (File Organizer)
 
 > **⚠️ Status**: In development. Not yet fully tested or documented.
@@ -312,6 +323,16 @@ Archive template examples:
 
 All configuration files are optional. If absent, built-in defaults are used. These settings affect both file organization (`file-organizer`) and preview generation (`preview-maker`).
 
+### Key modules
+
+- `file_organizer/cli.py` — CLI (`batch`, `watch` subcommands).
+- `file_organizer/organizer.py` — core batch workflow and per-file orchestration.
+- `file_organizer/processor.py` — per-file filename parsing, validation, and metadata writing.
+- `file_organizer/watcher.py` — daemon mode via watchdog, delegates to `FileOrganizer`.
+- `file_organizer/metadata.py` — `ArchiveMetadata`: multilingual XMP field resolution.
+- `file_organizer/constants.py` — default metadata configuration (`DEFAULT_METADATA`).
+- `file_organizer/config.py` — config loading from `file-organizer/config.json`.
+
 ## Preview Maker (PRV Generator)
 
 > **⚠️ Status**: In development. Not yet fully tested or documented.
@@ -359,6 +380,14 @@ Logging follows the same convention as other tools:
 - default logs: `~/.florentine-abbot/logs/preview_maker.log`
 - override directory via `--log-path` or `FLORENTINE_LOG_DIR`.
 
+### Key modules
+
+- `preview_maker/cli.py` — CLI (`batch`, `watch`, `convert` subcommands).
+- `preview_maker/maker.py` — core PRV generation logic.
+- `preview_maker/converter.py` — pure image conversion (resize + format); used by both the pipeline and `convert`.
+- `preview_maker/constants.py` — format maps, default sizes, and format aliases.
+- `preview_maker/watcher.py` — daemon mode via watchdog, delegates to `PreviewMaker`.
+
 ## Archive Integrity (Archive Keeper)
 
 > **⚠️ Status**: In development. Not yet fully tested or documented. Not included in the installable package; run from source.
@@ -379,6 +408,12 @@ python -m archive_keeper.cli "D:\Archive\Photos"
 ```
 
 This will create `archive.db` and populate it with the current state of the archive. Subsequent runs will compare the file system against this database.
+
+### Key modules
+
+- `archive_keeper/cli.py` — CLI entry point (`archive-keeper` command).
+- `archive_keeper/engine.py` — scan, hash, and diff logic.
+- `archive_keeper/scanner.py` — filesystem traversal and SHA-256 calculation.
 
 ## Face Detection (Face Detector)
 
@@ -429,6 +464,15 @@ For a full list of arguments:
 python -m face_detector.cli --help
 ```
 
+### Key modules
+
+- `face_detector/cli.py` — CLI (`batch`, `preview` subcommands).
+- `face_detector/engine.py` — orchestrates batch detection over a directory tree.
+- `face_detector/detector.py` — abstract base class for detector plugins.
+- `face_detector/store.py` — SQLite persistence for face embeddings.
+- `face_detector/clusterer.py` — DBSCAN-based identity clustering.
+- `face_detector/visualizer.py` — visualization of detected faces on image previews.
+
 ## Setup (Setup Runner)
 
 A one-time interactive configuration tool. Run it once after installation to set up paths and generate configuration files for all daemons.
@@ -451,42 +495,24 @@ Config files are written to:
 - Windows: `%APPDATA%\florentine-abbot\`
 - Linux/macOS: `~/.config/florentine-abbot/`
 
+### Key modules
+
+- `setup_runner/cli.py` — CLI entry point (`setup-runner` command).
+- `setup_runner/runner.py` — interactive setup logic; platform subclasses for Windows, macOS, Linux.
+
 ## Technical Details
 
-### Main Utilities
+### Shared modules
 
-- `scan_batcher/cli.py` — main CLI entry point (used for the `scan-batcher` command).
-- `archive_keeper/cli.py` — CLI for the `archive-keeper` tool.
-- `file_organizer/cli.py` — CLI for the `file-organizer` tool (subcommands: `batch`, `watch`).
-- `file_organizer/organizer.py` — core batch workflow and per-file processing.
-- `file_organizer/watcher.py` — daemon mode via watchdog, delegates to `FileOrganizer`.
-- `preview_maker/cli.py` — CLI for the `preview-maker` tool (subcommands: `batch`, `watch`, `convert`).
-- `preview_maker/maker.py` — core implementation for Preview Maker (PRV generation logic).
-- `preview_maker/converter.py` — pure image conversion (resize + format); used by both the pipeline and the `convert` subcommand.
-- `preview_maker/constants.py` — format maps, default sizes, and format aliases.
-- `preview_maker/watcher.py` — daemon mode via watchdog, delegates to `PreviewMaker`.
-- `scan_batcher/batch.py` — batch and interactive DPI calculation logic.
-- `scan_batcher/calculator.py` — DPI calculation algorithms.
-- `scan_batcher/parser.py` — command-line argument parsing and validation.
-- `common/logger.py` — unified logging subsystem used by all tools.
+Used by all tools:
+
+- `common/logger.py` — unified logging subsystem.
 - `common/naming.py` — shared filename parser and validator.
-- `common/router.py` — configurable file routing (suffix → folder mapping).
-- `common/formatter.py` — customizable path and filename formatting.
+- `common/router.py` — configurable file routing (filename pattern → subfolder mapping).
+- `common/formatter.py` — customizable archive path and filename formatting.
 - `common/tagger.py` — batch XMP/EXIF read/write abstraction over exiftool.
-- `common/metadata.py` — archival metadata policy (multilingual fields, tags mapping).
-- `scan_batcher/constants.py` — centralized constants and enumerations (e.g., `RoundingStrategy`).
-- `scan_batcher/workflow.py` — base class for all workflow plugins.
-- `scan_batcher/workflows/__init__.py` — plugin registration and discovery.
-- `scan_batcher/workflows/vuescan/workflow.py` — workflow automation for VueScan.
-- `common/exifer.py` — EXIF metadata extraction and processing, shared across all tools.
-- `face_detector/cli.py` — CLI for the `face-detector` tool (subcommands: `batch`, `preview`).
-- `face_detector/engine.py` — orchestrates batch detection over a directory tree.
-- `face_detector/detector.py` — abstract base class for detector plugins.
-- `face_detector/store.py` — SQLite persistence for face embeddings.
-- `face_detector/clusterer.py` — DBSCAN-based identity clustering.
-- `face_detector/previewer.py` — visualization of detected faces on image previews.
-- `setup_runner/cli.py` — CLI entry point for `setup-runner`.
-- `setup_runner/runner.py` — interactive setup logic; platform subclasses for Windows, macOS, Linux.
+- `common/exifer.py` — EXIF metadata extraction and processing.
+- `common/constants.py` — project-wide tag names, action constants, and default configurations.
 
 ### Installation
 
