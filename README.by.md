@@ -140,20 +140,27 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 {digitization_year:8:>:0}
 ```
 
-## Тэхнічныя дэталі
+### Ключавыя модулі
 
-### Асноўныя модулі
-
-- `scan_batcher/cli.py` — асноўны CLI-модуль (выкарыстоўваецца для каманды `scan-batcher`).
+- `scan_batcher/cli.py` — кропка ўваходу CLI (каманда `scan-batcher`).
 - `scan_batcher/batch.py` — логіка пакетных і інтэрактыўных разлікаў DPI.
 - `scan_batcher/calculator.py` — алгарытмы разліку DPI.
 - `scan_batcher/parser.py` — парсінг і валідацыя аргументаў камандной радка.
-- `common/logger.py` — адзіная падсістэма лагіравання.
 - `scan_batcher/constants.py` — цэнтралізаваныя канстанты і пералічэнні (напрыклад, `RoundingStrategy`).
 - `scan_batcher/workflow.py` — базавы клас для ўсіх workflow-плагінаў.
 - `scan_batcher/workflows/__init__.py` — рэгістрацыя і выяўленне плагінаў.
 - `scan_batcher/workflows/vuescan/workflow.py` — аўтаматызацыя працоўнага працэсу VueScan.
+
+## Тэхнічныя дэталі
+
+### Агульныя модулі
+
+Выкарыстоўваюцца па ўсім праекце:
+
+- `common/logger.py` — адзіная падсістэма лагіравання.
+- `common/tagger.py` — абстракцыя пакетнага XMP/EXIF чытання/запісу паверх exiftool.
 - `common/exifer.py` — выманне і апрацоўка EXIF-метаданых.
+- `common/constants.py` — імёны тэгаў, канстанты дзеянняў і канфігурацыя па змаўчанні.
 
 ### Усталяванне
 

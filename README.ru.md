@@ -140,21 +140,27 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 {digitization_year:8:>:0}
 ```
 
-## Технические детали
+### Ключевые модули
 
-### Основные модули
-
-- `scan_batcher/cli.py` — основной CLI-модуль (используется для команды `scan-batcher`).
+- `scan_batcher/cli.py` — точка входа CLI (команда `scan-batcher`).
 - `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
 - `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
 - `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
-- `common/logger.py` — единая подсистема логирования.
-- `common/tagger.py` — абстракция пакетного XMP/EXIF чтения/записи поверх exiftool.
-- `scan_batcher/constants.py` — централизованные константы и перечисления (например, `RoundingStrategy`).
+- `scan_batcher/constants.py` — централизованные константы и перечисления (напр., `RoundingStrategy`).
 - `scan_batcher/workflow.py` — базовый класс для всех workflow-плагинов.
 - `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.
 - `scan_batcher/workflows/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
+
+## Технические детали
+
+### Общие модули
+
+Используются по всему проекту:
+
+- `common/logger.py` — единая подсистема логирования.
+- `common/tagger.py` — абстракция пакетного XMP/EXIF чтения/записи поверх exiftool.
 - `common/exifer.py` — извлечение и обработка EXIF-метаданных.
+- `common/constants.py` — имена тегов, константы действий и конфигурация по умолчанию.
 
 ### Установка
 
