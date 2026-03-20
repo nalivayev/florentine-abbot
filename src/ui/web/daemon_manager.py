@@ -9,6 +9,7 @@ import json
 import subprocess
 import sys
 import threading
+from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -67,6 +68,8 @@ class DaemonManager:
         ),
     ]
 
+    MAX_LOG_LINES = 500
+
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._processes: dict[str, subprocess.Popen[bytes] | None] = {
@@ -76,8 +79,26 @@ class DaemonManager:
         self._stopped_by_us: set[str] = set()
         # Daemons that exited on their own → maps name to last stderr output.
         self._crashed: dict[str, str] = {}
+        # Per-daemon log buffers (stdout + stderr combined).
+        self._logs: dict[str, list[str]] = {d.name: [] for d in self._DESCRIPTORS}
 
-    # ── internals ──────────────────────────────────────────────────────
+    def _read_output(self, name: str, proc: "subprocess.Popen[bytes]") -> None:
+        """Read combined stdout+stderr line by line into the log buffer."""
+        try:
+            for raw in proc.stdout:
+                line = raw.decode(errors="replace").rstrip()
+                with self._lock:
+                    buf = self._logs[name]
+                    buf.append(line)
+                    if len(buf) > self.MAX_LOG_LINES:
+                        del buf[:len(buf) - self.MAX_LOG_LINES]
+        except Exception:
+            pass
+
+    def get_logs(self, name: str) -> list[str]:
+        """Return a snapshot of the log buffer for *name*."""
+        with self._lock:
+            return list(self._logs.get(name, []))
 
     def _find_script(self, name: str) -> str:
         """
@@ -143,8 +164,6 @@ class DaemonManager:
             if name not in self._stopped_by_us:
                 self._crashed[name] = stderr or f"Exited with code {proc.returncode}"
 
-    # ── public API ─────────────────────────────────────────────────────
-
     def all(self) -> list[DaemonState]:
         """Return current state for every daemon."""
         states: list[DaemonState] = []
@@ -209,7 +228,16 @@ class DaemonManager:
                 return  # already running
             self._stopped_by_us.discard(name)
             self._crashed.pop(name, None)
-            self._processes[name] = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+            self._logs[name] = []
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            self._processes[name] = proc
+            threading.Thread(
+                target=self._read_output, args=(name, proc), daemon=True
+            ).start()
 
     def stop(self, name: str) -> None:
         """Terminate the daemon subprocess. No-op if already stopped."""

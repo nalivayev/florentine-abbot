@@ -84,11 +84,7 @@ class ProjectConfig:
             return cls._initialize(logger=logger, config_path=config_path, data=data)
 
         if cls._instance is None:
-            raise RuntimeError(
-                "ProjectConfig has not been initialized. "
-                "Call ProjectConfig.instance(data=...) or "
-                "ProjectConfig.instance(config_path=...) first."
-            )
+            return cls._initialize()
         return cls._instance
 
     @classmethod

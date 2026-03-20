@@ -1,0 +1,134 @@
+{
+  "nav": {
+    "settings": "Settings",
+    "management": "Management",
+    "organizer": "Organizer",
+    "processor": "Processor",
+    "detector": "Detector"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Core project paths",
+    "inbox": "Inbox",
+    "inbox_hint": "Folder where the organizer picks up new files.",
+    "archive": "Archive folder",
+    "archive_hint": "Changing this will require resetting the database.",
+    "save": "Save",
+    "change_archive": "Change archive",
+    "confirm_archive_title": "Change archive folder",
+    "confirm_archive_message": "All daemons will be restarted with the new paths.\nThis will also require a database reset in the future.",
+    "saved": "Saved"
+  },
+  "daemons": {
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "crashed": "Crashed",
+      "not_configured": "Not configured"
+    },
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "watch": "Watch",
+    "output": "Output",
+    "no_logs": "No data"
+  },
+  "login": {
+    "title": "Florentine Abbot",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "error_invalid": "Invalid username or password",
+    "error_unavailable": "Server unavailable"
+  },
+  "setup": {
+    "archive_path": "Archive folder",
+    "username": "Username",
+    "password": "Password",
+    "password_confirm": "Repeat password",
+    "submit": "Launch",
+    "back": "Back",
+    "next": "Next",
+    "error_import_interrupted": "Import was interrupted (server stopped mid-process). Some files may not have been moved.",
+    "error_unavailable": "Server unavailable",
+    "validation": {
+      "required": "Required",
+      "username_format": "Letters, digits and '_' only, min 3 characters",
+      "password_short": "At least 6 characters",
+      "passwords_mismatch": "Passwords do not match",
+      "path_not_found": "Folder does not exist",
+      "same_as_archive": "Cannot match the archive folder"
+    },
+    "steps": {
+      "archive": {
+        "label": "Archive & account",
+        "hint": "Set the archive folder and create an administrator account.",
+        "archive_path_hint": "Required. All processed photos will be moved here.",
+        "username_hint": "Required. Letters, digits and '_' only, min 3 characters.",
+        "password_hint": "Required. At least 6 characters.",
+        "password_confirm_hint": "Required."
+      },
+      "existing": {
+        "label": "Existing photos",
+        "hint": "Do you have a folder with photos to import into the archive?",
+        "yes": "Yes, import them",
+        "no": "No, start fresh"
+      },
+      "import": {
+        "label": "Import settings",
+        "hint": "Specify the folder with source photos.",
+        "input_path": "Photos folder",
+        "recursive": "Include subfolders"
+      },
+      "preview": {
+        "label": "Preview",
+        "hint": "Review how your files will be renamed and moved. Nothing will change until you click Next.",
+        "loading": "Analysing files…",
+        "total": "Total",
+        "ok": "Will be moved",
+        "failed": "Errors",
+        "now": "As is:",
+        "after": "After:",
+        "errors_title": "Files that cannot be processed:"
+      },
+      "inbox": {
+        "label": "Inbox folder",
+        "hint": "New photos from this folder will be automatically added to the archive.",
+        "inbox_path": "Inbox folder",
+        "inbox_path_hint": "Files from this folder will be automatically moved to the archive.",
+        "skip_hint": "You can leave this empty and configure it later."
+      },
+      "launch": {
+        "label": "Launch",
+        "hint": "Review your settings and click Launch.",
+        "import_from": "Import from"
+      },
+      "processing": {
+        "label": "Processing",
+        "importing": "Importing photos…",
+        "done": "All done. You can now log in.",
+        "go": "Log in"
+      }
+    }
+  },
+  "tasks": {
+    "organizer": {
+      "label": "File Organizer",
+      "description": "Watches inbox for new scans and moves them to the archive."
+    },
+    "processor": {
+      "label": "Preview Maker",
+      "description": "Watches archive for new masters and generates PRV previews."
+    },
+    "detector": {
+      "label": "Face Detector",
+      "description": "Scans archive for unprocessed photos and detects faces."
+    }
+  },
+  "footer": {
+    "copyright": "© {year} Florentine Abbot"
+  },
+  "confirm": {
+    "cancel": "Cancel"
+  }
+}

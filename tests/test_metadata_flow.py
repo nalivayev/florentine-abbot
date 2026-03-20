@@ -19,7 +19,6 @@ from common.constants import (
     TAG_XMP_XMPRIGHTS_USAGE_TERMS,
 )
 from common.logger import Logger
-from common.formatter import ParsedFilename
 
 from file_organizer.metadata import ArchiveMetadata
 from tests.common.store_exifer import StoreExifer
@@ -50,7 +49,7 @@ class TestMetadataFlow:
         exifer: StoreExifer,
         metadata: ArchiveMetadata,
         file_path: Path,
-        parsed: ParsedFilename,
+        parsed: dict[str, int | str],
     ) -> None:
         """
         Simulate FileProcessor._write_metadata() logic.
@@ -69,8 +68,8 @@ class TestMetadataFlow:
 
         # Format dates from parsed filename
         date_str = (
-            f"{parsed.year}:{parsed.month:02d}:{parsed.day:02d} "
-            f"{parsed.hour:02d}:{parsed.minute:02d}:{parsed.second:02d}"
+            f"{parsed['year']}:{parsed['month']:02d}:{parsed['day']:02d} "
+            f"{parsed['hour']:02d}:{parsed['minute']:02d}:{parsed['second']:02d}"
         )
         tags[TAG_EXIF_DATETIME_ORIGINAL] = date_str
         tags[TAG_XMP_PHOTOSHOP_DATE_CREATED] = date_str
@@ -159,21 +158,12 @@ class TestMetadataFlow:
             logger=logger,
         )
 
-        parsed = ParsedFilename(
-            year=1950,
-            month=6,
-            day=15,
-            hour=12,
-            minute=0,
-            second=0,
-            modifier="E",
-            group="FAM",
-            subgroup="POR",
-            sequence="0001",
-            side="A",
-            suffix="tiff",
-            extension="tiff",
-        )
+        parsed: dict[str, int | str] = {
+            "year": 1950, "month": 6, "day": 15,
+            "hour": 12, "minute": 0, "second": 0,
+            "modifier": "E", "group": "FAM", "subgroup": "POR",
+            "sequence": 1, "side": "A", "suffix": "tiff", "extension": "tiff",
+        }
 
         # Act: simulate FileProcessor writing master tags
         self._simulate_file_processor_write(exifer, am, master, parsed)

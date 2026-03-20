@@ -135,7 +135,7 @@ class TestPipeline:
             recursive=False,
             copy_mode=False,
         )
-        assert processed == 1, "FileOrganizer should process 1 file"
+        assert processed["succeeded"] == 1, "FileOrganizer should process 1 file"
 
         # Find organized master
         master = self._find_file(self.output_dir, "*.RAW.tif")

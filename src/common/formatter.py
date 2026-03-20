@@ -1,41 +1,16 @@
 """Filename parsing, validation and formatting utilities shared across tools.
 
-Provides :class:`ParsedFilename` and :class:`Formatter` implementing the
-canonical Florentine Abbot naming scheme, used by both File Organizer and
-Preview Maker.
+Provides :class:`Formatter` implementing the canonical Florentine Abbot
+naming scheme, used by both File Organizer and Preview Maker.
 """
 
 import calendar
 import re
-from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Optional, Pattern
 
 from common.constants import DEFAULT_SOURCE_FILENAME_TEMPLATE, DEFAULT_ARCHIVE_PATH_TEMPLATE, DEFAULT_ARCHIVE_FILENAME_TEMPLATE
 from common.logger import Logger
-
-
-@dataclass
-class ParsedFilename:
-    """
-    Parsed filename data for structured photo filenames.
-
-    Represents a structured photo filename broken down into its components:
-    date, time, modifier, group/subgroup, sequence, side, suffix, and extension.
-    """
-
-    year: int
-    month: int
-    day: int
-    hour: int
-    minute: int
-    second: int
-    modifier: str
-    group: str
-    subgroup: str
-    sequence: str
-    side: str
-    suffix: str
-    extension: str
 
 
 class Formatter:
@@ -56,15 +31,20 @@ class Formatter:
     **Validation** — checks date/time consistency, modifier and side values,
     sequence limits.
 
-    **Formatting** — builds folder paths and filenames from
-    :class:`ParsedFilename` using configurable Python format-string templates
-    loaded from ``formats.json`` or supplied at construction time.
+    **Formatting** — builds folder paths and filenames from a parsed field
+    dict using configurable Python format-string templates loaded from
+    ``formats.json`` or supplied at construction time.
 
-    Templates use fields from :class:`ParsedFilename`:
+    Templates use the standard filename fields:
     ``{year}``, ``{month}``, ``{day}``, ``{hour}``, ``{minute}``, ``{second}``,
     ``{modifier}``, ``{group}``, ``{subgroup}``, ``{sequence}``, ``{side}``,
     ``{suffix}``, ``{extension}``.
     Format specifiers are supported: ``{month:02d}``, ``{sequence:04d}``, etc.
+
+    Callers may add extra keys to the parsed dict (e.g. ``exif_year``,
+    ``exif_camera``) before calling :meth:`format_path` / :meth:`format_filename`
+    — those keys are available in the output templates without any extra
+    configuration.
     """
 
     _NUMERIC_FIELDS = frozenset({
@@ -80,7 +60,7 @@ class Formatter:
         "year": 0, "month": 0, "day": 0,
         "hour": 0, "minute": 0, "second": 0,
         "modifier": "", "group": "", "subgroup": "",
-        "sequence": "0", "side": "", "suffix": "",
+        "sequence": 0, "side": "", "suffix": "",
         "extension": "",
     }
 
@@ -154,50 +134,48 @@ class Formatter:
             f"Archive filename template: {self._archive_filename_template}"
         )
 
-    def parse(self, filename: str) -> ParsedFilename | None:
-        """Parse a structured filename into components.
+    def parse(self, filepath: Path) -> dict[str, int | str] | None:
+        """Parse a structured filename into a field dict.
 
         Uses the compiled ``source_filename_template`` regex to extract
         field values.  Fields not present in the template receive defaults.
 
         Args:
-            filename: Filename to parse.
+            filepath: Path to the file (only the filename part is used for
+                parsing; the full path is available for future enrichment
+                such as EXIF reading).
 
         Returns:
-            :class:`ParsedFilename` on success, *None* if the name does not
-            match the expected pattern.
+            Dict of field names to values on success, *None* if the name
+            does not match the expected pattern.
         """
-        match = self._source_pattern.match(filename)
+        match = self._source_pattern.match(filepath.name)
         if not match:
             return None
 
         try:
-            # Start with defaults for fields not in template.
             values: dict[str, int | str] = dict(self._FIELD_DEFAULTS)
 
-            # Overwrite with matched groups.
             for i, field in enumerate(self._source_fields, 1):
-                values[field] = match.group(i)
+                raw = match.group(i)
+                if field in self._NUMERIC_FIELDS:
+                    values[field] = int(raw)
+                else:
+                    values[field] = raw
 
-            return ParsedFilename(
-                year=int(values["year"]),
-                month=int(values["month"]),
-                day=int(values["day"]),
-                hour=int(values["hour"]),
-                minute=int(values["minute"]),
-                second=int(values["second"]),
-                modifier=str(values["modifier"]).upper(),
-                group=str(values["group"]),
-                subgroup=str(values["subgroup"]),
-                sequence=str(values["sequence"]),
-                side=str(values["side"]).upper(),
-                suffix=str(values["suffix"]),
-                extension=str(values["extension"]).lower(),
-            )
+            # Normalize string fields.
+            values["modifier"] = str(values["modifier"]).upper()
+            values["group"] = str(values["group"])
+            values["subgroup"] = str(values["subgroup"])
+            values["side"] = str(values["side"]).upper()
+            values["suffix"] = str(values["suffix"])
+            values["extension"] = str(values["extension"]).lower()
+
+            return values
         except (ValueError, IndexError, KeyError):
             return None
 
-    def validate(self, parsed: ParsedFilename) -> list[str]:
+    def validate(self, parsed: dict[str, int | str]) -> list[str]:
         """Validate parsed filename data.
 
         Only fields present in the ``source_filename_template`` are checked.
@@ -205,7 +183,7 @@ class Formatter:
         and are silently skipped.
 
         Args:
-            parsed: Parsed filename data.
+            parsed: Parsed filename dict.
 
         Returns:
             List of validation error messages (empty if valid).
@@ -213,17 +191,17 @@ class Formatter:
         fields = frozenset(self._source_fields)
         errors: list[str] = []
 
-        if "modifier" in fields and parsed.modifier not in self._VALID_MODIFIERS:
+        if "modifier" in fields and parsed["modifier"] not in self._VALID_MODIFIERS:
             errors.append(
                 "Invalid modifier: "
-                f"'{parsed.modifier}' (must be one of: "
+                f"'{parsed['modifier']}' (must be one of: "
                 f"{', '.join(sorted(self._VALID_MODIFIERS))})"
             )
 
-        if "side" in fields and parsed.side not in self._VALID_SIDES:
+        if "side" in fields and parsed["side"] not in self._VALID_SIDES:
             errors.append(
                 "Invalid side: "
-                f"'{parsed.side}' (must be one of: "
+                f"'{parsed['side']}' (must be one of: "
                 f"{', '.join(sorted(self._VALID_SIDES))})"
             )
 
@@ -235,27 +213,24 @@ class Formatter:
             errors.extend(self._validate_zero_sequence(parsed, fields))
 
         if "sequence" in fields:
-            try:
-                if int(parsed.sequence) > 9999:
-                    errors.append(
-                        f"Invalid sequence value: {parsed.sequence} (must be <= 9999)"
-                    )
-            except ValueError:
-                pass
+            if int(parsed["sequence"]) > 9999:
+                errors.append(
+                    f"Invalid sequence value: {parsed['sequence']} (must be <= 9999)"
+                )
 
         return errors
 
-    def format_path(self, parsed: ParsedFilename) -> str:
-        """Format the folder path from parsed filename components.
+    def format_path(self, parsed: dict[str, int | str]) -> str:
+        """Format the folder path from parsed filename fields.
 
         Args:
-            parsed: Parsed filename components.
+            parsed: Parsed filename dict (may contain extra keys, e.g. exif_*).
 
         Returns:
             Formatted path string (e.g., ``"2024/2024.01.15"``).
         """
         try:
-            return self._archive_path_template.format(**self._template_kwargs(parsed))
+            return self._archive_path_template.format_map(parsed)
         except KeyError as e:
             self._logger.error(f"Missing field in archive_path_template: {e}")
             raise ValueError(f"Invalid archive_path_template: missing field {e}")
@@ -263,18 +238,18 @@ class Formatter:
             self._logger.error(f"Failed to format path: {e}")
             raise
 
-    def format_filename(self, parsed: ParsedFilename) -> str:
-        """Format the filename (without extension) from parsed components.
+    def format_filename(self, parsed: dict[str, int | str]) -> str:
+        """Format the filename (without extension) from parsed fields.
 
         Args:
-            parsed: Parsed filename components.
+            parsed: Parsed filename dict (may contain extra keys, e.g. exif_*).
 
         Returns:
             Formatted filename without extension
             (e.g., ``"2024.01.15.10.30.45.E.FAM.POR.0001.A.RAW"``).
         """
         try:
-            return self._archive_filename_template.format(**self._template_kwargs(parsed))
+            return self._archive_filename_template.format_map(parsed)
         except KeyError as e:
             self._logger.error(f"Missing field in archive_filename_template: {e}")
             raise ValueError(f"Invalid archive_filename_template: missing field {e}")
@@ -282,36 +257,17 @@ class Formatter:
             self._logger.error(f"Failed to format filename: {e}")
             raise
 
-    def format_template(self, parsed: ParsedFilename, template: str) -> str:
+    def format_template(self, parsed: dict[str, int | str], template: str) -> str:
         """Format an arbitrary template string using parsed filename fields.
 
         Args:
-            parsed: Parsed filename components.
+            parsed: Parsed filename dict.
             template: A ``str.format()``-style template.
 
         Returns:
             The formatted string.
         """
-        return template.format_map(self._template_kwargs(parsed))
-
-    @staticmethod
-    def _template_kwargs(parsed: ParsedFilename) -> dict[str, Any]:
-        """Build keyword arguments dict for ``str.format()``."""
-        return dict(
-            year=parsed.year,
-            month=parsed.month,
-            day=parsed.day,
-            hour=parsed.hour,
-            minute=parsed.minute,
-            second=parsed.second,
-            modifier=parsed.modifier,
-            group=parsed.group,
-            subgroup=parsed.subgroup,
-            sequence=int(parsed.sequence),
-            side=parsed.side,
-            suffix=parsed.suffix,
-            extension=parsed.extension,
-        )
+        return template.format_map(parsed)
 
     def _compile_source_template(self, template: str) -> tuple[Pattern[str], list[str]]:
         """Compile a source filename template into a regex pattern.
@@ -378,91 +334,91 @@ class Formatter:
         return pattern, field_names
 
     def _validate_date(
-        self, parsed: ParsedFilename, fields: frozenset[str],
+        self, parsed: dict[str, int | str], fields: frozenset[str],
     ) -> list[str]:
         errors: list[str] = []
 
-        if "month" in fields and parsed.month > 12:
-            errors.append(f"Invalid month value: {parsed.month} (must be 00-12)")
+        if "month" in fields and parsed["month"] > 12:
+            errors.append(f"Invalid month value: {parsed['month']} (must be 00-12)")
 
         if (
             "month" in fields
             and "day" in fields
-            and parsed.month > 0
-            and parsed.day > 0
+            and parsed["month"] > 0
+            and parsed["day"] > 0
         ):
-            max_days = self._DAYS_IN_MONTH.get(parsed.month, 0)
-            if parsed.month == 2 and calendar.isleap(parsed.year):
+            max_days = self._DAYS_IN_MONTH.get(int(parsed["month"]), 0)
+            if parsed["month"] == 2 and calendar.isleap(int(parsed["year"])):
                 max_days = 29
-            if parsed.day > max_days:
+            if parsed["day"] > max_days:
                 errors.append(
                     "Invalid day value: "
-                    f"{parsed.day} for month {parsed.month} (must be 00-{max_days})"
+                    f"{parsed['day']} for month {parsed['month']} (must be 00-{max_days})"
                 )
-        elif "day" in fields and parsed.day > 31:
-            errors.append(f"Invalid day value: {parsed.day} (must be 00-31)")
+        elif "day" in fields and parsed["day"] > 31:
+            errors.append(f"Invalid day value: {parsed['day']} (must be 00-31)")
 
         return errors
 
     def _validate_time(
-        self, parsed: ParsedFilename, fields: frozenset[str],
+        self, parsed: dict[str, int | str], fields: frozenset[str],
     ) -> list[str]:
         errors: list[str] = []
-        if "hour" in fields and parsed.hour > 23:
-            errors.append(f"Invalid hour value: {parsed.hour} (must be 00-23)")
-        if "minute" in fields and parsed.minute > 59:
-            errors.append(f"Invalid minute value: {parsed.minute} (must be 00-59)")
-        if "second" in fields and parsed.second > 59:
-            errors.append(f"Invalid second value: {parsed.second} (must be 00-59)")
+        if "hour" in fields and parsed["hour"] > 23:
+            errors.append(f"Invalid hour value: {parsed['hour']} (must be 00-23)")
+        if "minute" in fields and parsed["minute"] > 59:
+            errors.append(f"Invalid minute value: {parsed['minute']} (must be 00-59)")
+        if "second" in fields and parsed["second"] > 59:
+            errors.append(f"Invalid second value: {parsed['second']} (must be 00-59)")
         return errors
 
     def _validate_zero_sequence(
-        self, parsed: ParsedFilename, fields: frozenset[str],
+        self, parsed: dict[str, int | str], fields: frozenset[str],
     ) -> list[str]:
         errors: list[str] = []
 
-        if "month" in fields and parsed.month == 0:
-            if "day" in fields and parsed.day != 0:
+        if "month" in fields and parsed["month"] == 0:
+            if "day" in fields and parsed["day"] != 0:
                 errors.append(
                     "Invalid date: month is 00 but day is "
-                    f"{parsed.day:02d} (when month=00, day must also be 00)"
+                    f"{parsed['day']:02d} (when month=00, day must also be 00)"
                 )
             if (
                 fields & {"hour", "minute", "second"}
-                and (parsed.hour != 0 or parsed.minute != 0 or parsed.second != 0)
+                and (parsed["hour"] != 0 or parsed["minute"] != 0 or parsed["second"] != 0)
             ):
                 errors.append(
                     "Invalid date: month is 00 but time is "
-                    f"{parsed.hour:02d}:{parsed.minute:02d}:{parsed.second:02d} "
+                    f"{parsed['hour']:02d}:{parsed['minute']:02d}:{parsed['second']:02d} "
                     "(when month=00, time must be 00:00:00)"
                 )
 
-        if "day" in fields and parsed.day == 0:
+        if "day" in fields and parsed["day"] == 0:
             if (
                 fields & {"hour", "minute", "second"}
-                and (parsed.hour != 0 or parsed.minute != 0 or parsed.second != 0)
+                and (parsed["hour"] != 0 or parsed["minute"] != 0 or parsed["second"] != 0)
             ):
                 errors.append(
                     "Invalid date: day is 00 but time is "
-                    f"{parsed.hour:02d}:{parsed.minute:02d}:{parsed.second:02d} "
+                    f"{parsed['hour']:02d}:{parsed['minute']:02d}:{parsed['second']:02d} "
                     "(when day=00, time must be 00:00:00)"
                 )
 
-        if "hour" in fields and parsed.hour == 0:
+        if "hour" in fields and parsed["hour"] == 0:
             if (
                 fields & {"minute", "second"}
-                and (parsed.minute != 0 or parsed.second != 0)
+                and (parsed["minute"] != 0 or parsed["second"] != 0)
             ):
                 errors.append(
                     "Invalid time: hour is 00 but minutes/seconds are "
-                    f"{parsed.minute:02d}:{parsed.second:02d} "
+                    f"{parsed['minute']:02d}:{parsed['second']:02d} "
                     "(when hour=00, minutes and seconds must also be 00)"
                 )
 
-        if "minute" in fields and parsed.minute == 0 and parsed.second != 0:
+        if "minute" in fields and parsed["minute"] == 0 and parsed["second"] != 0:
             errors.append(
                 "Invalid time: minute is 00 but second is "
-                f"{parsed.second:02d} (when minute=00, second must also be 00)"
+                f"{parsed['second']:02d} (when minute=00, second must also be 00)"
             )
 
         return errors

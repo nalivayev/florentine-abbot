@@ -14,7 +14,6 @@ dependencies = [
     "watchdog>=3.0.0",
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.23.0",
-    "jinja2>=3.1.0",
 ]
 
 [project.optional-dependencies]
@@ -59,7 +58,7 @@ packages = [
 "common" = ["*.json"]
 "file_organizer" = ["*.json"]
 "preview_maker" = ["*.json"]
-"ui.web" = ["static/*", "templates/*"]
+"ui.web" = ["frontend/dist/**/*"]
 
 [build-system]
 requires = ["setuptools>=61.0", "setuptools_scm>=8.0"]

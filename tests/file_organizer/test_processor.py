@@ -8,7 +8,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 from common.logger import Logger
-from common.formatter import ParsedFilename
 from file_organizer.processor import FileProcessor
 
 class TestFileProcessor:
@@ -55,12 +54,12 @@ class TestFileProcessor:
     def test_process_skips_write_when_no_metadata(self):
         """process() skips _write_metadata when no_metadata=True."""
         processor = FileProcessor(self.logger)
-        parsed = ParsedFilename(
-            year=1950, month=6, day=15,
-            hour=12, minute=0, second=0,
-            modifier="E", group="FAM", subgroup="POR",
-            sequence="000001", side="A", suffix="MSR", extension="tiff",
-        )
+        parsed: dict[str, int | str] = {
+            "year": 1950, "month": 6, "day": 15,
+            "hour": 12, "minute": 0, "second": 0,
+            "modifier": "E", "group": "FAM", "subgroup": "POR",
+            "sequence": 1, "side": "A", "suffix": "MSR", "extension": "tiff",
+        }
 
         with patch.object(processor, '_write_metadata') as mock_write:
             processor.process(Path("dummy.tiff"), parsed, no_metadata=True)
@@ -70,12 +69,12 @@ class TestFileProcessor:
     def test_process_calls_write_when_no_metadata_is_false(self):
         """process() calls _write_metadata normally when flag is off."""
         processor = FileProcessor(self.logger)
-        parsed = ParsedFilename(
-            year=1950, month=6, day=15,
-            hour=12, minute=0, second=0,
-            modifier="E", group="FAM", subgroup="POR",
-            sequence="000001", side="A", suffix="MSR", extension="tiff",
-        )
+        parsed: dict[str, int | str] = {
+            "year": 1950, "month": 6, "day": 15,
+            "hour": 12, "minute": 0, "second": 0,
+            "modifier": "E", "group": "FAM", "subgroup": "POR",
+            "sequence": 1, "side": "A", "suffix": "MSR", "extension": "tiff",
+        }
 
         with patch.object(processor, '_write_metadata') as mock_write:
             processor.process(Path("dummy.tiff"), parsed, no_metadata=False)

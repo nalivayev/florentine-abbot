@@ -175,16 +175,16 @@ class TestFileOrganizerIntegration:
 
         # 2. Execute via batch API
         config_path = self._write_config(input_dir, self._minimal_config())
-        processed_count = organizer(
-            input_path=input_dir, 
+        result = organizer(
+            input_path=input_dir,
             output_path=output_dir,
-            config_path=config_path, 
-            recursive=False, 
+            config_path=config_path,
+            recursive=False,
             copy_mode=False
         )
-        
+
         # 3. Verify
-        assert processed_count == 1
+        assert result["succeeded"] == 1
         
         # Check file moved to output/YYYY/YYYY.MM.DD/SOURCES/
         # 1950 / 1950.06.15 / SOURCES
@@ -233,7 +233,7 @@ class TestFileOrganizerIntegration:
             copy_mode=False
         )
         
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
         
         # Verify normalized filename in output folder
         # 1950 / 1950.06.15 / SOURCES
@@ -260,7 +260,7 @@ class TestFileOrganizerIntegration:
             recursive=False, 
             copy_mode=False
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
         
         # 1950 / 1950.00.00 / DERIVATIVES
         expected_path = output_dir / "1950" / "1950.00.00" / "DERIVATIVES" / filename
@@ -298,7 +298,7 @@ class TestFileOrganizerIntegration:
             recursive=False, 
             copy_mode=False
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
 
         # PRV should be stored in output/YYYY/YYYY.MM.DD/ (no SOURCES/DERIVATIVES)
         expected_dir = output_dir / "1950" / "1950.06.15"
@@ -331,7 +331,7 @@ class TestFileOrganizerIntegration:
             recursive=False,
             copy_mode=False,
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
 
         dest = output_dir / "1950" / "1950.06.15" / "SOURCES" / filename
         assert dest.exists()
@@ -361,7 +361,7 @@ class TestFileOrganizerIntegration:
             recursive=False,
             copy_mode=False,
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
 
         dest = output_dir / "1950" / "1950.06.15" / "DERIVATIVES" / filename
         assert dest.exists()
@@ -499,7 +499,7 @@ class TestFileOrganizerIntegration:
                 copy_mode=False,
             )
             
-            assert processed_count == 1, f"{scenario['name']}: FileOrganizer failed to process file"
+            assert processed_count["succeeded"] == 1, f"{scenario['name']}: FileOrganizer failed to process file"
             
             # Verify file moved into output/YYYY/... tree
             found_files = list(output_dir.rglob(filename))
@@ -606,7 +606,7 @@ class TestFileOrganizerCustomFormats:
              recursive=False,
              copy_mode=False
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
         
         # File should be in flat structure: output/2024.03.15/SOURCES/
         expected_path = output_dir / "2024.03.15" / "SOURCES" / filename
@@ -639,7 +639,7 @@ class TestFileOrganizerCustomFormats:
              recursive=False,
              copy_mode=False
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
         
         # File should be in: output/2024/2024.03/SOURCES/
         expected_path = output_dir / "2024" / "2024.03" / "SOURCES" / filename
@@ -672,7 +672,7 @@ class TestFileOrganizerCustomFormats:
              recursive=False,
              copy_mode=False
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
         
         # File should be in: output/FAM/2024/2024.03.15/SOURCES/
         expected_path = output_dir / "FAM" / "2024" / "2024.03.15" / "SOURCES" / filename
@@ -705,7 +705,7 @@ class TestFileOrganizerCustomFormats:
              recursive=False,
              copy_mode=False
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
         
         # File should have compact name: 20240315_143000_TEST_RAW.tif
         expected_filename = "20240315_143000_TEST_RAW.tif"
@@ -824,7 +824,7 @@ class TestExiftoolCompliance:
                 recursive=False,
                 copy_mode=False,
             )
-            assert processed_count == 1
+            assert processed_count["succeeded"] == 1
 
             # 1950 / 1950.06.15 / SOURCES
             processed_path = output_dir / "1950" / "1950.06.15" / "SOURCES" / filename
@@ -885,7 +885,7 @@ class TestExiftoolCompliance:
             recursive=False,
             copy_mode=False,
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
 
         # 1950 / 1950.00.00 / DERIVATIVES
         processed_path = output_dir / "1950" / "1950.00.00" / "DERIVATIVES" / filename
@@ -932,7 +932,7 @@ class TestExiftoolCompliance:
             recursive=False,
             copy_mode=False,
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
 
         processed_path = output_dir / "2025" / "2025.11.29" / "SOURCES" / filename
         assert processed_path.exists()

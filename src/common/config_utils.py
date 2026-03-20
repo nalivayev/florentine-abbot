@@ -171,6 +171,24 @@ def load_optional_config(
         return default_dict
 
 
+def read_daemon_config(name: str) -> dict[str, Any]:
+    """Read a daemon's config.json from the standard config directory."""
+    path = get_config_dir() / name / "config.json"
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def write_daemon_config(name: str, data: dict[str, Any]) -> None:
+    """Write a daemon's config.json to the standard config directory."""
+    path = get_config_dir() / name / "config.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def get_template_path(module_name: str, filename: str = "config.template.json") -> Path | None:
     """
     Get path to template file from installed package or source tree.

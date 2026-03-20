@@ -6,29 +6,19 @@ from pathlib import Path
 from typing import Any
 
 from common.router import Router
-from common.formatter import ParsedFilename
 
 
 class TestRouter:
     """Tests for Router with pattern-based routing rules."""
 
-    def _create_parsed(self, suffix: str, extension: str = "tif") -> ParsedFilename:
-        """Create a ParsedFilename for testing."""
-        return ParsedFilename(
-            year=2020,
-            month=1,
-            day=15,
-            hour=10,
-            minute=0,
-            second=0,
-            modifier="E",
-            group="FAM",
-            subgroup="POR",
-            sequence="0001",
-            side="A",
-            suffix=suffix,
-            extension=extension,
-        )
+    def _create_parsed(self, suffix: str, extension: str = "tif") -> dict[str, int | str]:
+        return {
+            "year": 2020, "month": 1, "day": 15,
+            "hour": 10, "minute": 0, "second": 0,
+            "modifier": "E", "group": "FAM", "subgroup": "POR",
+            "sequence": 1, "side": "A",
+            "suffix": suffix, "extension": extension,
+        }
 
     def test_default_routing_raw_to_sources(self) -> None:
         """RAW files should go to SOURCES/ with default routing."""
@@ -147,46 +137,41 @@ class TestRouter:
     def test_get_normalized_filename(self) -> None:
         """Normalized filename should have leading zeros."""
         router = Router()
-        parsed = ParsedFilename(
-            year=2020,
-            month=1,
-            day=5,
-            hour=9,
-            minute=8,
-            second=7,
-            modifier="E",
-            group="FAM",
-            subgroup="POR",
-            sequence="1",
-            side="A",
-            suffix="RAW",
-            extension="tif",
-        )
+        parsed: dict[str, int | str] = {
+            "year": 2020, "month": 1, "day": 5,
+            "hour": 9, "minute": 8, "second": 7,
+            "modifier": "E", "group": "FAM", "subgroup": "POR",
+            "sequence": 1, "side": "A",
+            "suffix": "RAW", "extension": "tif",
+        }
 
         normalized = router.get_normalized_filename(parsed)
 
         assert normalized == "2020.01.05.09.08.07.E.FAM.POR.0001.A.RAW"
+
+    def _make_parsed(self, **kwargs: int | str) -> dict[str, int | str]:
+        base: dict[str, int | str] = {
+            "year": 2020, "month": 1, "day": 15,
+            "hour": 10, "minute": 0, "second": 0,
+            "modifier": "E", "group": "FAM", "subgroup": "POR",
+            "sequence": 1, "side": "A",
+            "suffix": "RAW", "extension": "tif",
+        }
+        base.update(kwargs)
+        return base
 
     def test_year_month_day_folder_structure(self) -> None:
         """Target folder should follow YYYY/YYYY.MM.DD structure."""
         router = Router()
 
         parsed_jan = self._create_parsed("RAW")
-        parsed_dec = ParsedFilename(
-            year=2020,
-            month=12,
-            day=31,
-            hour=23,
-            minute=59,
-            second=59,
-            modifier="E",
-            group="FAM",
-            subgroup="POR",
-            sequence="0001",
-            side="A",
-            suffix="RAW",
-            extension="tif",
-        )
+        parsed_dec: dict[str, int | str] = {
+            "year": 2020, "month": 12, "day": 31,
+            "hour": 23, "minute": 59, "second": 59,
+            "modifier": "E", "group": "FAM", "subgroup": "POR",
+            "sequence": 1, "side": "A",
+            "suffix": "RAW", "extension": "tif",
+        }
         base_path = Path("/archive")
 
         target_jan, _ = router.get_target_folder(parsed_jan, base_path)

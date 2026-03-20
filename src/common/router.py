@@ -9,7 +9,7 @@ import fnmatch
 from pathlib import Path
 from typing import Any, Optional
 
-from common.formatter import ParsedFilename, Formatter
+from common.formatter import Formatter
 from common.logger import Logger
 from common.constants import DEFAULT_ROUTES
 
@@ -58,7 +58,7 @@ class Router:
         self._routes: list[list[Any]] = section.get("rules", [])
 
     def get_target_folder(
-        self, parsed: ParsedFilename, base_path: Path, filename: str | None = None,
+        self, parsed: dict[str, int | str], base_path: Path, filename: str | None = None,
     ) -> tuple[Path, bool]:
         """Determine target folder for a file.
 
@@ -81,14 +81,14 @@ class Router:
         date_root_dir = base_path / formatted_path
 
         if filename is None:
-            filename = self._formatter.format_filename(parsed) + f".{parsed.extension}"
+            filename = self._formatter.format_filename(parsed) + f".{parsed['extension']}"
 
         subfolder, protect = self._match_route(filename)
         if subfolder == ".":
             return date_root_dir, protect
         return date_root_dir / subfolder, protect
 
-    def get_normalized_filename(self, parsed: ParsedFilename) -> str:
+    def get_normalized_filename(self, parsed: dict[str, int | str]) -> str:
         """Format filename according to the configured archive template.
 
         Args:

@@ -302,7 +302,7 @@ class TestPreviewMakerBatch:
             recursive=False,
             copy_mode=False,
         )
-        assert processed_count == 1
+        assert processed_count["succeeded"] == 1
 
         processed_msr = output_dir / "1950" / "1950.06.15" / "SOURCES" / filename
         assert processed_msr.exists()

@@ -65,6 +65,19 @@ stable and feature-complete.
 
 ---
 
+### UI / Web: system messages in the log panel
+
+When a daemon stops or crashes, add a formatted message to the log buffer in the same
+format as the daemon's own output.
+
+**Requires:** a `Logger` instance in `DaemonManager` with a custom handler that writes
+formatted lines into `self._logs[name]`, so stop/crash events appear inline with the
+daemon's output.
+
+**When to revisit:** when daemon lifecycle events need to be visible in the log panel.
+
+---
+
 ### file-organizer: `sort` subcommand (lightweight mode without pipeline)
 
 Analogous to `preview-maker convert` — a low-level subcommand that sorts files by
@@ -94,3 +107,54 @@ disabled.
 (clean separation of concerns, independently useful).
 
 **When to revisit:** after metadata writing is moved to `FileOrganizer`.
+
+---
+
+### UI / Web: user management
+
+Create, disable and delete users through the web admin interface.
+
+**Requires:** `GET/POST/PATCH /api/v1/users` endpoints, a page under `/admin`.
+
+**When to revisit:** once the auth layer is stable.
+
+---
+
+### UI / Web: password reset via CLI
+
+A CLI command `florentine-web reset-password --username <name>` to restore access
+without deleting the database.
+
+**Motivation:** if the admin forgets their password, the only current option is to delete
+`florentine.db` and go through setup again, destroying all users and sessions.
+
+**When to revisit:** on demand.
+
+---
+
+### UI / Web: naming presets in the setup wizard
+
+Step 2 of the setup wizard — choosing a folder structure template for the archive.
+
+**Proposed presets:** `Year/Month`, `Year/Month/Day`, `Year`, custom template.
+Presets write a corresponding `routes.json` to the config directory.
+
+**Problem:** the current Router uses complex XMP-based routing, which is hard to
+represent as simple presets without a dedicated "simple mode".
+
+**When to revisit:** when the routing system is simplified or a separate simple routing
+mode is introduced.
+
+---
+
+### UI / Web: photo gallery
+
+Browsing the archive through the web interface.
+
+**Core features:**
+- Thumbnail grid (PRV files)
+- Single photo viewer via Leaflet `CRS.Simple`
+- Filtering by date, tags
+- Virtual scrolling for large archives
+
+**When to revisit:** once the admin section and setup wizard are stable.

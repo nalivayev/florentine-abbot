@@ -176,8 +176,12 @@ def main(argv: list[str] | None = None) -> int:
         else:  # batch / watch
             path = Path(args.path)
             if not path.exists():
-                logger.error("Path does not exist: %s", path)
-                return 1
+                if args.command == "watch":
+                    path.mkdir(parents=True, exist_ok=True)
+                    logger.info("Created directory: %s", path)
+                else:
+                    logger.error("Path does not exist: %s", path)
+                    return 1
 
             fields: dict[str, str] = {"Mode": args.command, "Path": str(path)}
             if args.command == "batch":

@@ -1,13 +1,14 @@
 """
 Command Line Interface for File Organizer.
 
-Provides two subcommands:
+Provides three subcommands:
 
 * ``file-organizer batch`` — one-shot processing of existing files.
 * ``file-organizer watch`` — daemon mode that monitors a directory.
+* ``file-organizer preview`` — dry-run: show what would happen without moving files.
 
 Global flags (``--verbose``, ``--config``, ``--log-path``, ``--version``)
-are shared across both subcommands.
+are shared across all subcommands.
 """
 
 import argparse
@@ -19,6 +20,7 @@ from common.logger import Logger
 from common.utils import log_banner
 from common.version import get_version
 from file_organizer.organizer import FileOrganizer
+from file_organizer.previewer import Previewer
 from file_organizer.watcher import FileWatcher
 
 
@@ -95,6 +97,25 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     _add_common_arguments(watch_parser)
 
+    preview_parser = subparsers.add_parser(
+        "preview",
+        help="Dry-run — show what would happen without moving files",
+        description="Simulate batch processing and print a sample of source → destination mappings.",
+    )
+    _add_common_arguments(preview_parser)
+    preview_parser.add_argument(
+        "-r", "--recursive",
+        action="store_true",
+        help="Process files recursively in subdirectories",
+    )
+    preview_parser.add_argument(
+        "-n", "--sample",
+        type=int,
+        default=50,
+        metavar="N",
+        help="Number of preview entries to show (default: 50)",
+    )
+
     return parser
 
 
@@ -125,15 +146,19 @@ def main(argv: list[str] | None = None) -> int:
         "Output": str(output_path),
         "Copy mode": "yes" if args.copy else "no",
     }
-    if args.command == "batch":
+    if args.command in ("batch", "preview"):
         fields["Recursive"] = "yes" if args.recursive else "no"
     fields["No metadata"] = "yes" if args.no_metadata else "no"
     fields["Config"] = args.config or "default"
     log_banner(logger, "file-organizer", version, fields)
 
     if not input_path.exists():
-        logger.error(f"Input path does not exist: {input_path}")
-        return 1
+        if args.command == "watch":
+            input_path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created directory: {input_path}")
+        else:
+            logger.error(f"Input path does not exist: {input_path}")
+            return 1
 
     try:
         if args.command == "watch":
@@ -146,6 +171,25 @@ def main(argv: list[str] | None = None) -> int:
                 no_metadata=args.no_metadata,
             )
             watcher.start()
+        elif args.command == "preview":
+            organizer = FileOrganizer(logger)
+            result = organizer(
+                input_path=input_path,
+                output_path=output_path,
+                config_path=args.config,
+                recursive=args.recursive,
+                dry_run=True,
+            )
+            previewer = Previewer(result)
+            summary = previewer.summary()
+            print(f"\nTotal: {summary['total']}  OK: {summary['succeeded']}  Failed: {summary['failed']}\n")
+            for entry in previewer.sample(args.sample):
+                print(f"  {entry['source']}")
+                print(f"    → {entry['destination']}")
+            if previewer.errors():
+                print("\nErrors:")
+                for err in previewer.errors():
+                    print(f"  {err['file']}: {err['reason']}")
         else:
             # batch
             organizer = FileOrganizer(logger)

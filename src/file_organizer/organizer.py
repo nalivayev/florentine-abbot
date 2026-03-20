@@ -14,6 +14,7 @@ Responsibilities are split as follows:
 
 import shutil
 import stat
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -103,7 +104,8 @@ class FileOrganizer:
         recursive: bool = False,
         copy_mode: bool = False,
         no_metadata: bool = False,
-    ) -> int:
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
         """
         Run the organizer in batch mode.
 
@@ -114,9 +116,10 @@ class FileOrganizer:
             recursive: If True, process files in subdirectories recursively.
             copy_mode: If True, copy files instead of moving them.
             no_metadata: If True, skip writing EXIF/XMP metadata.
+            dry_run: If True, simulate processing without moving files.
 
         Returns:
-            The number of successfully processed files.
+            Dict with processing results (see _run_batch).
 
         Raises:
             ValueError: If *input_path* and *output_path* overlap (equal
@@ -129,6 +132,7 @@ class FileOrganizer:
             recursive=recursive,
             copy_mode=copy_mode,
             no_metadata=no_metadata,
+            dry_run=dry_run,
         )
 
 
@@ -141,7 +145,8 @@ class FileOrganizer:
         recursive: bool = False,
         copy_mode: bool = False,
         no_metadata: bool = False,
-    ) -> int:
+        dry_run: bool = False,
+    ) -> dict[str, Any]:
         """
         Process existing files under ``input_path`` once and exit.
 
@@ -152,9 +157,11 @@ class FileOrganizer:
             recursive: If True, process files in subdirectories recursively.
             copy_mode: If True, copy files instead of moving them.
             no_metadata: If True, skip writing EXIF/XMP metadata.
+            dry_run: If True, simulate processing without moving files.
 
         Returns:
-            The number of successfully processed files.
+            Dict with keys: started_at, finished_at, dry_run, total,
+            succeeded, failed, errors, preview.
 
         Raises:
             ValueError: If *input_path* and *output_path* overlap (equal
@@ -164,50 +171,67 @@ class FileOrganizer:
         resolved_input = Path(input_path).resolve()
         resolved_output = Path(output_path).resolve()
 
-        # If a per-run config path is provided, reload processor with its metadata.
         if config_path is not None:
             run_config = Config(self._logger, config_path)
             self._processor = FileProcessor(self._logger, metadata_config=run_config.metadata)
 
-        # Guard: input and output must not overlap.
         self._validate_no_overlap(resolved_input, resolved_output)
 
-        mode_str = "RECURSIVE" if recursive else "BATCH"
+        mode_str = "DRY-RUN" if dry_run else ("RECURSIVE" if recursive else "BATCH")
         self._logger.info(
             "Starting File Organizer in %s mode: %s -> %s",
             mode_str, input_path, resolved_output,
         )
 
-        count = 0
-        skipped = 0
+        started_at = datetime.now(timezone.utc).isoformat()
+        succeeded = 0
+        errors: list[dict[str, str]] = []
+        preview: list[dict[str, str]] = []
 
-        # Choose iterator based on recursive flag
         iterator = input_path.rglob('*') if recursive else input_path.iterdir()
+        files = [f for f in iterator if f.is_file()]
 
-        for file_path in iterator:
-            if not file_path.is_file():
-                continue
-
+        for file_path in files:
             if not self.should_process(file_path, output_path=resolved_output):
-                self._logger.warning(f"Skipped file (invalid filename format or unsupported): {file_path.name}")
-                skipped += 1
+                errors.append({"file": str(file_path), "reason": "unsupported or invalid filename"})
                 continue
 
-            try:
-                self.process_single_file(
-                    file_path,
-                    output_path=resolved_output,
-                    copy_mode=copy_mode,
-                    no_metadata=no_metadata,
-                )
-                count += 1
-            except Exception as e:
-                self._logger.error(f"Error processing {file_path.name}: {e}")
-                skipped += 1
+            if dry_run:
+                try:
+                    parsed = self._processor.validate(file_path)
+                    dest_path, _, _, _ = self._calculate_destination_paths(file_path, parsed, resolved_output)
+                    preview.append({"source": str(file_path), "destination": str(dest_path)})
+                    succeeded += 1
+                except Exception as e:
+                    errors.append({"file": str(file_path), "reason": str(e)})
+            else:
+                try:
+                    self.process_single_file(
+                        file_path,
+                        output_path=resolved_output,
+                        copy_mode=copy_mode,
+                        no_metadata=no_metadata,
+                    )
+                    succeeded += 1
+                except Exception as e:
+                    self._logger.error(f"Error processing {file_path.name}: {e}")
+                    errors.append({"file": str(file_path), "reason": str(e)})
 
-        self._logger.info(f"Batch processing complete. Processed {count} files, skipped {skipped} files.")
+        finished_at = datetime.now(timezone.utc).isoformat()
+        self._logger.info(
+            f"Batch processing complete. Succeeded: {succeeded}, failed: {len(errors)}."
+        )
 
-        return count
+        return {
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "dry_run": dry_run,
+            "total": len(files),
+            "succeeded": succeeded,
+            "failed": len(errors),
+            "errors": errors,
+            "preview": preview,
+        }
 
 
     def process_single_file(
@@ -416,7 +440,7 @@ class FileOrganizer:
 
         # Get normalized filename from router
         base_name = self._router.get_normalized_filename(parsed)
-        dest_filename = f"{base_name}.{parsed.extension}"
+        dest_filename = f"{base_name}.{parsed['extension']}"
 
         dest_log_filename = None
         if source_log_path:
@@ -424,9 +448,6 @@ class FileOrganizer:
 
         # Get target folder from router
         processed_dir, protect = self._router.get_target_folder(parsed, processed_root, filename=file_path.name)
-
-        # Create processed directory if it doesn't exist
-        processed_dir.mkdir(parents=True, exist_ok=True)
 
         # Destination paths
         dest_path = processed_dir / dest_filename

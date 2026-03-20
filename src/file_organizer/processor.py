@@ -12,7 +12,7 @@ from pathlib import Path
 from datetime import datetime
 
 from common.logger import Logger
-from common.formatter import Formatter, ParsedFilename
+from common.formatter import Formatter
 from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_EXIF_DATETIME_ORIGINAL, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, XMP_ACTION_EDITED
 from file_organizer.metadata import ArchiveMetadata
 from common.exifer import Exifer
@@ -52,7 +52,7 @@ class FileProcessor:
         self._exifer = Exifer()
 
 
-    def validate(self, file_path: Path) -> ParsedFilename:
+    def validate(self, file_path: Path) -> dict[str, int | str]:
         """
         Validate source file before processing.
 
@@ -65,7 +65,7 @@ class FileProcessor:
             file_path: Path to the source file to validate.
 
         Returns:
-            ParsedFilename on success.
+            dict[str, int | str] on success.
 
         Raises:
             ValueError: If DocumentID/InstanceID are missing or filename is invalid.
@@ -83,14 +83,14 @@ class FileProcessor:
             )
 
         # Parse and validate filename
-        parsed = self._parse_and_validate(file_path.name)
+        parsed = self._parse_and_validate(file_path)
         if not parsed:
             raise ValueError(f"Failed to parse or validate filename: {file_path.name}")
 
         return parsed
 
 
-    def process(self, dest_path: Path, parsed: ParsedFilename, no_metadata: bool = False) -> None:
+    def process(self, dest_path: Path, parsed: dict[str, int | str], no_metadata: bool = False) -> None:
         """
         Write EXIF/XMP metadata to destination file.
 
@@ -111,17 +111,17 @@ class FileProcessor:
         self._logger.info(f"Successfully processed: {dest_path.name}")
 
 
-    def _parse_and_validate(self, filename: str) -> ParsedFilename | None:
+    def _parse_and_validate(self, file_path: Path) -> dict[str, int | str] | None:
         """
         Parse and validate a filename.
 
         Args:
-            filename: The filename to parse and validate.
+            file_path: Path to the file to parse and validate.
 
         Returns:
             Parsed filename data if valid, None otherwise.
         """
-        parsed = self._formatter.parse(filename)
+        parsed = self._formatter.parse(file_path)
         if not parsed:
             return None
 
@@ -132,7 +132,7 @@ class FileProcessor:
         return parsed
 
 
-    def _write_metadata(self, file_path: Path, parsed: ParsedFilename) -> None:
+    def _write_metadata(self, file_path: Path, parsed: dict[str, int | str]) -> None:
         """
         Write metadata to EXIF/XMP fields using exiftool.
 
@@ -170,10 +170,10 @@ class FileProcessor:
 
         # 2. Dates
         # 2.1 DateTimeOriginal - date from filename (original photo date)
-        if parsed.modifier == "E":
+        if parsed["modifier"] == "E":
             dt_str = (
-                f"{parsed.year:04d}:{parsed.month:02d}:{parsed.day:02d} "
-                f"{parsed.hour:02d}:{parsed.minute:02d}:{parsed.second:02d}"
+                f"{parsed['year']:04d}:{parsed['month']:02d}:{parsed['day']:02d} "
+                f"{parsed['hour']:02d}:{parsed['minute']:02d}:{parsed['second']:02d}"
             )
             tagger.write(KeyValueTag(TAG_EXIF_DATETIME_ORIGINAL, dt_str))
             tagger.write(KeyValueTag(TAG_XMP_PHOTOSHOP_DATE_CREATED, dt_str.replace(":", "-", 2).replace(" ", "T")))
@@ -182,12 +182,12 @@ class FileProcessor:
             # date in XMP-photoshop:DateCreated.
             tagger.write(KeyValueTag(TAG_EXIF_DATETIME_ORIGINAL, ""))
 
-            if parsed.year > 0:
-                date_val = f"{parsed.year:04d}"
-                if parsed.month > 0:
-                    date_val += f"-{parsed.month:02d}"
-                    if parsed.day > 0:
-                        date_val += f"-{parsed.day:02d}"
+            if int(parsed["year"]) > 0:
+                date_val = f"{parsed['year']:04d}"
+                if int(parsed["month"]) > 0:
+                    date_val += f"-{parsed['month']:02d}"
+                    if int(parsed["day"]) > 0:
+                        date_val += f"-{parsed['day']:02d}"
 
                 tagger.write(KeyValueTag(TAG_XMP_PHOTOSHOP_DATE_CREATED, date_val))
 

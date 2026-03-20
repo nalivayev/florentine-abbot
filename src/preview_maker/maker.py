@@ -15,7 +15,7 @@ import datetime
 from pathlib import Path
 
 from common.logger import Logger
-from common.formatter import Formatter, ParsedFilename
+from common.formatter import Formatter
 from common.constants import SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_FORMAT, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CONVERTED, XMP_ACTION_EDITED
 from common.exifer import Exifer
 from common.tagger import Tagger
@@ -97,7 +97,7 @@ class PreviewMaker:
             self._logger.debug(f"Skipping {file_path}: unsupported extension '{file_path.suffix}'")
             return False
 
-        parsed = self._formatter.parse(file_path.name)
+        parsed = self._formatter.parse(file_path)
         if not parsed:
             self._logger.debug(f"Skipping {file_path}: cannot parse filename")
             return False
@@ -116,7 +116,7 @@ class PreviewMaker:
                     continue
                 sib_priority = self._get_match_priority(sibling.name)
                 if sib_priority is not None and sib_priority < my_priority:
-                    sib_parsed = self._formatter.parse(sibling.name)
+                    sib_parsed = self._formatter.parse(sibling)
                     if sib_parsed and self._same_shot(parsed, sib_parsed):
                         self._logger.debug(
                             f"Skipping {file_path.name}: higher-priority source exists ({sibling.name})"
@@ -146,7 +146,7 @@ class PreviewMaker:
         Returns:
             True if a preview was generated, False otherwise.
         """
-        parsed = self._formatter.parse(src_path.name)
+        parsed = self._formatter.parse(src_path)
         if not parsed:
             raise ValueError(f"Cannot parse filename: {src_path.name}")
 
@@ -285,7 +285,7 @@ class PreviewMaker:
         return written
 
     
-    def _build_preview_filename(self, parsed: ParsedFilename) -> str:
+    def _build_preview_filename(self, parsed: dict[str, int | str]) -> str:
         """Build preview filename from configured template and parsed fields."""
         stem = self._formatter.format_template(parsed, self._config.template)
         return f"{stem}{FORMAT_MAP[self._config.image_format][1]}"
@@ -303,23 +303,23 @@ class PreviewMaker:
 
     
     @staticmethod
-    def _same_shot(a: ParsedFilename, b: ParsedFilename) -> bool:
+    def _same_shot(a: dict[str, int | str], b: dict[str, int | str]) -> bool:
         """Check whether two parsed filenames represent the same shot.
 
         Compares all identity fields **except** suffix and extension.
         """
         return (
-            a.year == b.year
-            and a.month == b.month
-            and a.day == b.day
-            and a.hour == b.hour
-            and a.minute == b.minute
-            and a.second == b.second
-            and a.modifier == b.modifier
-            and a.group == b.group
-            and a.subgroup == b.subgroup
-            and a.sequence == b.sequence
-            and a.side == b.side
+            a["year"] == b["year"]
+            and a["month"] == b["month"]
+            and a["day"] == b["day"]
+            and a["hour"] == b["hour"]
+            and a["minute"] == b["minute"]
+            and a["second"] == b["second"]
+            and a["modifier"] == b["modifier"]
+            and a["group"] == b["group"]
+            and a["subgroup"] == b["subgroup"]
+            and a["sequence"] == b["sequence"]
+            and a["side"] == b["side"]
         )
 
     
