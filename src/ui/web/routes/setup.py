@@ -5,6 +5,7 @@ Setup routes — first-run initialization wizard.
 import asyncio
 import json
 import re
+import subprocess
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,6 +29,20 @@ _import_thread: threading.Thread | None = None
 _import_progress: dict[str, Any] = {}
 
 _STATE_FILE = get_config_dir() / "setup_import.json"
+
+
+@router.get("/setup/check-exiftool", dependencies=[Depends(require_localhost)])
+async def check_exiftool() -> dict:
+    """Check whether ExifTool is actually runnable and return its version."""
+    try:
+        result = subprocess.run(
+            ["exiftool", "-ver"], capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return {"installed": True, "version": result.stdout.strip()}
+        return {"installed": False, "version": None}
+    except Exception:
+        return {"installed": False, "version": None}
 
 
 def _read_state() -> dict | None:
@@ -75,7 +90,7 @@ async def setup_validate(req: ValidateRequest) -> dict:
     def norm(p: str) -> str:
         return p.strip().lower().rstrip("/\\")
 
-    if req.step == 1:
+    if req.step == 3:
         if not req.archive.strip():
             errors["archive"] = "required"
         if not req.username.strip():
@@ -91,7 +106,7 @@ async def setup_validate(req: ValidateRequest) -> dict:
         elif req.password != req.password2:
             errors["password2"] = "passwords_mismatch"
 
-    elif req.step == 3:
+    elif req.step == 5:
         if not req.import_path.strip():
             errors["import_path"] = "required"
         else:
@@ -100,7 +115,7 @@ async def setup_validate(req: ValidateRequest) -> dict:
             elif norm(req.import_path) == norm(req.archive):
                 errors["import_path"] = "same_as_archive"
 
-    elif req.step == 5:
+    elif req.step == 7:
         if req.inbox.strip() and norm(req.inbox) == norm(req.archive):
             errors["inbox"] = "same_as_archive"
 
@@ -147,7 +162,7 @@ async def setup_preview(req: PreviewRequest) -> dict:
     output_path = Path(req.output_path.strip())
 
     if not input_path.exists():
-        raise HTTPException(status_code=422, detail="Папка не существует")
+        raise HTTPException(status_code=422, detail="Folder does not exist")
 
     logger = Logger("file_organizer", console=False)
     organizer = FileOrganizer(logger)

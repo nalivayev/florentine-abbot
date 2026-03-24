@@ -4,7 +4,8 @@
     "management": "Management",
     "organizer": "Organizer",
     "processor": "Processor",
-    "detector": "Detector"
+    "detector": "Detector",
+    "logout": "Log out"
   },
   "settings": {
     "title": "Settings",
@@ -17,7 +18,10 @@
     "change_archive": "Change archive",
     "confirm_archive_title": "Change archive folder",
     "confirm_archive_message": "All daemons will be restarted with the new paths.\nThis will also require a database reset in the future.",
-    "saved": "Saved"
+    "saved": "Saved",
+    "save_error": "Error",
+    "inbox_placeholder": "/path/to/inbox",
+    "archive_placeholder": "/path/to/archive"
   },
   "daemons": {
     "status": {
@@ -31,7 +35,9 @@
     "restart": "Restart",
     "watch": "Watch",
     "output": "Output",
-    "no_logs": "No data"
+    "no_logs": "No data",
+    "not_configured_hint": "Set the required paths in {link} to enable this daemon.",
+    "go_to_settings": "Settings"
   },
   "login": {
     "title": "Florentine Abbot",
@@ -51,6 +57,13 @@
     "next": "Next",
     "error_import_interrupted": "Import was interrupted (server stopped mid-process). Some files may not have been moved.",
     "error_unavailable": "Server unavailable",
+    "exiftool": {
+      "missing_title": "ExifTool not found",
+      "missing_hint": "ExifTool is required for processing photos. Install it and make sure it is available in PATH.",
+      "found_title": "ExifTool found",
+      "version": "Version",
+      "recheck": "Check again"
+    },
     "validation": {
       "required": "Required",
       "username_format": "Letters, digits and '_' only, min 3 characters",
@@ -60,6 +73,14 @@
       "same_as_archive": "Cannot match the archive folder"
     },
     "steps": {
+      "welcome": {
+        "label": "Welcome",
+        "hint": "Welcome to Florentine Abbot — a toolkit for digitizing and organizing photo archives.\n\nThis wizard will help you set up the system: check dependencies, create an archive, and configure the incoming folder for new scans."
+      },
+      "sysreq": {
+        "label": "System requirements",
+        "checking": "Checking dependencies…"
+      },
       "archive": {
         "label": "Archive & account",
         "hint": "Set the archive folder and create an administrator account.",
@@ -129,6 +150,8 @@
     "copyright": "© {year} Florentine Abbot"
   },
   "confirm": {
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "title": "Confirmation",
+    "confirm": "Continue"
   }
 }

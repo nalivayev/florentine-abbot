@@ -15,7 +15,7 @@
 
     <div class="field">
       <label class="field-label">{{ t('settings.inbox') }}</label>
-      <input class="field-input" v-model="form.inbox" placeholder="/path/to/inbox" />
+      <input class="field-input" v-model="form.inbox" :placeholder="t('settings.inbox_placeholder')" />
       <div class="field-hint">{{ t('settings.inbox_hint') }}</div>
     </div>
     <div class="field-actions">
@@ -31,7 +31,7 @@
         {{ t('settings.archive') }}
         <span class="label-warning">— {{ t('settings.archive_hint') }}</span>
       </label>
-      <input class="field-input" v-model="form.archive" placeholder="/path/to/archive" />
+      <input class="field-input" v-model="form.archive" :placeholder="t('settings.archive_placeholder')" />
     </div>
     <div class="field-actions">
       <button class="btn btn-danger" @click="saveArchive" :disabled="savingArchive">
@@ -78,7 +78,7 @@ async function saveInbox() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ inbox: form.value.inbox }),
     })
-    if (!res.ok) inboxError.value = (await res.json()).detail || 'Ошибка'
+    if (!res.ok) inboxError.value = (await res.json()).detail || t('settings.save_error')
     else { savedInbox.value = true; setTimeout(() => savedInbox.value = false, 3000) }
   } finally { savingInbox.value = false }
 }
@@ -99,7 +99,7 @@ async function onConfirm() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ archive: form.value.archive }),
     })
-    if (!res.ok) archiveError.value = (await res.json()).detail || 'Ошибка'
+    if (!res.ok) archiveError.value = (await res.json()).detail || t('settings.save_error')
     else { savedArchive.value = true; setTimeout(() => savedArchive.value = false, 3000) }
   } finally { savingArchive.value = false }
 }

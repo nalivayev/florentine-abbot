@@ -38,11 +38,10 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  padding: 24px 0;
+  padding: 24px 0 0;
   height: 100vh;
   box-sizing: border-box;
-  overflow: hidden;
-  padding-bottom: 16px;
+  overflow-y: auto;
 }
 
 .sidebar-logo {
@@ -154,6 +153,17 @@ a { color: inherit; text-decoration: none; }
   color: var(--danger);
   font-size: 13px;
   border-radius: 0 4px 4px 0;
+}
+
+/* Not-configured hint */
+.not-configured-hint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.not-configured-hint a {
+  color: var(--primary);
+  text-decoration: underline;
 }
 
 /* Divider */
@@ -329,7 +339,7 @@ a { color: inherit; text-decoration: none; }
 /* Footer */
 .sidebar-footer {
   margin-top: auto;
-  padding: 16px 20px 0;
+  padding: 12px 20px 16px;
   border-top: 1px solid var(--border);
 }
 
@@ -337,6 +347,13 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   gap: 4px;
   margin-bottom: 8px;
+}
+
+.lang-switcher-top {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 50;
 }
 
 .lang-btn {
@@ -352,6 +369,22 @@ a { color: inherit; text-decoration: none; }
 .lang-btn.active {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.logout-link {
+  cursor: pointer;
+  background: none;
+  border: none;
+  text-align: left;
+  width: 100%;
+  padding: 6px 0;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-muted);
+  transition: color 0.15s;
+}
+.logout-link:hover {
+  color: var(--danger);
 }
 
 .copyright {

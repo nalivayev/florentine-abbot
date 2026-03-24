@@ -19,9 +19,17 @@
       <button v-if="daemon.status === 'running'"
         class="btn btn-stop" @click="stop">{{ t('daemons.stop') }}</button>
       <button v-else-if="daemon.status === 'crashed'"
-        class="btn btn-retry" @click="start">Retry</button>
-      <button v-else-if="daemon.status === 'not_configured'"
-        class="btn" disabled>Not configured</button>
+        class="btn btn-retry" @click="start">{{ t('daemons.restart') }}</button>
+      <template v-else-if="daemon.status === 'not_configured'">
+        <button class="btn" disabled>{{ t('daemons.status.not_configured') }}</button>
+        <p class="not-configured-hint">
+          <i18n-t keypath="daemons.not_configured_hint" tag="span">
+            <template #link>
+              <router-link to="/admin/config">{{ t('daemons.go_to_settings') }}</router-link>
+            </template>
+          </i18n-t>
+        </p>
+      </template>
       <button v-else
         class="btn btn-start" @click="start">{{ t('daemons.start') }}</button>
     </div>
@@ -29,7 +37,7 @@
     <div class="error-block" v-if="daemon.status === 'crashed' && daemon.error">{{ daemon.error }}</div>
 
     <hr class="divider">
-    <div class="log-header">Вывод</div>
+    <div class="log-header">{{ t('daemons.output') }}</div>
     <div class="log-panel" ref="logPanel">
       <div v-if="logs.length === 0" class="log-empty">{{ t('daemons.no_logs') }}</div>
       <div v-for="(line, i) in logs" :key="i" class="log-line">{{ line }}</div>

@@ -21,8 +21,34 @@
 
         <div class="setup-content">
 
-      <!-- Step 1: Account + Archive -->
+      <!-- Step 1: Welcome -->
       <section v-if="step === 1">
+        <h1>{{ t('setup.steps.welcome.label') }}</h1>
+        <p class="hint" style="white-space: pre-line;">{{ t('setup.steps.welcome.hint') }}</p>
+      </section>
+
+      <!-- Step 2: System requirements -->
+      <section v-else-if="step === 2">
+        <h1>{{ t('setup.steps.sysreq.label') }}</h1>
+
+        <div v-if="exiftoolChecking" class="loading">{{ t('setup.steps.sysreq.checking') }}</div>
+
+        <div v-else-if="exiftoolChecked && exiftoolInstalled" class="sysreq-row">
+          <span>ExifTool</span><span class="sysreq-ok">✔ {{ exiftoolVersion }}</span>
+        </div>
+
+        <div v-else-if="exiftoolChecked && !exiftoolInstalled" class="exiftool-warning">
+          <p class="exiftool-title">⚠ {{ t('setup.exiftool.missing_title') }}</p>
+          <p class="exiftool-text">{{ t('setup.exiftool.missing_hint') }}</p>
+          <pre class="exiftool-cmd">{{ exiftoolCmd }}</pre>
+          <button type="button" class="btn-back" style="margin-top: 0.75rem;" @click="checkExiftool">
+            {{ t('setup.exiftool.recheck') }}
+          </button>
+        </div>
+      </section>
+
+      <!-- Step 3: Account + Archive -->
+      <section v-else-if="step === 3">
         <h1>{{ t('setup.steps.archive.label') }}</h1>
         <p class="hint">{{ t('setup.steps.archive.hint') }}</p>
 
@@ -46,10 +72,11 @@
           <input v-model="password2" type="password" autocomplete="new-password" :class="{ invalid: fieldErrors.password2 }" />
           <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.password2 }">{{ t('setup.steps.archive.password_confirm_hint') }}</p>
         </div>
+
       </section>
 
-      <!-- Step 2: Existing photos? -->
-      <section v-else-if="step === 2">
+      <!-- Step 4: Existing photos? -->
+      <section v-else-if="step === 4">
         <h1>{{ t('setup.steps.existing.label') }}</h1>
         <p class="hint">{{ t('setup.steps.existing.hint') }}</p>
 
@@ -62,8 +89,8 @@
         <p v-if="fieldErrors.choice" class="field-error">{{ t('setup.validation.' + fieldErrors.choice) }}</p>
       </section>
 
-      <!-- Step 3: Import settings (only if hasExisting) -->
-      <section v-else-if="step === 3">
+      <!-- Step 5: Import settings (only if hasExisting) -->
+      <section v-else-if="step === 5">
         <h1>{{ t('setup.steps.import.label') }}</h1>
         <p class="hint">{{ t('setup.steps.import.hint') }}</p>
 
@@ -78,8 +105,8 @@
         </div>
       </section>
 
-      <!-- Step 4: Preview dry-run (only if hasExisting) -->
-      <section v-else-if="step === 4">
+      <!-- Step 6: Preview dry-run (only if hasExisting) -->
+      <section v-else-if="step === 6">
         <h1>{{ t('setup.steps.preview.label') }}</h1>
         <p class="hint">{{ t('setup.steps.preview.hint') }}</p>
 
@@ -124,8 +151,8 @@
         </div>
       </section>
 
-      <!-- Step 5: Inbox path -->
-      <section v-else-if="step === 5">
+      <!-- Step 7: Inbox path -->
+      <section v-else-if="step === 7">
         <h1>{{ t('setup.steps.inbox.label') }}</h1>
         <p class="hint">{{ t('setup.steps.inbox.hint') }}</p>
 
@@ -137,8 +164,8 @@
         <p class="skip-hint">{{ t('setup.steps.inbox.skip_hint') }}</p>
       </section>
 
-      <!-- Step 6: Summary + launch -->
-      <section v-else-if="step === 6">
+      <!-- Step 8: Summary + launch -->
+      <section v-else-if="step === 8">
         <h1>{{ t('setup.steps.launch.label') }}</h1>
         <p class="hint">{{ t('setup.steps.launch.hint') }}</p>
 
@@ -158,8 +185,8 @@
         </div>
       </section>
 
-      <!-- Step 7: Processing -->
-      <section v-else-if="step === 7">
+      <!-- Step 9: Processing -->
+      <section v-else-if="step === 9">
         <h1>{{ t('setup.steps.processing.label') }}</h1>
 
         <div v-if="importing">
@@ -178,18 +205,18 @@
 
         <!-- Navigation -->
         <div class="nav">
-          <button v-if="step > 1 && step <= 6 && !launched" type="button" class="btn-back" @click="back">
+          <button v-if="step > 1 && step <= 8 && !launched" type="button" class="btn-back" @click="back">
             {{ t('setup.back') }}
           </button>
-          <button v-if="step < 6 && !launched" type="button" class="btn-next"
-            :disabled="!canAdvance || previewLoading || validating" @click="next">
+          <button v-if="step < 8 && !launched" type="button" class="btn-next"
+            :disabled="!canAdvance || previewLoading || validating || exiftoolChecking" @click="next">
             {{ t('setup.next') }}
           </button>
-          <button v-if="step === 6 && !launched" type="button" class="btn-next"
+          <button v-if="step === 8 && !launched" type="button" class="btn-next"
             :disabled="loading" @click="submit">
             {{ t('setup.submit') }}
           </button>
-          <button v-if="step === 7 && !importing" type="button" class="btn-next" @click="finish">
+          <button v-if="step === 9 && !importing" type="button" class="btn-next" @click="finish">
             {{ t('setup.steps.processing.go') }}
           </button>
         </div>
@@ -211,29 +238,35 @@ function saveLang(lang) {
 }
 const router = useRouter()
 
-// Steps: 1=account+archive, 2=existing?, 3=import settings, 4=preview, 5=inbox, 6=summary
+// Steps: 1=welcome, 2=sysreq, 3=account+archive, 4=existing?, 5=import, 6=preview, 7=inbox, 8=summary, 9=processing
 const step = ref(1)
 
-// Step 1
+// Step 3
 const archive = ref('')
 const username = ref('')
 const password = ref('')
 const password2 = ref('')
 
-// Step 2
+// Step 4
 const hasExisting = ref(null)
 
-// Step 3
+// Step 5
 const importPath = ref('')
 const importRecursive = ref(false)
 
-// Step 4
+// Step 6
 const preview = ref(null)
 const previewLoading = ref(false)
 const previewError = ref('')
 
-// Step 5
+// Step 7
 const inbox = ref('')
+
+// ExifTool
+const exiftoolChecked = ref(false)
+const exiftoolChecking = ref(false)
+const exiftoolInstalled = ref(false)
+const exiftoolVersion = ref(null)
 
 // Final
 const error = ref('')
@@ -280,13 +313,15 @@ const destTree = computed(() =>
 )
 
 const stepLabels = computed(() => [
-  { n: 1, label: t('setup.steps.archive.label') },
-  { n: 2, label: t('setup.steps.existing.label') },
-  { n: 3, label: t('setup.steps.import.label'), skip: hasExisting.value === false },
-  { n: 4, label: t('setup.steps.preview.label'), skip: hasExisting.value === false },
-  { n: 5, label: t('setup.steps.inbox.label') },
-  { n: 6, label: t('setup.steps.launch.label') },
-  { n: 7, label: t('setup.steps.processing.label') },
+  { n: 1, label: t('setup.steps.welcome.label') },
+  { n: 2, label: t('setup.steps.sysreq.label') },
+  { n: 3, label: t('setup.steps.archive.label') },
+  { n: 4, label: t('setup.steps.existing.label') },
+  { n: 5, label: t('setup.steps.import.label'), skip: hasExisting.value === false },
+  { n: 6, label: t('setup.steps.preview.label'), skip: hasExisting.value === false },
+  { n: 7, label: t('setup.steps.inbox.label') },
+  { n: 8, label: t('setup.steps.launch.label') },
+  { n: 9, label: t('setup.steps.processing.label') },
 ])
 
 function stepState(s) {
@@ -297,24 +332,25 @@ function stepState(s) {
 }
 
 function stepIcon(s) {
-  if (s.skip) return '–'
+  if (s.skip) return '✔'
   if (s.n < step.value) return '✔'
   return ''
 }
 
 const canAdvance = computed(() => {
-  if (step.value === 4) return !!preview.value
+  if (step.value === 2) return exiftoolChecked.value && exiftoolInstalled.value
+  if (step.value === 6) return !!preview.value
   return true
 })
 
 function back() {
   fieldErrors.value = {}
-  if (step.value === 3 || step.value === 2) {
+  if (step.value === 5 || step.value === 4) {
     step.value = step.value - 1
-  } else if (step.value === 4) {
-    step.value = 3
-  } else if (step.value === 5 && !hasExisting.value) {
-    step.value = 2
+  } else if (step.value === 6) {
+    step.value = 5
+  } else if (step.value === 7 && !hasExisting.value) {
+    step.value = 4
   } else {
     step.value = step.value - 1
   }
@@ -347,25 +383,61 @@ async function validateStep(stepNum) {
   }
 }
 
+const exiftoolCmd = computed(() => {
+  const ua = navigator.userAgent.toLowerCase()
+  if (ua.includes('win')) return 'winget install --id OliverBetz.ExifTool -e'
+  if (ua.includes('mac')) return 'brew install exiftool'
+  return 'sudo apt install libimage-exiftool-perl'
+})
+
+async function checkExiftool() {
+  exiftoolChecking.value = true
+  try {
+    const res = await fetch(apiUrl('/setup/check-exiftool'))
+    const data = await res.json()
+    exiftoolInstalled.value = data.installed
+    exiftoolVersion.value = data.version
+  } catch {
+    exiftoolInstalled.value = false
+    exiftoolVersion.value = null
+  }
+  exiftoolChecked.value = true
+  exiftoolChecking.value = false
+  return exiftoolInstalled.value
+}
+
 async function next() {
   error.value = ''
-  if (step.value === 1 || step.value === 3 || step.value === 5) {
+  if (step.value === 1) {
+    // Moving from Welcome to System Requirements — auto-check ExifTool
+    step.value = 2
+    const ok = await checkExiftool()
+    if (ok) step.value = 3
+    return
+  }
+  if (step.value === 2) {
+    if (!exiftoolChecked.value) {
+      await checkExiftool()
+    }
+    if (!exiftoolInstalled.value) return
+  }
+  if (step.value === 3 || step.value === 5 || step.value === 7) {
     const ok = await validateStep(step.value)
     if (!ok) return
   }
-  if (step.value === 2) {
+  if (step.value === 4) {
     if (hasExisting.value === null) {
       fieldErrors.value = { choice: 'required' }
       return
     }
     if (!hasExisting.value) {
-      step.value = 5
+      step.value = 7
       return
     }
   }
-  if (step.value === 3) {
+  if (step.value === 5) {
     await loadPreview()
-    step.value = 4
+    step.value = 6
     return
   }
   step.value = step.value + 1
@@ -421,7 +493,7 @@ async function submit() {
     }
     const data = await res.json()
     launched.value = true
-    step.value = 7
+    step.value = 9
     if (data.importing) {
       importing.value = true
       listenProgress()
@@ -453,12 +525,12 @@ onMounted(async () => {
     if (data.import_status === 'running') {
       launched.value = true
       importing.value = true
-      step.value = 7
+      step.value = 9
       listenProgress()
     } else if (data.import_status === 'done') {
       launched.value = true
       importing.value = false
-      step.value = 7
+      step.value = 9
       if (data.import_result) {
         importProgress.value = {
           done: true,
@@ -471,7 +543,7 @@ onMounted(async () => {
     } else if (data.import_status === 'interrupted') {
       launched.value = true
       importing.value = false
-      step.value = 7
+      step.value = 9
       error.value = t('setup.error_import_interrupted')
     }
   } catch {
@@ -523,11 +595,11 @@ async function finish() {
   line-height: 1.3;
 }
 .step-item.active {
-  color: var(--text);
+  color: var(--accent);
   font-weight: 600;
 }
-.step-item.done { color: var(--accent); font-weight: 600; }
-.step-item.skipped { opacity: 0.3; }
+.step-item.done { color: var(--text); font-weight: 600; }
+.step-item.skipped { opacity: 0.3; font-weight: 600; }
 .step-icon {
   width: 1rem;
   flex-shrink: 0;
@@ -758,5 +830,46 @@ input.invalid:focus {
   font-size: 0.85rem;
   color: var(--text-muted);
   padding: 1rem 0;
+}
+.exiftool-warning {
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  background: #fdf5e4;
+  border-left: 3px solid var(--warning);
+  border-radius: 0 4px 4px 0;
+}
+.sysreq-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.sysreq-ok {
+  color: var(--success);
+  font-weight: 500;
+}
+.exiftool-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+.exiftool-text {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.exiftool-cmd {
+  background: #f4f5f7;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>
