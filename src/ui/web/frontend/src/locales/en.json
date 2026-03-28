@@ -1,43 +1,80 @@
 {
-  "nav": {
-    "settings": "Settings",
-    "management": "Management",
-    "organizer": "Organizer",
-    "processor": "Processor",
-    "detector": "Detector",
-    "logout": "Log out"
-  },
-  "settings": {
-    "title": "Settings",
-    "subtitle": "Core project paths",
-    "inbox": "Inbox",
-    "inbox_hint": "Folder where the organizer picks up new files.",
-    "archive": "Archive folder",
-    "archive_hint": "Changing this will require resetting the database.",
-    "save": "Save",
-    "change_archive": "Change archive",
-    "confirm_archive_title": "Change archive folder",
-    "confirm_archive_message": "All daemons will be restarted with the new paths.\nThis will also require a database reset in the future.",
-    "saved": "Saved",
-    "save_error": "Error",
-    "inbox_placeholder": "/path/to/inbox",
-    "archive_placeholder": "/path/to/archive"
-  },
-  "daemons": {
-    "status": {
-      "running": "Running",
-      "stopped": "Stopped",
-      "crashed": "Crashed",
-      "not_configured": "Not configured"
+  "admin": {
+    "nav": {
+      "settings": "Settings",
+      "management": "Management",
+      "organizer": "Organizer",
+      "processor": "Processor",
+      "detector": "Detector",
+      "logout": "Log out"
     },
-    "start": "Start",
-    "stop": "Stop",
-    "restart": "Restart",
-    "watch": "Watch",
-    "output": "Output",
-    "no_logs": "No data",
-    "not_configured_hint": "Set the required paths in {link} to enable this daemon.",
-    "go_to_settings": "Settings"
+    "settings": {
+      "title": "Settings",
+      "subtitle": "Core project paths",
+      "inbox": "Inbox",
+      "inbox_hint": "Folder where the organizer picks up new files.",
+      "archive": "Archive folder",
+      "archive_hint": "Changing this will require resetting the database.",
+      "save": "Save",
+      "change_archive": "Change archive",
+      "confirm_archive_title": "Change archive folder",
+      "confirm_archive_message": "All daemons will be restarted with the new paths.\nThis will also require a database reset in the future.",
+      "saved": "Saved",
+      "save_error": "Error",
+      "inbox_placeholder": "/path/to/inbox",
+      "archive_placeholder": "/path/to/archive"
+    },
+    "daemons": {
+      "status": {
+        "running": "Running",
+        "stopped": "Stopped",
+        "crashed": "Crashed",
+        "not_configured": "Not configured"
+      },
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "watch": "Watch",
+      "output": "Output",
+      "no_logs": "No data",
+      "not_configured_hint": "Set the required paths in {link} to enable this daemon.",
+      "go_to_settings": "Settings"
+    },
+    "tasks": {
+      "organizer": {
+        "label": "File Organizer",
+        "description": "Watches inbox for new scans and moves them to the archive."
+      },
+      "processor": {
+        "label": "Preview Maker",
+        "description": "Watches archive for new masters and generates PRV previews."
+      },
+      "detector": {
+        "label": "Face Detector",
+        "description": "Scans archive for unprocessed photos and detects faces."
+      }
+    }
+  },
+  "app": {
+    "nav": {
+      "photos": "Photos",
+      "map": "Map",
+      "albums": "Albums",
+      "people": "People",
+      "genealogy": "Genealogy",
+      "timeline": "Timeline",
+      "stats": "Statistics",
+      "logout": "Log out"
+    },
+    "albums": {
+      "title": "Albums",
+      "empty": "No albums yet",
+      "import_btn": "Import photos"
+    },
+    "wip": {
+      "title": "Section under development",
+      "hint": "This section is not ready yet. Check back later."
+    }
   },
   "login": {
     "title": "Florentine Abbot",
@@ -55,7 +92,6 @@
     "submit": "Launch",
     "back": "Back",
     "next": "Next",
-    "error_import_interrupted": "Import was interrupted (server stopped mid-process). Some files may not have been moved.",
     "error_unavailable": "Server unavailable",
     "exiftool": {
       "missing_title": "ExifTool not found",
@@ -84,70 +120,55 @@
       "archive": {
         "label": "Archive & account",
         "hint": "Set the archive folder and create an administrator account.",
+        "archive_section_label": "Archive folder",
+        "admin_account_label": "Administrator account",
         "archive_path_hint": "Required. All processed photos will be moved here.",
         "username_hint": "Required. Letters, digits and '_' only, min 3 characters.",
         "password_hint": "Required. At least 6 characters.",
         "password_confirm_hint": "Required."
       },
-      "existing": {
-        "label": "Existing photos",
-        "hint": "Do you have a folder with photos to import into the archive?",
-        "yes": "Yes, import them",
-        "no": "No, start fresh"
-      },
-      "import": {
-        "label": "Import settings",
-        "hint": "Specify the folder with source photos.",
-        "input_path": "Photos folder",
-        "recursive": "Include subfolders"
-      },
-      "preview": {
-        "label": "Preview",
-        "hint": "Review how your files will be renamed and moved. Nothing will change until you click Next.",
-        "loading": "Analysing files…",
-        "total": "Total",
-        "ok": "Will be moved",
-        "failed": "Errors",
-        "now": "As is:",
-        "after": "After:",
-        "errors_title": "Files that cannot be processed:"
-      },
-      "inbox": {
-        "label": "Inbox folder",
-        "hint": "New photos from this folder will be automatically added to the archive.",
-        "inbox_path": "Inbox folder",
-        "inbox_path_hint": "Files from this folder will be automatically moved to the archive.",
-        "skip_hint": "You can leave this empty and configure it later."
+      "format": {
+        "label": "Archive format",
+        "hint": "All files in the archive are named according to a unified standard that ensures long-term readability and compatibility with all tools in the system. The defaults match this standard — change them only if you know what you are doing.",
+        "path_label": "Folder structure",
+        "path_desc": "Determines which folder in the archive the file goes into.",
+        "filename_label": "File name",
+        "filename_desc": "Determines the file name in the archive. Extension is added automatically.",
+        "edit": "Edit",
+        "edit_path": "Edit folder structure",
+        "edit_filename": "Edit file name",
+        "tree_archive": "archive",
+        "tree_caption": "Example of how files will be organized in your archive:",
+        "legend_sources": "Source files — scans, digital photos, RAW data. Read-only, protected from accidental changes.",
+        "legend_derivatives": "Processed derivatives: print-ready files, web exports, etc.",
+        "legend_prv": "Preview images. Stored at the date folder root for quick browsing.",
+        "dialog_title_path": "Archive folder structure",
+        "dialog_title_filename": "Archive file name",
+        "dialog_hint_path": "Template that determines which folder the file goes into.",
+        "dialog_hint_filename": "Template that determines the file name. Extension is added automatically.",
+        "preview_label": "Example result",
+        "tags_label": "Available tags",
+        "unknown_tags": "Unknown tags: {tags}",
+        "tags": {
+          "year":     "Year from the file name. Usually the year of capture or digitisation — depends on how the source file was named.",
+          "month":    "Month (1–12).",
+          "day":      "Day (1–31).",
+          "hour":     "Hour (0–23).",
+          "minute":   "Minute (0–59).",
+          "second":   "Second (0–59).",
+          "sequence": "Frame sequence number within a series.",
+          "modifier": "Date certainty: E — exact, A — unknown, B — before, C — circa, F — after.",
+          "group":    "Group — 3-character event or series code (e.g. FAM).",
+          "subgroup": "Subgroup — 3-character refinement code (e.g. POR).",
+          "side":     "Side — for double-sided scans (A, B).",
+          "suffix":   "File version: MSR — master scan, RAW — raw data, PRV — preview, PRT — print."
+        }
       },
       "launch": {
         "label": "Launch",
-        "hint": "Review your settings and click Launch.",
-        "import_from": "Import from"
-      },
-      "processing": {
-        "label": "Processing",
-        "importing": "Importing photos…",
-        "done": "All done. You can now log in.",
-        "go": "Log in"
+        "hint": "Review your settings and click Launch."
       }
     }
-  },
-  "tasks": {
-    "organizer": {
-      "label": "File Organizer",
-      "description": "Watches inbox for new scans and moves them to the archive."
-    },
-    "processor": {
-      "label": "Preview Maker",
-      "description": "Watches archive for new masters and generates PRV previews."
-    },
-    "detector": {
-      "label": "Face Detector",
-      "description": "Scans archive for unprocessed photos and detects faces."
-    }
-  },
-  "footer": {
-    "copyright": "© {year} Florentine Abbot"
   },
   "confirm": {
     "cancel": "Cancel",

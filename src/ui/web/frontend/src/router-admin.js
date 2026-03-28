@@ -1,19 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { apiUrl } from './api.js'
 import LoginView from './views/LoginView.vue'
-import AlbumsView from './views/AlbumsView.vue'
-import WipView from './views/WipView.vue'
+import TaskView from './views/admin/TaskView.vue'
+import ConfigView from './views/admin/ConfigView.vue'
 
 const routes = [
-  { path: '/login', component: LoginView },
-  { path: '/albums', component: AlbumsView, meta: { requiresAuth: true } },
-  { path: '/photos', component: WipView, meta: { requiresAuth: true } },
-  { path: '/map', component: WipView, meta: { requiresAuth: true } },
-  { path: '/people', component: WipView, meta: { requiresAuth: true } },
-  { path: '/genealogy', component: WipView, meta: { requiresAuth: true } },
-  { path: '/timeline', component: WipView, meta: { requiresAuth: true } },
-  { path: '/stats', component: WipView, meta: { requiresAuth: true } },
-  { path: '/:pathMatch(.*)*', redirect: '/albums' },
+  { path: '/admin/login', component: LoginView },
+  { path: '/admin/config', component: ConfigView, meta: { requiresAuth: true } },
+  { path: '/admin/tasks/:task', component: TaskView, meta: { requiresAuth: true } },
+  { path: '/:pathMatch(.*)*', redirect: '/admin/config' },
 ]
 
 const router = createRouter({
@@ -39,18 +34,18 @@ router.beforeEach(async (to) => {
     return false
   }
 
-  if (to.path === '/login') return true
+  if (to.path === '/admin/login') return true
 
   if (to.meta.requiresAuth) {
     const token = localStorage.getItem('token')
-    if (!token) return '/login'
+    if (!token) return '/admin/login'
 
     const res = await fetch(apiUrl('/auth/me'), {
       headers: { Authorization: `Bearer ${token}` },
     })
     if (!res.ok) {
       localStorage.removeItem('token')
-      return '/login'
+      return '/admin/login'
     }
   }
 

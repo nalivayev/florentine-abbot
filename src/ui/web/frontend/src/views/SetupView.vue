@@ -12,8 +12,10 @@
 
       <!-- Main -->
       <div class="setup-main">
-        <!-- Language switcher -->
+        <!-- Language + theme switcher -->
         <div class="lang-bar">
+          <button class="lang-btn theme-btn" @click="toggle" :title="isDark ? 'Light' : 'Dark'">{{ isDark ? '☀' : '☽' }}</button>
+          <span class="switcher-sep">|</span>
           <button v-for="lang in ['ru', 'en']" :key="lang"
             :class="['lang-btn', { active: locale === lang }]"
             @click="locale = lang; saveLang(lang)">{{ lang.toUpperCase() }}</button>
@@ -24,7 +26,7 @@
       <!-- Step 1: Welcome -->
       <section v-if="step === 1">
         <h1>{{ t('setup.steps.welcome.label') }}</h1>
-        <p class="hint" style="white-space: pre-line;">{{ t('setup.steps.welcome.hint') }}</p>
+        <p class="hint hint-preline">{{ t('setup.steps.welcome.hint') }}</p>
       </section>
 
       <!-- Step 2: System requirements -->
@@ -41,7 +43,7 @@
           <p class="exiftool-title">⚠ {{ t('setup.exiftool.missing_title') }}</p>
           <p class="exiftool-text">{{ t('setup.exiftool.missing_hint') }}</p>
           <pre class="exiftool-cmd">{{ exiftoolCmd }}</pre>
-          <button type="button" class="btn-back" style="margin-top: 0.75rem;" @click="checkExiftool">
+          <button type="button" class="btn-back" @click="checkExiftool">
             {{ t('setup.exiftool.recheck') }}
           </button>
         </div>
@@ -50,122 +52,86 @@
       <!-- Step 3: Account + Archive -->
       <section v-else-if="step === 3">
         <h1>{{ t('setup.steps.archive.label') }}</h1>
-        <p class="hint">{{ t('setup.steps.archive.hint') }}</p>
 
-        <div class="field">
-          <label>{{ t('setup.archive_path') }}</label>
-          <input v-model="archive" type="text" placeholder="C:\archive" :class="{ invalid: fieldErrors.archive }" />
-          <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.archive }">{{ t('setup.steps.archive.archive_path_hint') }}</p>
-        </div>
-        <div class="field">
-          <label>{{ t('setup.username') }}</label>
-          <input v-model="username" type="text" autocomplete="username" :class="{ invalid: fieldErrors.username }" />
-          <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.username }">{{ t('setup.steps.archive.username_hint') }}</p>
-        </div>
-        <div class="field">
-          <label>{{ t('setup.password') }}</label>
-          <input v-model="password" type="password" autocomplete="new-password" :class="{ invalid: fieldErrors.password }" />
-          <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.password }">{{ t('setup.steps.archive.password_hint') }}</p>
-        </div>
-        <div class="field">
-          <label>{{ t('setup.password_confirm') }}</label>
-          <input v-model="password2" type="password" autocomplete="new-password" :class="{ invalid: fieldErrors.password2 }" />
-          <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.password2 }">{{ t('setup.steps.archive.password_confirm_hint') }}</p>
+        <div class="setup-section">
+          <p class="subsection-label">{{ t('setup.steps.archive.archive_section_label') }}</p>
+          <div class="field">
+            <label>{{ t('setup.archive_path') }}</label>
+            <input v-model="archive" type="text" placeholder="C:\archive" :class="{ invalid: fieldErrors.archive }" />
+            <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.archive }">{{ t('setup.steps.archive.archive_path_hint') }}</p>
+          </div>
         </div>
 
+        <div class="setup-section">
+          <p class="subsection-label">{{ t('setup.steps.archive.admin_account_label') }}</p>
+          <div class="field">
+            <label>{{ t('setup.username') }}</label>
+            <input v-model="username" type="text" autocomplete="username" :class="{ invalid: fieldErrors.username }" />
+            <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.username }">{{ t('setup.steps.archive.username_hint') }}</p>
+          </div>
+          <div class="field">
+            <label>{{ t('setup.password') }}</label>
+            <input v-model="password" type="password" autocomplete="new-password" :class="{ invalid: fieldErrors.password }" />
+            <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.password }">{{ t('setup.steps.archive.password_hint') }}</p>
+          </div>
+          <div class="field">
+            <label>{{ t('setup.password_confirm') }}</label>
+            <input v-model="password2" type="password" autocomplete="new-password" :class="{ invalid: fieldErrors.password2 }" />
+            <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.password2 }">{{ t('setup.steps.archive.password_confirm_hint') }}</p>
+          </div>
+        </div>
       </section>
 
-      <!-- Step 4: Existing photos? -->
+      <!-- Step 4: Archive format -->
       <section v-else-if="step === 4">
-        <h1>{{ t('setup.steps.existing.label') }}</h1>
-        <p class="hint">{{ t('setup.steps.existing.hint') }}</p>
+        <h1>{{ t('setup.steps.format.label') }}</h1>
+        <p class="hint">{{ t('setup.steps.format.hint') }}</p>
 
-        <div class="choice">
-          <button type="button" :class="['choice-btn', { selected: hasExisting === true }]"
-            @click="hasExisting = true; fieldErrors = {}">{{ t('setup.steps.existing.yes') }}</button>
-          <button type="button" :class="['choice-btn', { selected: hasExisting === false }]"
-            @click="hasExisting = false; fieldErrors = {}">{{ t('setup.steps.existing.no') }}</button>
+        <p class="tree-caption">{{ t('setup.steps.format.tree_caption') }}</p>
+        <div class="archive-tree">
+          <div class="tree-node tree-dir tree-d0">{{ archive || t('setup.steps.format.tree_archive') }}/</div>
+          <div class="tree-node tree-dir tree-d1">{{ treeYearFolder }}/</div>
+
+          <!-- date with two photos -->
+          <div class="tree-node tree-dir tree-d2">{{ treeDateFolder1 }}/</div>
+          <div class="tree-node tree-dir tree-d3">SOURCES/</div>
+          <div class="tree-node tree-locked tree-d4">{{ treeFileMSR1a }}.tiff</div>
+          <div class="tree-node tree-locked tree-d4">{{ treeFileRAW1a }}.cr2</div>
+          <div class="tree-node tree-locked tree-d4">{{ treeFileMSR1b }}.tiff</div>
+          <div class="tree-node tree-locked tree-d4">{{ treeFileRAW1b }}.cr2</div>
+          <div class="tree-node tree-dir tree-d3">DERIVATIVES/</div>
+          <div class="tree-node tree-muted tree-d4">{{ treeFilePRT1a }}.tiff</div>
+          <div class="tree-node tree-muted tree-d4">{{ treeFileWEB1a }}.jpg</div>
+          <div class="tree-node tree-muted tree-d4">{{ treeFilePRT1b }}.tiff</div>
+          <div class="tree-node tree-muted tree-d4">{{ treeFileWEB1b }}.jpg</div>
+          <div class="tree-node tree-d3">{{ treeFilePRV1a }}.jpg</div>
+          <div class="tree-node tree-d3">{{ treeFilePRV1b }}.jpg</div>
+
+          <!-- date with one photo -->
+          <div class="tree-node tree-dir tree-d2">{{ treeDateFolder2 }}/</div>
+          <div class="tree-node tree-dir tree-d3">SOURCES/</div>
+          <div class="tree-node tree-locked tree-d4">{{ treeFileMSR2 }}.tiff</div>
+          <div class="tree-node tree-locked tree-d4">{{ treeFileRAW2 }}.cr2</div>
+          <div class="tree-node tree-dir tree-d3">DERIVATIVES/</div>
+          <div class="tree-node tree-muted tree-d4">{{ treeFilePRT2 }}.tiff</div>
+          <div class="tree-node tree-muted tree-d4">{{ treeFileWEB2 }}.jpg</div>
+          <div class="tree-node tree-d3">{{ treeFilePRV2 }}.jpg</div>
         </div>
-        <p v-if="fieldErrors.choice" class="field-error">{{ t('setup.validation.' + fieldErrors.choice) }}</p>
+
+        <dl class="tree-legend">
+          <dt>SOURCES/</dt><dd>{{ t('setup.steps.format.legend_sources') }}</dd>
+          <dt>DERIVATIVES/</dt><dd>{{ t('setup.steps.format.legend_derivatives') }}</dd>
+          <dt>*.PRV.*</dt><dd>{{ t('setup.steps.format.legend_prv') }}</dd>
+        </dl>
+
+        <div class="format-edit-links">
+          <button type="button" class="btn-edit" @click="openDialog('path')">{{ t('setup.steps.format.edit_path') }}</button>
+          <button type="button" class="btn-edit" @click="openDialog('filename')">{{ t('setup.steps.format.edit_filename') }}</button>
+        </div>
       </section>
 
-      <!-- Step 5: Import settings (only if hasExisting) -->
+      <!-- Step 5: Launch -->
       <section v-else-if="step === 5">
-        <h1>{{ t('setup.steps.import.label') }}</h1>
-        <p class="hint">{{ t('setup.steps.import.hint') }}</p>
-
-        <div class="field">
-          <label>{{ t('setup.steps.import.input_path') }}</label>
-          <input v-model="importPath" type="text" placeholder="C:\photos" :class="{ invalid: fieldErrors.import_path }" />
-          <p v-if="fieldErrors.import_path" class="field-hint field-hint-error">{{ t('setup.validation.' + fieldErrors.import_path) }}</p>
-        </div>
-        <div class="field checkbox">
-          <input id="recursive" v-model="importRecursive" type="checkbox" />
-          <label for="recursive">{{ t('setup.steps.import.recursive') }}</label>
-        </div>
-      </section>
-
-      <!-- Step 6: Preview dry-run (only if hasExisting) -->
-      <section v-else-if="step === 6">
-        <h1>{{ t('setup.steps.preview.label') }}</h1>
-        <p class="hint">{{ t('setup.steps.preview.hint') }}</p>
-
-        <div v-if="previewLoading" class="loading">{{ t('setup.steps.preview.loading') }}</div>
-        <div v-else-if="previewError" class="error">{{ previewError }}</div>
-        <div v-else-if="preview">
-          <div class="summary">
-            <span>{{ t('setup.steps.preview.total') }}: <b>{{ preview.summary.total }}</b></span>
-            <span>{{ t('setup.steps.preview.ok') }}: <b>{{ preview.summary.succeeded }}</b></span>
-            <span v-if="preview.summary.failed">
-              {{ t('setup.steps.preview.failed') }}: <b>{{ preview.summary.failed }}</b>
-            </span>
-          </div>
-
-          <div class="tree-cards">
-            <div class="tree-card">
-              <div class="tree-header">{{ t('setup.steps.preview.now') }}</div>
-              <div class="tree-body">
-                <div v-for="node in sourceTree" :key="node.key"
-                  class="tree-node" :style="{ paddingLeft: node.depth * 14 + 8 + 'px' }">
-                  <span :class="node.isFile ? 'file-name' : 'folder-name'">{{ node.name }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="tree-card">
-              <div class="tree-header">{{ t('setup.steps.preview.after') }}</div>
-              <div class="tree-body">
-                <div v-for="node in destTree" :key="node.key"
-                  class="tree-node" :style="{ paddingLeft: node.depth * 14 + 8 + 'px' }">
-                  <span :class="node.isFile ? 'file-name' : 'folder-name'">{{ node.name }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="preview.errors.length" class="errors-block">
-            <p class="errors-title">{{ t('setup.steps.preview.errors_title') }}</p>
-            <div v-for="(e, i) in preview.errors" :key="i" class="preview-error">
-              {{ e.file }}: {{ e.reason }}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Step 7: Inbox path -->
-      <section v-else-if="step === 7">
-        <h1>{{ t('setup.steps.inbox.label') }}</h1>
-        <p class="hint">{{ t('setup.steps.inbox.hint') }}</p>
-
-        <div class="field">
-          <label>{{ t('setup.steps.inbox.inbox_path') }}</label>
-          <input v-model="inbox" type="text" placeholder="C:\inbox" :class="{ invalid: fieldErrors.inbox }" />
-          <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.inbox }">{{ t('setup.steps.inbox.inbox_path_hint') }}</p>
-        </div>
-        <p class="skip-hint">{{ t('setup.steps.inbox.skip_hint') }}</p>
-      </section>
-
-      <!-- Step 8: Summary + launch -->
-      <section v-else-if="step === 8">
         <h1>{{ t('setup.steps.launch.label') }}</h1>
         <p class="hint">{{ t('setup.steps.launch.hint') }}</p>
 
@@ -176,28 +142,15 @@
           <div class="summary-row">
             <span>{{ t('setup.username') }}</span><b>{{ username }}</b>
           </div>
-          <div v-if="inbox" class="summary-row">
-            <span>{{ t('setup.steps.inbox.inbox_path') }}</span><b>{{ inbox }}</b>
+          <div class="summary-row">
+            <span>{{ t('setup.steps.format.path_label') }}</span>
+            <code class="summary-code">{{ archivePathTemplate }}</code>
           </div>
-          <div v-if="hasExisting && importPath" class="summary-row">
-            <span>{{ t('setup.steps.launch.import_from') }}</span><b>{{ importPath }}</b>
-          </div>
-        </div>
-      </section>
-
-      <!-- Step 9: Processing -->
-      <section v-else-if="step === 9">
-        <h1>{{ t('setup.steps.processing.label') }}</h1>
-
-        <div v-if="importing">
-          <p class="hint">{{ t('setup.steps.processing.importing') }}</p>
-          <div class="progress-row">
-            <span>{{ t('setup.steps.preview.ok') }}: {{ importProgress.succeeded }}</span>
-            <span v-if="importProgress.failed"> · {{ t('setup.steps.preview.failed') }}: {{ importProgress.failed }}</span>
+          <div class="summary-row">
+            <span>{{ t('setup.steps.format.filename_label') }}</span>
+            <code class="summary-code">{{ archiveFilenameTemplate }}</code>
           </div>
         </div>
-
-        <div v-if="!importing" class="done-msg">{{ t('setup.steps.processing.done') }}</div>
       </section>
 
         <p v-if="error" class="error">{{ error }}</p>
@@ -205,40 +158,54 @@
 
         <!-- Navigation -->
         <div class="nav">
-          <button v-if="step > 1 && step <= 8 && !launched" type="button" class="btn-back" @click="back">
+          <button v-if="step > 1" type="button" class="btn-back" @click="back">
             {{ t('setup.back') }}
           </button>
-          <button v-if="step < 8 && !launched" type="button" class="btn-next"
-            :disabled="!canAdvance || previewLoading || validating || exiftoolChecking" @click="next">
+          <button v-if="step < 5" type="button" class="btn-next"
+            :disabled="!canAdvance || validating || exiftoolChecking" @click="next">
             {{ t('setup.next') }}
           </button>
-          <button v-if="step === 8 && !launched" type="button" class="btn-next"
+          <button v-if="step === 5" type="button" class="btn-next"
             :disabled="loading" @click="submit">
             {{ t('setup.submit') }}
-          </button>
-          <button v-if="step === 9 && !importing" type="button" class="btn-next" @click="finish">
-            {{ t('setup.steps.processing.go') }}
           </button>
         </div>
       </div><!-- /setup-main -->
     </div><!-- /setup-box -->
   </div>
+
+  <!-- Format edit dialogs -->
+  <FormatEditDialog
+    v-if="dialogOpen === 'path'"
+    v-model="archivePathTemplate"
+    :title="t('setup.steps.format.dialog_title_path')"
+    :hint="t('setup.steps.format.dialog_hint_path')"
+    @close="dialogOpen = null"
+  />
+  <FormatEditDialog
+    v-if="dialogOpen === 'filename'"
+    v-model="archiveFilenameTemplate"
+    :title="t('setup.steps.format.dialog_title_filename')"
+    :hint="t('setup.steps.format.dialog_hint_filename')"
+    @close="dialogOpen = null"
+  />
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useTheme } from '../theme.js'
 import { apiUrl } from '../api.js'
+import FormatEditDialog from '../components/FormatEditDialog.vue'
 
 const { t, locale } = useI18n()
+const { isDark, init: initTheme, toggle } = useTheme()
 
 function saveLang(lang) {
   localStorage.setItem('lang', lang)
 }
-const router = useRouter()
 
-// Steps: 1=welcome, 2=sysreq, 3=account+archive, 4=existing?, 5=import, 6=preview, 7=inbox, 8=summary, 9=processing
+// Steps: 1=welcome, 2=sysreq, 3=account+archive, 4=format, 5=launch
 const step = ref(1)
 
 // Step 3
@@ -248,19 +215,9 @@ const password = ref('')
 const password2 = ref('')
 
 // Step 4
-const hasExisting = ref(null)
-
-// Step 5
-const importPath = ref('')
-const importRecursive = ref(false)
-
-// Step 6
-const preview = ref(null)
-const previewLoading = ref(false)
-const previewError = ref('')
-
-// Step 7
-const inbox = ref('')
+const archivePathTemplate = ref('')
+const archiveFilenameTemplate = ref('')
+const dialogOpen = ref(null)
 
 // ExifTool
 const exiftoolChecked = ref(false)
@@ -273,87 +230,84 @@ const error = ref('')
 const fieldErrors = ref({})
 const validating = ref(false)
 const loading = ref(false)
-const launched = ref(false)
-const importing = ref(false)
-const importProgress = ref({ done: false, succeeded: 0, failed: 0, errors: [] })
 
-function buildTree(paths) {
-  if (!paths.length) return []
-
-  // Build nested object from all path components
-  const root = {}
-  for (const p of paths) {
-    const parts = p.replace(/\\/g, '/').split('/').filter(Boolean)
-    let node = root
-    for (const part of parts) {
-      if (!node[part]) node[part] = {}
-      node = node[part]
-    }
-  }
-
-  // Flatten to renderable list
-  const result = []
-  function traverse(node, depth, parentKey) {
-    for (const [name, children] of Object.entries(node).sort()) {
-      const key = parentKey + '/' + name
-      const isFile = Object.keys(children).length === 0
-      result.push({ key, name, depth, isFile })
-      if (!isFile) traverse(children, depth + 1, key)
-    }
-  }
-  traverse(root, 0, '')
-  return result
+const SAMPLE = {
+  year: 2024, month: 5, day: 12,
+  hour: 14, minute: 30, second: 0,
+  sequence: 1,
+  modifier: 'E', group: 'FAM', subgroup: 'POR',
+  side: 'A', suffix: 'MSR',
 }
 
-const sourceTree = computed(() =>
-  preview.value ? buildTree(preview.value.sample.map(e => e.source)) : []
-)
-const destTree = computed(() =>
-  preview.value ? buildTree(preview.value.sample.map(e => e.destination)) : []
-)
+function renderTplWith(tpl, overrides = {}) {
+  const sample = { ...SAMPLE, ...overrides }
+  return tpl.replace(/\{(\w+)(?::([^}]+))?\}/g, (_, name, fmt) => {
+    const val = sample[name]
+    if (val === undefined) return `{${name}}`
+    if (fmt && typeof val === 'number') {
+      const width = parseInt(fmt)
+      if (!isNaN(width)) return String(val).padStart(width, '0')
+    }
+    return String(val)
+  })
+}
+
+
+// S1a, S1b — two photos on the same date (day 11); S2 — one photo on a different date (day 12)
+const S1a = { day: 11, hour: 10, minute: 15, second: 0, sequence: 1 }
+const S1b = { day: 11, hour: 14, minute: 30, second: 0, sequence: 2 }
+const S2  = {}
+
+const treeYearFolder  = computed(() => renderTplWith(archivePathTemplate.value, S2).split('/')[0])
+const treeDateFolder1 = computed(() => { const p = renderTplWith(archivePathTemplate.value, S1a).split('/'); return p[p.length - 1] })
+const treeDateFolder2 = computed(() => { const p = renderTplWith(archivePathTemplate.value, S2).split('/'); return p[p.length - 1] })
+
+const treeFileMSR1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'MSR' }))
+const treeFileRAW1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'RAW' }))
+const treeFilePRV1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'PRV' }))
+const treeFilePRT1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'PRT' }))
+const treeFileWEB1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'WEB' }))
+const treeFileMSR1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'MSR' }))
+const treeFileRAW1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'RAW' }))
+const treeFilePRV1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'PRV' }))
+const treeFilePRT1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'PRT' }))
+const treeFileWEB1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'WEB' }))
+const treeFileMSR2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'MSR' }))
+const treeFileRAW2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'RAW' }))
+const treeFilePRV2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'PRV' }))
+const treeFilePRT2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'PRT' }))
+const treeFileWEB2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'WEB' }))
 
 const stepLabels = computed(() => [
   { n: 1, label: t('setup.steps.welcome.label') },
   { n: 2, label: t('setup.steps.sysreq.label') },
   { n: 3, label: t('setup.steps.archive.label') },
-  { n: 4, label: t('setup.steps.existing.label') },
-  { n: 5, label: t('setup.steps.import.label'), skip: hasExisting.value === false },
-  { n: 6, label: t('setup.steps.preview.label'), skip: hasExisting.value === false },
-  { n: 7, label: t('setup.steps.inbox.label') },
-  { n: 8, label: t('setup.steps.launch.label') },
-  { n: 9, label: t('setup.steps.processing.label') },
+  { n: 4, label: t('setup.steps.format.label') },
+  { n: 5, label: t('setup.steps.launch.label') },
 ])
 
 function stepState(s) {
-  if (s.skip) return 'skipped'
   if (s.n < step.value) return 'done'
   if (s.n === step.value) return 'active'
   return 'pending'
 }
 
 function stepIcon(s) {
-  if (s.skip) return '✔'
-  if (s.n < step.value) return '✔'
-  return ''
+  return s.n < step.value ? '✔' : ''
+}
+
+function openDialog(which) {
+  dialogOpen.value = which
 }
 
 const canAdvance = computed(() => {
   if (step.value === 2) return exiftoolChecked.value && exiftoolInstalled.value
-  if (step.value === 6) return !!preview.value
   return true
 })
 
 function back() {
   fieldErrors.value = {}
-  if (step.value === 5 || step.value === 4) {
-    step.value = step.value - 1
-  } else if (step.value === 6) {
-    step.value = 5
-  } else if (step.value === 7 && !hasExisting.value) {
-    step.value = 4
-  } else {
-    step.value = step.value - 1
-  }
+  step.value = step.value - 1
 }
 
 async function validateStep(stepNum) {
@@ -369,8 +323,6 @@ async function validateStep(stepNum) {
         username: username.value,
         password: password.value,
         password2: password2.value,
-        import_path: importPath.value,
-        inbox: inbox.value,
       }),
     })
     const data = await res.json()
@@ -409,65 +361,20 @@ async function checkExiftool() {
 async function next() {
   error.value = ''
   if (step.value === 1) {
-    // Moving from Welcome to System Requirements — auto-check ExifTool
     step.value = 2
     const ok = await checkExiftool()
     if (ok) step.value = 3
     return
   }
   if (step.value === 2) {
-    if (!exiftoolChecked.value) {
-      await checkExiftool()
-    }
+    if (!exiftoolChecked.value) await checkExiftool()
     if (!exiftoolInstalled.value) return
   }
-  if (step.value === 3 || step.value === 5 || step.value === 7) {
-    const ok = await validateStep(step.value)
+  if (step.value === 3) {
+    const ok = await validateStep(3)
     if (!ok) return
   }
-  if (step.value === 4) {
-    if (hasExisting.value === null) {
-      fieldErrors.value = { choice: 'required' }
-      return
-    }
-    if (!hasExisting.value) {
-      step.value = 7
-      return
-    }
-  }
-  if (step.value === 5) {
-    await loadPreview()
-    step.value = 6
-    return
-  }
   step.value = step.value + 1
-}
-
-async function loadPreview() {
-  previewLoading.value = true
-  previewError.value = ''
-  preview.value = null
-  try {
-    const res = await fetch(apiUrl('/setup/preview'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        input_path: importPath.value,
-        output_path: archive.value,
-        recursive: importRecursive.value,
-      }),
-    })
-    if (!res.ok) {
-      const d = await res.json()
-      previewError.value = d.detail || t('setup.error_unavailable')
-    } else {
-      preview.value = await res.json()
-    }
-  } catch {
-    previewError.value = t('setup.error_unavailable')
-  } finally {
-    previewLoading.value = false
-  }
 }
 
 async function submit() {
@@ -481,9 +388,8 @@ async function submit() {
         archive: archive.value,
         username: username.value,
         password: password.value,
-        inbox: inbox.value,
-        import_path: hasExisting.value ? importPath.value : '',
-        import_recursive: importRecursive.value,
+        archive_path_template: archivePathTemplate.value,
+        archive_filename_template: archiveFilenameTemplate.value,
       }),
     })
     if (!res.ok) {
@@ -491,13 +397,7 @@ async function submit() {
       error.value = d.detail || t('setup.error_unavailable')
       return
     }
-    const data = await res.json()
-    launched.value = true
-    step.value = 9
-    if (data.importing) {
-      importing.value = true
-      listenProgress()
-    }
+    window.location.href = '/admin/login'
   } catch {
     error.value = t('setup.error_unavailable')
   } finally {
@@ -505,58 +405,18 @@ async function submit() {
   }
 }
 
-function listenProgress() {
-  const es = new EventSource(apiUrl('/setup/import/progress'))
-  es.onmessage = (e) => {
-    const p = JSON.parse(e.data)
-    importProgress.value = p
-    if (p.done) {
-      importing.value = false
-      es.close()
-    }
-  }
-  es.onerror = () => es.close()
-}
-
 onMounted(async () => {
+  initTheme()
   try {
-    const res = await fetch(apiUrl('/setup/status'))
+    const res = await fetch(apiUrl('/setup/format'))
     const data = await res.json()
-    if (data.import_status === 'running') {
-      launched.value = true
-      importing.value = true
-      step.value = 9
-      listenProgress()
-    } else if (data.import_status === 'done') {
-      launched.value = true
-      importing.value = false
-      step.value = 9
-      if (data.import_result) {
-        importProgress.value = {
-          done: true,
-          total: data.import_result.total,
-          succeeded: data.import_result.succeeded,
-          failed: data.import_result.failed,
-          errors: [],
-        }
-      }
-    } else if (data.import_status === 'interrupted') {
-      launched.value = true
-      importing.value = false
-      step.value = 9
-      error.value = t('setup.error_import_interrupted')
-    }
+    archivePathTemplate.value = data.archive_path_template
+    archiveFilenameTemplate.value = data.archive_filename_template
   } catch {
-    // ignore — show normal step 1
+    archivePathTemplate.value = '{year:04d}/{year:04d}.{month:02d}.{day:02d}'
+    archiveFilenameTemplate.value = '{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}'
   }
 })
-
-async function finish() {
-  try {
-    await fetch(apiUrl('/setup/finish'), { method: 'POST' })
-  } catch { /* ignore */ }
-  router.push('/login')
-}
 </script>
 
 <style scoped>
@@ -569,7 +429,7 @@ async function finish() {
   overflow: hidden;
 }
 .setup-box {
-  width: 860px;
+  width: min(1040px, calc(100vw - 4rem));
   height: calc(100vh - 4rem);
   display: flex;
   flex-direction: row;
@@ -581,29 +441,25 @@ async function finish() {
   flex-direction: column;
   justify-content: flex-start;
   padding-top: 2.8rem;
-  padding-right: 2rem;
+  padding-right: var(--sp-7);
   border-right: 1px solid var(--border);
   gap: 0.1rem;
 }
 .step-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   padding: 0.4rem 0;
-  font-size: 0.88rem;
+  font-size: var(--fs-base);
   color: var(--text);
   line-height: 1.3;
 }
-.step-item.active {
-  color: var(--accent);
-  font-weight: 600;
-}
+.step-item.active { color: var(--accent); font-weight: 600; }
 .step-item.done { color: var(--text); font-weight: 600; }
-.step-item.skipped { opacity: 0.3; font-weight: 600; }
 .step-icon {
-  width: 1rem;
+  width: var(--sp-4);
   flex-shrink: 0;
-  font-size: 0.85rem;
+  font-size: var(--fs-base);
   color: inherit;
 }
 .step-label { min-width: 0; }
@@ -611,198 +467,226 @@ async function finish() {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding-left: 2rem;
+  padding-left: var(--sp-7);
   min-width: 0;
 }
 .setup-content {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
-  padding-bottom: 1rem;
+  padding-bottom: var(--sp-4);
 }
 .lang-bar {
   display: flex;
   justify-content: flex-end;
   gap: 0.4rem;
-  margin-bottom: 1rem;
+  margin-bottom: var(--sp-4);
 }
 .lang-btn {
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
+  padding: 0.2rem var(--sp-2);
+  font-size: var(--fs-xs);
   border: 1px solid var(--border);
   border-radius: 3px;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
 }
-.lang-btn.active {
-  color: var(--accent);
-  border-color: var(--accent);
+.lang-btn.active { color: var(--accent); border-color: var(--accent); }
+.switcher-sep {
+  color: var(--border);
+  font-size: var(--fs-sm);
+  user-select: none;
 }
 h1 {
-  font-size: 1.05rem;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text);
   margin-bottom: 0.4rem;
 }
 .hint {
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--sp-5);
 }
-.skip-hint {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-top: 0.5rem;
-}
-.field {
-  margin-bottom: 0.85rem;
-}
-.field.checkbox {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.field.checkbox label {
-  margin: 0;
-  font-size: 0.85rem;
+.hint-preline { white-space: pre-line; }
+.exiftool-warning .btn-back { margin-top: var(--sp-3); }
+.subsection-label {
+  font-size: var(--fs-base);
+  font-weight: 600;
   color: var(--text);
+  margin: 0 0 var(--sp-2);
 }
+.field { margin-bottom: 0.85rem; }
 label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--text);
   margin-bottom: 0.3rem;
 }
 input[type="text"],
 input[type="password"] {
   width: 100%;
-  padding: 0.5rem 0.6rem;
+  padding: var(--sp-2) 0.6rem;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   box-sizing: border-box;
 }
-input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-input.invalid {
-  border-color: var(--danger);
-}
-input.invalid:focus {
-  border-color: var(--danger);
-}
+input:focus { outline: none; border-color: var(--accent); }
+input.invalid { border-color: var(--danger); }
+input.invalid:focus { border-color: var(--danger); }
 .field-hint {
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
-  margin-top: 0.25rem;
+  margin-top: var(--sp-1);
 }
-.field-hint-error {
-  color: var(--danger);
+.field-hint-error { color: var(--danger); }
+/* Archive tree */
+.tree-caption {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin: 0 0 0.4rem;
 }
-.choice {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-.choice-btn {
-  flex: 1;
-  padding: 0.7rem;
+.archive-tree {
+  font-family: monospace;
+  font-size: var(--fs-sm);
+  background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: #fff;
+  padding: 0.65rem 0.75rem;
+  overflow-x: auto;
+  margin-bottom: var(--sp-3);
+}
+.tree-node {
+  white-space: nowrap;
+  line-height: 1.7;
   color: var(--text);
-  font-size: 0.9rem;
-  cursor: pointer;
 }
-.choice-btn.selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, #fff);
+.tree-d0 { padding-left: 0; }
+.tree-d1 { padding-left: var(--sp-6); }
+.tree-d2 { padding-left: 3rem; }
+.tree-d3 { padding-left: 4.5rem; }
+.tree-d4 { padding-left: 6rem; }
+.tree-dir { font-weight: 500; }
+.tree-locked { color: var(--text-muted); }
+.tree-muted { color: var(--text-muted); }
+.tree-legend {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem var(--sp-3);
+  font-size: var(--fs-xs);
+  margin: var(--sp-4) 0 var(--sp-5);
 }
-.summary {
-  display: flex;
-  gap: 1.5rem;
-  font-size: 0.85rem;
+.tree-legend dt {
+  font-family: monospace;
+  color: var(--text);
+  white-space: nowrap;
+}
+.tree-legend dd {
   color: var(--text-muted);
-  margin-bottom: 1rem;
+  margin: 0;
 }
-.tree-cards {
+.format-edit-links {
   display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
+  justify-content: flex-end;
+  gap: var(--sp-2);
 }
-.tree-card {
-  min-width: 0;
+/* Format step */
+.setup-section {
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--border);
 }
-.tree-header {
-  font-size: 0.9rem;
+.setup-section:last-of-type { border-bottom: 1px solid var(--border); }
+.setup-section-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--sp-2);
+}
+.setup-section-title {
+  font-size: var(--fs-base);
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 0.4rem;
+  margin: 0 0 0.15rem;
 }
-.tree-body {
-  padding: 0;
-}
-.tree-node {
-  white-space: nowrap;
-}
-.tree-node {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.2rem 0;
-  font-size: 0.8rem;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-}
-.folder-name { overflow: hidden; text-overflow: ellipsis; font-weight: 500; color: var(--text); }
-.file-name { overflow: hidden; text-overflow: ellipsis; color: var(--text-muted); font-size: 0.78rem; }
-.errors-block {
-  margin-top: 1.75rem;
-  font-size: 0.78rem;
+.setup-section-desc {
+  font-size: var(--fs-xs);
   color: var(--text-muted);
+  margin: 0;
 }
-.errors-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.4rem; color: var(--text); }
-.summary-list { margin-bottom: 1.5rem; }
+.format-value {
+  display: block;
+  font-family: monospace;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.35rem 0.6rem;
+  word-break: break-all;
+  margin-bottom: 0.45rem;
+}
+.format-preview-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+}
+.preview-label { color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.preview-value {
+  font-family: monospace;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  word-break: break-all;
+}
+.btn-edit {
+  flex-shrink: 0;
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-sm);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.btn-edit:hover { border-color: var(--accent); color: var(--accent); }
+/* Summary */
+.summary-list { margin-bottom: var(--sp-6); }
 .summary-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.85rem;
+  align-items: baseline;
+  gap: var(--sp-4);
+  font-size: var(--fs-base);
   padding: 0.4rem 0;
   border-bottom: 1px solid var(--border);
   color: var(--text-muted);
 }
 .summary-row b { color: var(--text); }
-.progress-row {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-top: 0.5rem;
-}
-.done-msg {
-  margin-top: 1rem;
-  font-size: 0.9rem;
+.summary-code {
+  font-family: monospace;
+  font-size: var(--fs-xs);
   color: var(--text);
-  font-weight: 500;
+  text-align: right;
+  word-break: break-all;
 }
+/* Nav */
 .nav {
   flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 1.25rem;
+  padding-top: var(--sp-5);
 }
 .btn-back {
   width: 120px;
-  padding: 0.5rem 0;
+  padding: var(--sp-2) 0;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   cursor: pointer;
 }
 .btn-next {
@@ -813,28 +697,17 @@ input.invalid:focus {
   color: #fff;
   border: none;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   cursor: pointer;
   text-align: center;
 }
-.btn-next:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-.error {
-  font-size: 0.82rem;
-  color: var(--danger);
-  margin: 0.5rem 0;
-}
-.loading {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  padding: 1rem 0;
-}
+.btn-next:disabled { opacity: 0.5; cursor: default; }
+.error { font-size: var(--fs-sm); color: var(--danger); margin: var(--sp-2) 0; }
+.loading { font-size: var(--fs-base); color: var(--text-muted); padding: var(--sp-4) 0; }
 .exiftool-warning {
-  margin-top: 1.25rem;
-  padding: 0.9rem 1rem;
-  background: #fdf5e4;
+  margin-top: var(--sp-5);
+  padding: 0.9rem var(--sp-4);
+  background: var(--bg-warning);
   border-left: 3px solid var(--warning);
   border-radius: 0 4px 4px 0;
 }
@@ -842,32 +715,20 @@ input.invalid:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0;
-  font-size: 0.9rem;
+  padding: var(--sp-2) 0;
+  font-size: var(--fs-base);
   color: var(--text);
 }
-.sysreq-ok {
-  color: var(--success);
-  font-weight: 500;
-}
-.exiftool-title {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text);
-  margin-bottom: 0.4rem;
-}
-.exiftool-text {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-}
+.sysreq-ok { color: var(--success); font-weight: 500; }
+.exiftool-title { font-weight: 600; font-size: var(--fs-base); color: var(--text); margin-bottom: 0.4rem; }
+.exiftool-text { font-size: var(--fs-sm); color: var(--text-muted); margin-bottom: var(--sp-2); }
 .exiftool-cmd {
-  background: #f4f5f7;
+  background: var(--surface-muted);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.5rem 0.75rem;
+  padding: var(--sp-2) var(--sp-3);
   font-family: monospace;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   color: var(--text);
   white-space: pre-wrap;
   word-break: break-all;

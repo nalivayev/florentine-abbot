@@ -55,6 +55,10 @@ def create_app() -> FastAPI:
 
         @app.get("/{full_path:path}")
         async def spa(full_path: str) -> FileResponse:
+            if full_path.startswith("admin"):
+                return FileResponse(_DIST / "admin.html")
+            if full_path.startswith("setup"):
+                return FileResponse(_DIST / "setup.html")
             return FileResponse(_DIST / "index.html")
 
     return app

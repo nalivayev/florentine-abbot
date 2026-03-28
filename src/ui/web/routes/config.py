@@ -34,7 +34,7 @@ async def config_get(user: dict = Depends(get_current_user)) -> dict:
 async def config_save_inbox(settings: InboxSettings, user: dict = Depends(require_admin)) -> dict:
     inbox = settings.inbox.strip()
     if not inbox:
-        raise HTTPException(status_code=422, detail="Path is required")
+        raise HTTPException(status_code=422, detail="required")
 
     fo = read_daemon_config("file-organizer")
     fo.setdefault("watch", {})["path"] = inbox
@@ -53,7 +53,7 @@ async def config_save_inbox(settings: InboxSettings, user: dict = Depends(requir
 async def config_save_archive(settings: ArchiveSettings, user: dict = Depends(require_admin)) -> dict:
     archive = settings.archive.strip()
     if not archive:
-        raise HTTPException(status_code=422, detail="Path is required")
+        raise HTTPException(status_code=422, detail="required")
 
     fo = read_daemon_config("file-organizer")
     fo.setdefault("watch", {})["output"] = archive

@@ -47,7 +47,11 @@ async function submit() {
     }
     const data = await res.json()
     localStorage.setItem('token', data.token)
-    router.push('/admin/tasks/organizer')
+    if (window.location.pathname.startsWith('/admin')) {
+      router.push('/admin/config')
+    } else {
+      router.push('/albums')
+    }
   } catch {
     error.value = t('login.error_unavailable')
   } finally {
@@ -68,28 +72,28 @@ async function submit() {
   width: 320px;
 }
 h1 {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 2rem;
+  margin-bottom: var(--sp-7);
 }
 .field {
-  margin-bottom: 1rem;
+  margin-bottom: var(--sp-4);
 }
 label {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-bottom: 0.35rem;
 }
 input {
   width: 100%;
-  padding: 0.5rem 0.6rem;
+  padding: var(--sp-2) 0.6rem;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   box-sizing: border-box;
 }
 input:focus {
@@ -98,13 +102,13 @@ input:focus {
 }
 button {
   width: 100%;
-  margin-top: 0.5rem;
+  margin-top: var(--sp-2);
   padding: 0.55rem;
   background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: var(--fs-base);
   cursor: pointer;
 }
 button:disabled {
@@ -112,8 +116,8 @@ button:disabled {
   cursor: default;
 }
 .error {
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   color: var(--danger);
-  margin: 0.5rem 0;
+  margin: var(--sp-2) 0;
 }
 </style>

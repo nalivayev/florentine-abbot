@@ -1,45 +1,45 @@
 <template>
   <div v-if="daemon">
-    <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
-      <h1 class="page-title">{{ t(`tasks.${route.params.task}.label`) }}</h1>
+    <div class="task-header">
+      <h1 class="page-title">{{ t(`admin.tasks.${route.params.task}.label`) }}</h1>
       <span class="badge" :class="`badge-${daemon.status}`">{{ statusLabel }}</span>
     </div>
-    <p class="page-subtitle">{{ t(`tasks.${route.params.task}.description`) }}</p>
+    <p class="page-subtitle">{{ t(`admin.tasks.${route.params.task}.description`) }}</p>
 
     <div class="info-row" v-if="daemon.watch_path">
-      <span class="info-label">{{ t('daemons.watch') }}</span>
+      <span class="info-label">{{ t('admin.daemons.watch') }}</span>
       <span class="info-value">{{ daemon.watch_path }}</span>
     </div>
     <div class="info-row" v-if="daemon.output_path">
-      <span class="info-label">{{ t('daemons.output') }}</span>
+      <span class="info-label">{{ t('admin.daemons.output') }}</span>
       <span class="info-value">{{ daemon.output_path }}</span>
     </div>
 
-    <div style="margin-top: 24px;">
+    <div class="task-actions">
       <button v-if="daemon.status === 'running'"
-        class="btn btn-stop" @click="stop">{{ t('daemons.stop') }}</button>
+        class="btn btn-stop" @click="stop">{{ t('admin.daemons.stop') }}</button>
       <button v-else-if="daemon.status === 'crashed'"
-        class="btn btn-retry" @click="start">{{ t('daemons.restart') }}</button>
+        class="btn btn-retry" @click="start">{{ t('admin.daemons.restart') }}</button>
       <template v-else-if="daemon.status === 'not_configured'">
-        <button class="btn" disabled>{{ t('daemons.status.not_configured') }}</button>
+        <button class="btn" disabled>{{ t('admin.daemons.status.not_configured') }}</button>
         <p class="not-configured-hint">
-          <i18n-t keypath="daemons.not_configured_hint" tag="span">
+          <i18n-t keypath="admin.daemons.not_configured_hint" tag="span">
             <template #link>
-              <router-link to="/admin/config">{{ t('daemons.go_to_settings') }}</router-link>
+              <router-link to="/admin/config">{{ t('admin.daemons.go_to_settings') }}</router-link>
             </template>
           </i18n-t>
         </p>
       </template>
       <button v-else
-        class="btn btn-start" @click="start">{{ t('daemons.start') }}</button>
+        class="btn btn-start" @click="start">{{ t('admin.daemons.start') }}</button>
     </div>
 
     <div class="error-block" v-if="daemon.status === 'crashed' && daemon.error">{{ daemon.error }}</div>
 
     <hr class="divider">
-    <div class="log-header">{{ t('daemons.output') }}</div>
+    <div class="log-header">{{ t('admin.daemons.output') }}</div>
     <div class="log-panel" ref="logPanel">
-      <div v-if="logs.length === 0" class="log-empty">{{ t('daemons.no_logs') }}</div>
+      <div v-if="logs.length === 0" class="log-empty">{{ t('admin.daemons.no_logs') }}</div>
       <div v-for="(line, i) in logs" :key="i" class="log-line">{{ line }}</div>
     </div>
   </div>
@@ -68,7 +68,7 @@ let eventSource = null
 
 const daemonName = computed(() => DAEMON_NAMES[route.params.task])
 const daemon = computed(() => daemons.value.find(d => d.descriptor.name === daemonName.value))
-const statusLabel = computed(() => t(`daemons.status.${daemon.value?.status}`) ?? '')
+const statusLabel = computed(() => t(`admin.daemons.status.${daemon.value?.status}`) ?? '')
 
 async function fetchDaemons() {
   const res = await apiFetch('/daemons')
@@ -110,3 +110,13 @@ onUnmounted(() => {
   if (eventSource) eventSource.close()
 })
 </script>
+
+<style scoped>
+.task-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: 0.375rem;
+}
+.task-actions { margin-top: var(--sp-6); }
+</style>
