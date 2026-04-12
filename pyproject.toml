@@ -48,3 +48,7 @@ markers = [
     "manual: manual tests excluded from regular runs (run with: pytest -m manual)",
 ]
 addopts = "-m 'not manual'"
+testpaths = [
+    "tests/common",
+    "tests/scan_batcher",
+]
