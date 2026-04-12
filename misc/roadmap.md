@@ -147,6 +147,84 @@ mode is introduced.
 
 ---
 
+### scan-batcher: EmulateWorkflow — synthetic test data generation
+
+A new workflow (`--engine emulate`) that generates valid synthetic scan files
+without requiring a physical scanner or VueScan.
+
+**Purpose:**
+- Manual end-to-end testing of the import pipeline
+- Integration (B2B) tests for `content-importer` that need real files on disk
+  with proper metadata, without depending on the scan-batcher → VueScan pipeline
+
+**Parameters (via `-t key=value`):**
+- `output` — destination folder
+- `count` — number of files to generate (default: 1)
+- `date` — scan date in `YYYY-MM-DD` format (default: today)
+- `group`, `subgroup` — archive group and subgroup
+- `modifier` — filename modifier (A, B, C, E, F)
+- `side` — A or R
+- `suffix` — MSR, PRV, etc.
+- `extension` — tif or jpg (default: tif)
+
+**Implementation:**
+1. Build filename using `Formatter` with the provided parameters
+2. Create a minimal image via Pillow
+3. Write scanner EXIF tags (Make, Model, Software, CreateDate) via `Exifer`
+4. Run `_write_xmp_history` from `MetadataWorkflow` — file gets DocumentID,
+   InstanceID, and XMP History exactly as if processed by scan-batcher normally
+
+**Future extension:** add `--mode invalid` or `--mode mixed` to generate files
+that fail validation (wrong filename scheme, missing XMP IDs) for testing
+error handling in the import pipeline.
+
+---
+
+### scan-batcher: workflow architecture inconsistency
+
+Currently two fundamentally different types of workflows share the same interface:
+
+- `VuescanWorkflow` — **tool integration**: launches an external program (VueScan),
+  reads its INI configuration files, orchestrates the full scan cycle. The `-w` flag
+  pointing to a workflow INI file is central to its operation.
+
+- `PatchWorkflow` — **file processing**: operates on already-existing files, just
+  writes metadata. Does not use the `-w` INI config at all.
+
+This creates a leaky abstraction: the `-w`/`--workflow` flag and the `workflow_path`
+parameter in `__call__` are meaningful only for tool-integration workflows. File-
+processing workflows (Patch, Emulate) ignore `workflow_path` entirely.
+
+**Possible resolution:**
+- Split into two base classes: `ToolWorkflow` (wraps external programs, uses INI)
+  and `FileWorkflow` (processes files, uses `-t` templates only)
+- Or keep the single interface and document the convention that `workflow_path`
+  may be ignored
+
+**When to revisit:** when a third file-processing workflow is added, or when the
+inconsistency causes real friction.
+
+---
+
+### archive-keeper: purge permanently lost files
+
+When a file is marked `missing` and will never return (e.g. re-imported under a different
+path), the original record stays as a `missing`-ghost in the database indefinitely.
+
+**Current stance:** this is intentional — a `missing` record is an audit trail, not
+garbage. Two different paths = two different files from the system's perspective.
+
+**Missing piece:** there is no way to explicitly close such records without direct SQL.
+
+**Proposed command:** `archive-keeper scan --purge-missing` — interactively (or with
+`--force`) removes `missing` records whose paths have been absent for longer than a
+configurable threshold, or all of them unconditionally with `--all`.
+
+**When to revisit:** when ghost records start accumulating in practice and become
+a usability problem.
+
+---
+
 ### UI / Web: photo gallery
 
 Browsing the archive through the web interface.

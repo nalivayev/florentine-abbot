@@ -11,7 +11,6 @@ Or via the installed entry point::
 """
 
 import argparse
-import json
 from pathlib import Path
 
 import uvicorn
@@ -19,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from common.config_utils import get_config_dir
+from common.config_utils import get_archive_path
 from common.db import init_db
 from ui.web.routes import router as api_router
 
@@ -28,14 +27,11 @@ _DIST = _HERE / "frontend" / "dist"
 
 
 def _try_init_db() -> None:
-    """Init DB from file-organizer config if archive path is already set."""
+    """Init DB from global config if archive path is already set."""
     try:
-        config_path = get_config_dir() / "file-organizer" / "config.json"
-        if config_path.exists():
-            data = json.loads(config_path.read_text(encoding="utf-8"))
-            archive = data.get("watch", {}).get("output", "").strip()
-            if archive and Path(archive).exists():
-                init_db(archive)
+        archive = get_archive_path()
+        if archive and archive.exists():
+            init_db(archive)
     except Exception:
         pass
 
@@ -50,13 +46,18 @@ def create_app() -> FastAPI:
     async def favicon() -> Response:
         return Response(status_code=204)
 
+    # Serve .system/ directory (previews, tiles) as static files.
+    archive = get_archive_path()
+    system_dir = archive / ".system" if archive else None
+    if system_dir:
+        system_dir.mkdir(parents=True, exist_ok=True)
+        app.mount("/system", StaticFiles(directory=system_dir), name="system")
+
     if _DIST.exists():
         app.mount("/assets", StaticFiles(directory=_DIST / "assets"), name="assets")
 
         @app.get("/{full_path:path}")
         async def spa(full_path: str) -> FileResponse:
-            if full_path.startswith("admin"):
-                return FileResponse(_DIST / "admin.html")
             if full_path.startswith("setup"):
                 return FileResponse(_DIST / "setup.html")
             return FileResponse(_DIST / "index.html")

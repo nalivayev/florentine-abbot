@@ -4,19 +4,20 @@ Daemon management routes.
 
 import asyncio
 import json
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from common.auth import hash_token, token_is_expired
 from common.db import get_conn
-from ui.web.daemon_manager import manager
-from ui.web.deps import get_current_user, require_admin
+from ui.web.daemon_manager import DaemonState, manager
+from ui.web.deps import check_admin, require_admin
 
 router = APIRouter()
 
 
-def _serialize(state) -> dict:
+def _serialize(state: DaemonState) -> dict[str, Any]:
     return {
         "descriptor": {
             "name": state.descriptor.name,
@@ -30,7 +31,7 @@ def _serialize(state) -> dict:
     }
 
 
-def _auth_by_token(token: str) -> dict:
+def _auth_by_token(token: str) -> dict[str, Any]:
     """Authenticate by raw token string (for SSE query param fallback)."""
     conn = get_conn()
     hashed = hash_token(token)
@@ -52,19 +53,23 @@ def _auth_by_token(token: str) -> dict:
     return dict(row)
 
 
+def _require_admin_by_token(token: str) -> dict[str, Any]:
+    return check_admin(_auth_by_token(token))
+
+
 @router.get("/daemons")
-async def daemons_list(user: dict = Depends(get_current_user)) -> list:
+async def daemons_list(_user: dict[str, Any] = Depends(require_admin)) -> list[dict[str, Any]]:
     return [_serialize(d) for d in manager.all()]
 
 
 @router.post("/daemons/{name}/start")
-async def daemon_start(name: str, user: dict = Depends(require_admin)) -> list:
+async def daemon_start(name: str, _user: dict[str, Any] = Depends(require_admin)) -> list[dict[str, Any]]:
     manager.start(name)
     return [_serialize(d) for d in manager.all()]
 
 
 @router.post("/daemons/{name}/stop")
-async def daemon_stop(name: str, user: dict = Depends(require_admin)) -> list:
+async def daemon_stop(name: str, _user: dict[str, Any] = Depends(require_admin)) -> list[dict[str, Any]]:
     manager.stop(name)
     return [_serialize(d) for d in manager.all()]
 
@@ -74,7 +79,7 @@ async def daemon_logs(
     name: str,
     token: str = Query(..., description="Session token"),
 ) -> StreamingResponse:
-    _auth_by_token(token)
+    _require_admin_by_token(token)
 
     async def generate():
         sent = 0

@@ -15,7 +15,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from common.config_utils import get_config_dir
+from common.config_utils import get_config_dir, get_archive_path
 
 
 class DaemonStatus(str, Enum):
@@ -52,19 +52,19 @@ class DaemonManager:
 
     _DESCRIPTORS = [
         DaemonDescriptor(
-            name="file-organizer",
-            label="File Organizer",
-            description="Watches inbox for new scans and moves them to the archive.",
-        ),
-        DaemonDescriptor(
             name="preview-maker",
             label="Preview Maker",
             description="Watches archive for new masters and generates PRV previews.",
         ),
         DaemonDescriptor(
-            name="face-detector",
-            label="Face Detector",
-            description="Detects faces in archive images and clusters identities.",
+            name="tile-cutter",
+            label="Tile Cutter",
+            description="Watches archive for new masters and generates image tile pyramids.",
+        ),
+        DaemonDescriptor(
+            name="archive-keeper",
+            label="Archive Keeper",
+            description="Monitors archive integrity: checksums, missing files, lifecycle tracking.",
         ),
     ]
 
@@ -125,27 +125,26 @@ class DaemonManager:
             return {}
 
     def _build_cmd(self, name: str, config: dict[str, Any]) -> list[str] | None:
-        """
-        Build the subprocess argv for a daemon, or None if not configured.
-        face-detector has no watch mode — always returns None.
-        """
+        """Build the subprocess argv for a daemon, or None if not configured."""
         watch = config.get("watch", {})
         script = self._find_script(name)
 
-        if name == "file-organizer":
-            path = watch.get("path")
-            output = watch.get("output")
-            if not path or not output:
-                return None
-            return [script, "watch", "--input", path, "--output", output]
-
         if name == "preview-maker":
-            path = watch.get("path")
-            if not path:
+            if get_archive_path() is None:
                 return None
-            return [script, "watch", "--path", path]
+            return [script, "watch"]
 
-        return None  # face-detector: no watch mode yet
+        if name == "tile-cutter":
+            if get_archive_path() is None:
+                return None
+            return [script, "watch"]
+
+        if name == "archive-keeper":
+            if get_archive_path() is None:
+                return None
+            return [script, "watch"]
+
+        return None
 
     def _poll(self, name: str) -> None:
         """
@@ -172,15 +171,6 @@ class DaemonManager:
             watch = config.get("watch", {})
             watch_path = watch.get("path") or None
             output_path = watch.get("output") or None
-
-            if d.name == "face-detector":
-                states.append(DaemonState(
-                    descriptor=d,
-                    status=DaemonStatus.NOT_CONFIGURED,
-                    watch_path=watch_path,
-                    error="Watch mode not yet supported",
-                ))
-                continue
 
             cmd = self._build_cmd(d.name, config)
             if cmd is None:

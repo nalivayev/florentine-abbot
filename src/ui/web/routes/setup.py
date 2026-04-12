@@ -115,11 +115,13 @@ async def setup(req: SetupRequest) -> dict:
     archive = req.archive.strip()
     username = req.username.strip()
     password = req.password
+    inbox = str(Path(archive) / ".inbox")
 
     if not archive or not username or not password:
         raise HTTPException(status_code=422, detail="All fields are required")
 
     Path(archive).mkdir(parents=True, exist_ok=True)
+    Path(inbox).mkdir(parents=True, exist_ok=True)
     init_db(archive)
 
     conn = get_conn()
@@ -132,13 +134,35 @@ async def setup(req: SetupRequest) -> dict:
     conn.commit()
 
     fo = read_daemon_config("file-organizer")
-    fo.setdefault("watch", {})["output"] = archive
+    fo.setdefault("watch", {})
+    fo["watch"]["path"] = inbox
+    fo["watch"]["output"] = archive
     write_daemon_config("file-organizer", fo)
 
     pm = read_daemon_config("preview-maker")
     pm.setdefault("watch", {})["path"] = archive
     write_daemon_config("preview-maker", pm)
 
+    tc = read_daemon_config("tile-cutter")
+    tc.setdefault("watch", {})["path"] = archive
+    write_daemon_config("tile-cutter", tc)
+
     _save_format(req.archive_path_template, req.archive_filename_template)
+
+    # Save archive path to global config
+    global_config_path = get_config_dir() / "config.json"
+    try:
+        global_data = json.loads(global_config_path.read_text(encoding="utf-8")) if global_config_path.exists() else {}
+    except Exception:
+        global_data = {}
+    global_data["archive"] = archive
+    global_config_path.write_text(json.dumps(global_data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    from ui.web.daemon_manager import manager
+    for name in ("preview-maker", "tile-cutter"):
+        try:
+            manager.start(name)
+        except Exception:
+            pass  # daemon start failure is non-fatal for setup
 
     return {"ok": True}

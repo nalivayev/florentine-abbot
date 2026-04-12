@@ -82,10 +82,15 @@ def _build_parser() -> argparse.ArgumentParser:
 
     watch_parser = subparsers.add_parser(
         "watch",
-        help="Daemon mode — watch for new source files",
-        description="Watch --path for new source files and generate previews continuously.",
+        help="Daemon mode — poll database for new files and generate previews",
+        description="Poll the database for new files and generate previews continuously.",
     )
-    _add_common_arguments(watch_parser)
+    watch_parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to preview-maker config JSON (default: standard location)",
+    )
 
     convert_parser = subparsers.add_parser(
         "convert",
@@ -173,34 +178,28 @@ def main(argv: list[str] | None = None) -> int:
             converter(file_path, output_path)
             logger.info("Saved: %s", output_path)
 
-        else:  # batch / watch
+        elif args.command == "watch":
+            log_banner(logger, "preview-maker", version, {
+                "Mode": "watch",
+                "Config": args.config or "default",
+            })
+            PreviewWatcher(logger, config_path=args.config).start()
+
+        else:  # batch
             path = Path(args.path)
             if not path.exists():
-                if args.command == "watch":
-                    path.mkdir(parents=True, exist_ok=True)
-                    logger.info("Created directory: %s", path)
-                else:
-                    logger.error("Path does not exist: %s", path)
-                    return 1
-
-            fields: dict[str, str] = {"Mode": args.command, "Path": str(path)}
-            if args.command == "batch":
-                fields["Overwrite"] = "yes" if args.overwrite else "no"
-            fields["No metadata"] = "yes" if args.no_metadata else "no"
-            fields["Config"] = args.config or "default"
-            log_banner(logger, "preview-maker", version,fields)
-
-            if args.command == "watch":
-                PreviewWatcher(
-                    logger,
-                    path=str(path),
-                    config_path=args.config,
-                    no_metadata=args.no_metadata,
-                ).start()
-            else:
-                maker = PreviewMaker(logger, args.config, no_metadata=args.no_metadata)
-                count = maker(path=path, overwrite=bool(args.overwrite))
-                logger.info("Generated %d preview file(s)", count)
+                logger.error("Path does not exist: %s", path)
+                return 1
+            log_banner(logger, "preview-maker", version, {
+                "Mode": "batch",
+                "Path": str(path),
+                "Overwrite": "yes" if args.overwrite else "no",
+                "No metadata": "yes" if args.no_metadata else "no",
+                "Config": args.config or "default",
+            })
+            maker = PreviewMaker(logger, args.config, no_metadata=args.no_metadata)
+            count = maker(path=path, overwrite=bool(args.overwrite))
+            logger.info("Generated %d preview file(s)", count)
 
     except Exception as exc:  # pragma: no cover - generic CLI error reporting
         print(f"[preview_maker] Error: {exc}", file=sys.stderr)

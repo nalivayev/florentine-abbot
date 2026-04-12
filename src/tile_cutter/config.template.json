@@ -1,0 +1,15 @@
+{
+  "help": "Configuration for Tile Cutter.",
+  "priority": [
+    "*.MSR.*",
+    "*.RAW.*"
+  ],
+  "image": {
+    "size": 4000,
+    "tile_size": 256,
+    "jpeg": {
+      "quality": 85,
+      "optimize": true
+    }
+  }
+}

@@ -1,12 +1,12 @@
 <template>
-  <h1 class="page-title">{{ t('admin.settings.title') }}</h1>
-  <p class="page-subtitle">{{ t('admin.settings.subtitle') }}</p>
+  <h1 class="page-title">{{ t('settings.title') }}</h1>
+  <p class="page-subtitle">{{ t('settings.subtitle') }}</p>
 
   <ConfirmDialog
     :visible="showConfirm"
-    :title="t('admin.settings.confirm_archive_title')"
-    :message="t('admin.settings.confirm_archive_message')"
-    :confirmLabel="t('admin.settings.change_archive')"
+    :title="t('settings.confirm_archive_title')"
+    :message="t('settings.confirm_archive_message')"
+    :confirmLabel="t('settings.change_archive')"
     @confirm="onConfirm"
     @cancel="showConfirm = false"
   />
@@ -14,30 +14,30 @@
   <div class="config-body">
 
     <div class="field">
-      <label class="field-label">{{ t('admin.settings.inbox') }}</label>
-      <input class="field-input" v-model="form.inbox" :placeholder="t('admin.settings.inbox_placeholder')" />
-      <div class="field-hint">{{ t('admin.settings.inbox_hint') }}</div>
+      <label class="field-label">{{ t('settings.inbox') }}</label>
+      <input class="field-input" v-model="form.inbox" :placeholder="t('settings.inbox_placeholder')" />
+      <div class="field-hint">{{ t('settings.inbox_hint') }}</div>
     </div>
     <div class="field-actions">
       <button class="btn btn-save" @click="saveInbox" :disabled="savingInbox">
-        {{ t('admin.settings.save') }}
+        {{ t('settings.save') }}
       </button>
-      <span class="saved-msg" v-if="savedInbox">{{ t('admin.settings.saved') }}</span>
+      <span class="saved-msg" v-if="savedInbox">{{ t('settings.saved') }}</span>
       <span class="field-error-inline" v-if="inboxError">{{ inboxError }}</span>
     </div>
 
     <div class="field field-mt">
       <label class="field-label">
-        {{ t('admin.settings.archive') }}
-        <span class="label-warning">— {{ t('admin.settings.archive_hint') }}</span>
+        {{ t('settings.archive') }}
+        <span class="label-warning">— {{ t('settings.archive_hint') }}</span>
       </label>
-      <input class="field-input" v-model="form.archive" :placeholder="t('admin.settings.archive_placeholder')" />
+      <input class="field-input" v-model="form.archive" :placeholder="t('settings.archive_placeholder')" />
     </div>
     <div class="field-actions">
       <button class="btn btn-danger" @click="saveArchive" :disabled="savingArchive">
-        {{ t('admin.settings.change_archive') }}
+        {{ t('settings.change_archive') }}
       </button>
-      <span class="saved-msg" v-if="savedArchive">{{ t('admin.settings.saved') }}</span>
+      <span class="saved-msg" v-if="savedArchive">{{ t('settings.saved') }}</span>
       <span class="field-error-inline" v-if="archiveError">{{ archiveError }}</span>
     </div>
 
@@ -47,13 +47,13 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import ConfirmDialog from '../../components/ConfirmDialog.vue'
-import { apiFetch } from '../../api.js'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
+import { apiFetch } from '../api.js'
 
 const { t, te } = useI18n()
 function translateError(code) {
   const key = 'setup.validation.' + code
-  return te(key) ? t(key) : t('admin.settings.save_error')
+  return te(key) ? t(key) : t('settings.save_error')
 }
 const form = ref({ archive: '', inbox: '' })
 

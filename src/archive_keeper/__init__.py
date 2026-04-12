@@ -1,5 +1,3 @@
 """
-Archive Keeper - Digital Preservation Tool.
+Archive Keeper - Archive integrity monitoring.
 """
-
-__version__ = "0.1.0"

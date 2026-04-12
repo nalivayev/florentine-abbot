@@ -82,56 +82,8 @@
         </div>
       </section>
 
-      <!-- Step 4: Archive format -->
+      <!-- Step 4: Launch -->
       <section v-else-if="step === 4">
-        <h1>{{ t('setup.steps.format.label') }}</h1>
-        <p class="hint">{{ t('setup.steps.format.hint') }}</p>
-
-        <p class="tree-caption">{{ t('setup.steps.format.tree_caption') }}</p>
-        <div class="archive-tree">
-          <div class="tree-node tree-dir tree-d0">{{ archive || t('setup.steps.format.tree_archive') }}/</div>
-          <div class="tree-node tree-dir tree-d1">{{ treeYearFolder }}/</div>
-
-          <!-- date with two photos -->
-          <div class="tree-node tree-dir tree-d2">{{ treeDateFolder1 }}/</div>
-          <div class="tree-node tree-dir tree-d3">SOURCES/</div>
-          <div class="tree-node tree-locked tree-d4">{{ treeFileMSR1a }}.tiff</div>
-          <div class="tree-node tree-locked tree-d4">{{ treeFileRAW1a }}.cr2</div>
-          <div class="tree-node tree-locked tree-d4">{{ treeFileMSR1b }}.tiff</div>
-          <div class="tree-node tree-locked tree-d4">{{ treeFileRAW1b }}.cr2</div>
-          <div class="tree-node tree-dir tree-d3">DERIVATIVES/</div>
-          <div class="tree-node tree-muted tree-d4">{{ treeFilePRT1a }}.tiff</div>
-          <div class="tree-node tree-muted tree-d4">{{ treeFileWEB1a }}.jpg</div>
-          <div class="tree-node tree-muted tree-d4">{{ treeFilePRT1b }}.tiff</div>
-          <div class="tree-node tree-muted tree-d4">{{ treeFileWEB1b }}.jpg</div>
-          <div class="tree-node tree-d3">{{ treeFilePRV1a }}.jpg</div>
-          <div class="tree-node tree-d3">{{ treeFilePRV1b }}.jpg</div>
-
-          <!-- date with one photo -->
-          <div class="tree-node tree-dir tree-d2">{{ treeDateFolder2 }}/</div>
-          <div class="tree-node tree-dir tree-d3">SOURCES/</div>
-          <div class="tree-node tree-locked tree-d4">{{ treeFileMSR2 }}.tiff</div>
-          <div class="tree-node tree-locked tree-d4">{{ treeFileRAW2 }}.cr2</div>
-          <div class="tree-node tree-dir tree-d3">DERIVATIVES/</div>
-          <div class="tree-node tree-muted tree-d4">{{ treeFilePRT2 }}.tiff</div>
-          <div class="tree-node tree-muted tree-d4">{{ treeFileWEB2 }}.jpg</div>
-          <div class="tree-node tree-d3">{{ treeFilePRV2 }}.jpg</div>
-        </div>
-
-        <dl class="tree-legend">
-          <dt>SOURCES/</dt><dd>{{ t('setup.steps.format.legend_sources') }}</dd>
-          <dt>DERIVATIVES/</dt><dd>{{ t('setup.steps.format.legend_derivatives') }}</dd>
-          <dt>*.PRV.*</dt><dd>{{ t('setup.steps.format.legend_prv') }}</dd>
-        </dl>
-
-        <div class="format-edit-links">
-          <button type="button" class="btn-edit" @click="openDialog('path')">{{ t('setup.steps.format.edit_path') }}</button>
-          <button type="button" class="btn-edit" @click="openDialog('filename')">{{ t('setup.steps.format.edit_filename') }}</button>
-        </div>
-      </section>
-
-      <!-- Step 5: Launch -->
-      <section v-else-if="step === 5">
         <h1>{{ t('setup.steps.launch.label') }}</h1>
         <p class="hint">{{ t('setup.steps.launch.hint') }}</p>
 
@@ -142,14 +94,6 @@
           <div class="summary-row">
             <span>{{ t('setup.username') }}</span><b>{{ username }}</b>
           </div>
-          <div class="summary-row">
-            <span>{{ t('setup.steps.format.path_label') }}</span>
-            <code class="summary-code">{{ archivePathTemplate }}</code>
-          </div>
-          <div class="summary-row">
-            <span>{{ t('setup.steps.format.filename_label') }}</span>
-            <code class="summary-code">{{ archiveFilenameTemplate }}</code>
-          </div>
         </div>
       </section>
 
@@ -157,15 +101,15 @@
         </div><!-- /setup-content -->
 
         <!-- Navigation -->
-        <div class="nav">
+        <div class="wizard-nav">
           <button v-if="step > 1" type="button" class="btn-back" @click="back">
             {{ t('setup.back') }}
           </button>
-          <button v-if="step < 5" type="button" class="btn-next"
+          <button v-if="step < 4" type="button" class="btn-next"
             :disabled="!canAdvance || validating || exiftoolChecking" @click="next">
             {{ t('setup.next') }}
           </button>
-          <button v-if="step === 5" type="button" class="btn-next"
+          <button v-if="step === 4" type="button" class="btn-next"
             :disabled="loading" @click="submit">
             {{ t('setup.submit') }}
           </button>
@@ -173,30 +117,13 @@
       </div><!-- /setup-main -->
     </div><!-- /setup-box -->
   </div>
-
-  <!-- Format edit dialogs -->
-  <FormatEditDialog
-    v-if="dialogOpen === 'path'"
-    v-model="archivePathTemplate"
-    :title="t('setup.steps.format.dialog_title_path')"
-    :hint="t('setup.steps.format.dialog_hint_path')"
-    @close="dialogOpen = null"
-  />
-  <FormatEditDialog
-    v-if="dialogOpen === 'filename'"
-    v-model="archiveFilenameTemplate"
-    :title="t('setup.steps.format.dialog_title_filename')"
-    :hint="t('setup.steps.format.dialog_hint_filename')"
-    @close="dialogOpen = null"
-  />
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from '../theme.js'
 import { apiUrl } from '../api.js'
-import FormatEditDialog from '../components/FormatEditDialog.vue'
 
 const { t, locale } = useI18n()
 const { isDark, init: initTheme, toggle } = useTheme()
@@ -205,85 +132,29 @@ function saveLang(lang) {
   localStorage.setItem('lang', lang)
 }
 
-// Steps: 1=welcome, 2=sysreq, 3=account+archive, 4=format, 5=launch
+// Steps: 1=welcome, 2=sysreq, 3=account+archive, 4=launch
 const step = ref(1)
 
-// Step 3
 const archive = ref('')
 const username = ref('')
 const password = ref('')
 const password2 = ref('')
 
-// Step 4
-const archivePathTemplate = ref('')
-const archiveFilenameTemplate = ref('')
-const dialogOpen = ref(null)
-
-// ExifTool
 const exiftoolChecked = ref(false)
 const exiftoolChecking = ref(false)
 const exiftoolInstalled = ref(false)
 const exiftoolVersion = ref(null)
 
-// Final
 const error = ref('')
 const fieldErrors = ref({})
 const validating = ref(false)
 const loading = ref(false)
 
-const SAMPLE = {
-  year: 2024, month: 5, day: 12,
-  hour: 14, minute: 30, second: 0,
-  sequence: 1,
-  modifier: 'E', group: 'FAM', subgroup: 'POR',
-  side: 'A', suffix: 'MSR',
-}
-
-function renderTplWith(tpl, overrides = {}) {
-  const sample = { ...SAMPLE, ...overrides }
-  return tpl.replace(/\{(\w+)(?::([^}]+))?\}/g, (_, name, fmt) => {
-    const val = sample[name]
-    if (val === undefined) return `{${name}}`
-    if (fmt && typeof val === 'number') {
-      const width = parseInt(fmt)
-      if (!isNaN(width)) return String(val).padStart(width, '0')
-    }
-    return String(val)
-  })
-}
-
-
-// S1a, S1b — two photos on the same date (day 11); S2 — one photo on a different date (day 12)
-const S1a = { day: 11, hour: 10, minute: 15, second: 0, sequence: 1 }
-const S1b = { day: 11, hour: 14, minute: 30, second: 0, sequence: 2 }
-const S2  = {}
-
-const treeYearFolder  = computed(() => renderTplWith(archivePathTemplate.value, S2).split('/')[0])
-const treeDateFolder1 = computed(() => { const p = renderTplWith(archivePathTemplate.value, S1a).split('/'); return p[p.length - 1] })
-const treeDateFolder2 = computed(() => { const p = renderTplWith(archivePathTemplate.value, S2).split('/'); return p[p.length - 1] })
-
-const treeFileMSR1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'MSR' }))
-const treeFileRAW1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'RAW' }))
-const treeFilePRV1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'PRV' }))
-const treeFilePRT1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'PRT' }))
-const treeFileWEB1a = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1a, suffix: 'WEB' }))
-const treeFileMSR1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'MSR' }))
-const treeFileRAW1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'RAW' }))
-const treeFilePRV1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'PRV' }))
-const treeFilePRT1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'PRT' }))
-const treeFileWEB1b = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S1b, suffix: 'WEB' }))
-const treeFileMSR2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'MSR' }))
-const treeFileRAW2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'RAW' }))
-const treeFilePRV2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'PRV' }))
-const treeFilePRT2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'PRT' }))
-const treeFileWEB2  = computed(() => renderTplWith(archiveFilenameTemplate.value, { ...S2,  suffix: 'WEB' }))
-
 const stepLabels = computed(() => [
   { n: 1, label: t('setup.steps.welcome.label') },
   { n: 2, label: t('setup.steps.sysreq.label') },
   { n: 3, label: t('setup.steps.archive.label') },
-  { n: 4, label: t('setup.steps.format.label') },
-  { n: 5, label: t('setup.steps.launch.label') },
+  { n: 4, label: t('setup.steps.launch.label') },
 ])
 
 function stepState(s) {
@@ -294,10 +165,6 @@ function stepState(s) {
 
 function stepIcon(s) {
   return s.n < step.value ? '✔' : ''
-}
-
-function openDialog(which) {
-  dialogOpen.value = which
 }
 
 const canAdvance = computed(() => {
@@ -388,8 +255,6 @@ async function submit() {
         archive: archive.value,
         username: username.value,
         password: password.value,
-        archive_path_template: archivePathTemplate.value,
-        archive_filename_template: archiveFilenameTemplate.value,
       }),
     })
     if (!res.ok) {
@@ -397,7 +262,7 @@ async function submit() {
       error.value = d.detail || t('setup.error_unavailable')
       return
     }
-    window.location.href = '/admin/login'
+    window.location.href = '/'
   } catch {
     error.value = t('setup.error_unavailable')
   } finally {
@@ -405,18 +270,7 @@ async function submit() {
   }
 }
 
-onMounted(async () => {
-  initTheme()
-  try {
-    const res = await fetch(apiUrl('/setup/format'))
-    const data = await res.json()
-    archivePathTemplate.value = data.archive_path_template
-    archiveFilenameTemplate.value = data.archive_filename_template
-  } catch {
-    archivePathTemplate.value = '{year:04d}/{year:04d}.{month:02d}.{day:02d}'
-    archiveFilenameTemplate.value = '{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}'
-  }
-})
+initTheme()
 </script>
 
 <style scoped>
@@ -516,6 +370,7 @@ h1 {
   color: var(--text);
   margin: 0 0 var(--sp-2);
 }
+.setup-section { margin-bottom: var(--sp-6); }
 .field { margin-bottom: 0.85rem; }
 label {
   display: block;
@@ -543,115 +398,6 @@ input.invalid:focus { border-color: var(--danger); }
   margin-top: var(--sp-1);
 }
 .field-hint-error { color: var(--danger); }
-/* Archive tree */
-.tree-caption {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  margin: 0 0 0.4rem;
-}
-.archive-tree {
-  font-family: monospace;
-  font-size: var(--fs-sm);
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.65rem 0.75rem;
-  overflow-x: auto;
-  margin-bottom: var(--sp-3);
-}
-.tree-node {
-  white-space: nowrap;
-  line-height: 1.7;
-  color: var(--text);
-}
-.tree-d0 { padding-left: 0; }
-.tree-d1 { padding-left: var(--sp-6); }
-.tree-d2 { padding-left: 3rem; }
-.tree-d3 { padding-left: 4.5rem; }
-.tree-d4 { padding-left: 6rem; }
-.tree-dir { font-weight: 500; }
-.tree-locked { color: var(--text-muted); }
-.tree-muted { color: var(--text-muted); }
-.tree-legend {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.2rem var(--sp-3);
-  font-size: var(--fs-xs);
-  margin: var(--sp-4) 0 var(--sp-5);
-}
-.tree-legend dt {
-  font-family: monospace;
-  color: var(--text);
-  white-space: nowrap;
-}
-.tree-legend dd {
-  color: var(--text-muted);
-  margin: 0;
-}
-.format-edit-links {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--sp-2);
-}
-/* Format step */
-.setup-section {
-  padding: var(--sp-3) 0;
-  border-top: 1px solid var(--border);
-}
-.setup-section:last-of-type { border-bottom: 1px solid var(--border); }
-.setup-section-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--sp-2);
-}
-.setup-section-title {
-  font-size: var(--fs-base);
-  font-weight: 600;
-  color: var(--text);
-  margin: 0 0 0.15rem;
-}
-.setup-section-desc {
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  margin: 0;
-}
-.format-value {
-  display: block;
-  font-family: monospace;
-  font-size: var(--fs-sm);
-  color: var(--text);
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.35rem 0.6rem;
-  word-break: break-all;
-  margin-bottom: 0.45rem;
-}
-.format-preview-row {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-  font-size: var(--fs-sm);
-}
-.preview-label { color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
-.preview-value {
-  font-family: monospace;
-  font-size: var(--fs-sm);
-  color: var(--text);
-  word-break: break-all;
-}
-.btn-edit {
-  flex-shrink: 0;
-  padding: var(--sp-1) var(--sp-3);
-  font-size: var(--fs-sm);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-.btn-edit:hover { border-color: var(--accent); color: var(--accent); }
-/* Summary */
 .summary-list { margin-bottom: var(--sp-6); }
 .summary-row {
   display: flex;
@@ -664,44 +410,6 @@ input.invalid:focus { border-color: var(--danger); }
   color: var(--text-muted);
 }
 .summary-row b { color: var(--text); }
-.summary-code {
-  font-family: monospace;
-  font-size: var(--fs-xs);
-  color: var(--text);
-  text-align: right;
-  word-break: break-all;
-}
-/* Nav */
-.nav {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: var(--sp-5);
-}
-.btn-back {
-  width: 120px;
-  padding: var(--sp-2) 0;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface);
-  color: var(--text-muted);
-  font-size: var(--fs-base);
-  cursor: pointer;
-}
-.btn-next {
-  width: 120px;
-  margin-left: auto;
-  padding: 0.55rem 0;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  font-size: var(--fs-base);
-  cursor: pointer;
-  text-align: center;
-}
-.btn-next:disabled { opacity: 0.5; cursor: default; }
 .error { font-size: var(--fs-sm); color: var(--danger); margin: var(--sp-2) 0; }
 .loading { font-size: var(--fs-base); color: var(--text-muted); padding: var(--sp-4) 0; }
 .exiftool-warning {

@@ -10,6 +10,7 @@ and moving files into the ``processed/`` tree. Higher-level orchestration
 import uuid
 from pathlib import Path
 from datetime import datetime
+from typing import Any
 
 from common.logger import Logger
 from common.formatter import Formatter
@@ -35,7 +36,7 @@ class FileProcessor:
     - File organization/movement (handled by FileOrganizer)
     """
 
-    def __init__(self, logger: Logger, metadata_config: dict | None = None) -> None:
+    def __init__(self, logger: Logger, metadata_config: dict[str, Any] | None = None) -> None:
         """
         Initialize FileProcessor.
 
@@ -204,18 +205,10 @@ class FileProcessor:
         self._logger.debug(f"Generated new InstanceID: {new_instance_id}")
 
         # 5. XMP History entry
-        version = get_version()
-        if version == "unknown":
-            version = "0.0"
-        else:
-            parts = version.split(".")
-            if len(parts) >= 2:
-                version = f"{parts[0]}.{parts[1]}"
-
         tagger.write(HistoryTag(
             action=XMP_ACTION_EDITED,
             when=datetime.now().astimezone(),
-            software_agent=f"file-organizer {version}",
+            software_agent=f"file-organizer {get_version()}",
             changed="metadata",
             instance_id=new_instance_id,
         ))

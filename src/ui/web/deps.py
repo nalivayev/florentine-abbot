@@ -2,6 +2,8 @@
 FastAPI dependencies for authentication and access control.
 """
 
+from typing import Any
+
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -24,7 +26,7 @@ def _get_token(credentials: HTTPAuthorizationCredentials | None = Depends(_beare
     return credentials.credentials
 
 
-def get_current_user(token: str = Depends(_get_token)) -> dict:
+def get_current_user(token: str = Depends(_get_token)) -> dict[str, Any]:
     """Return the user row for the session token. Raises 401 if invalid."""
     conn = get_conn()
     token_hash = hash_token(token)
@@ -47,8 +49,13 @@ def get_current_user(token: str = Depends(_get_token)) -> dict:
     return dict(row)
 
 
-def require_admin(user: dict = Depends(get_current_user)) -> dict:
-    """Require admin role."""
+def check_admin(user: dict[str, Any]) -> dict[str, Any]:
+    """Raise 403 if user is not admin. Can be used outside of FastAPI Depends."""
     if user["role"] != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
     return user
+
+
+def require_admin(user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
+    """Require admin role."""
+    return check_admin(user)

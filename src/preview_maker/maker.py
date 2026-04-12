@@ -9,7 +9,6 @@ configured with parameters and then executed via :meth:`__call__`.
 """
 
 import fnmatch
-import stat
 import uuid
 import datetime
 from pathlib import Path
@@ -168,8 +167,8 @@ class PreviewMaker:
         # Build preview filename from configured template
         prv_filename = self._build_preview_filename(parsed)
 
-        # Use router to determine preview output folder
-        prv_dir, protect = self._router.get_target_folder(parsed, archive_path, filename=prv_filename)
+        prv_dir = self._prv_dir(archive_path, src_path)
+        prv_dir.mkdir(parents=True, exist_ok=True)
         prv_path = prv_dir / prv_filename
 
         if prv_path.exists() and not overwrite:
@@ -187,14 +186,6 @@ class PreviewMaker:
             input_path=src_path,
             output_path=prv_path,
         )
-
-        if protect and prv_path.exists():
-            try:
-                mode = prv_path.stat().st_mode
-                prv_path.chmod(mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
-                self._logger.info(f"  Protected (read-only): {prv_path.name}")
-            except OSError as e:
-                self._logger.warning(f"Failed to set read-only on {prv_path}: {e}")
 
         return True
 
@@ -285,6 +276,18 @@ class PreviewMaker:
         return written
 
     
+    def _prv_dir(self, archive_path: Path, src_path: Path) -> Path:
+        """Build the output preview directory path for a source file.
+
+        Mirrors the archive path structure:
+        scan/000001/2025/2025.06.01/file.tif
+        → .system/scan/previews/000001/2025/2025.06.01/
+        """
+        rel = src_path.relative_to(archive_path)
+        # rel.parts: ('scan', '000001', '2025', '2025.06.01', 'file.tif')
+        # → .system/previews/scan/000001/2025/2025.06.01/
+        return archive_path / ".system" / "previews" / Path(*rel.parts[:-1])
+
     def _build_preview_filename(self, parsed: dict[str, int | str]) -> str:
         """Build preview filename from configured template and parsed fields."""
         stem = self._formatter.format_template(parsed, self._config.template)
@@ -426,14 +429,13 @@ class PreviewMaker:
         # 6. XMP History entries
         if master_document_id:
             version = get_version()
-            major_version = "0.0" if version == "unknown" else ".".join(version.split(".")[:2])
             now = datetime.datetime.now().astimezone()
 
             # 'converted' — PRV file created from master via format conversion
             tagger.write(HistoryTag(
                 action=XMP_ACTION_CONVERTED,
                 when=now,
-                software_agent=f"preview-maker {major_version}",
+                software_agent=f"preview-maker {version}",
                 instance_id=converted_instance_id,
             ))
 
@@ -441,7 +443,7 @@ class PreviewMaker:
             tagger.write(HistoryTag(
                 action=XMP_ACTION_EDITED,
                 when=now,
-                software_agent=f"preview-maker {major_version}",
+                software_agent=f"preview-maker {version}",
                 changed="metadata",
                 instance_id=edited_instance_id,
             ))

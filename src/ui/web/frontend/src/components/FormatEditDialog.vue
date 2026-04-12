@@ -18,7 +18,7 @@
 
         <div class="preview-block">
           <span class="preview-label">{{ t('setup.steps.format.preview_label') }}:</span>
-          <code class="preview-value">{{ previewResult }}</code>
+          <code class="preview-value"><span v-if="prefix" class="preview-prefix">{{ prefix }}</span>{{ previewResult }}</code>
         </div>
 
         <div class="tags-section">
@@ -54,6 +54,7 @@ const props = defineProps({
   modelValue: { type: String, required: true },
   title: { type: String, required: true },
   hint: { type: String, required: true },
+  prefix: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue', 'close'])
 
@@ -215,6 +216,7 @@ function cancel() {
   font-size: var(--fs-sm);
 }
 .preview-label { color: var(--text-muted); white-space: nowrap; }
+.preview-prefix { color: var(--text-muted); }
 .preview-value {
   font-family: monospace;
   font-size: var(--fs-sm);

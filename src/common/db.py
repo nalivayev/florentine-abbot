@@ -9,6 +9,21 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
+# File lifecycle statuses
+FILE_STATUS_NEW       = "new"
+FILE_STATUS_ACTIVE    = "active"
+FILE_STATUS_MODIFIED  = "modified"
+FILE_STATUS_DELETED   = "deleted"
+FILE_STATUS_CORRUPTED = "corrupted"
+FILE_STATUS_MISSING   = "missing"
+
+# Task statuses
+TASK_STATUS_PENDING = "pending"
+TASK_STATUS_RUNNING = "running"
+TASK_STATUS_DONE    = "done"
+TASK_STATUS_FAILED  = "failed"
+TASK_STATUS_SKIPPED = "skipped"
+
 _conn: Optional[sqlite3.Connection] = None
 
 
@@ -41,6 +56,32 @@ def is_initialized() -> bool:
 
 def _create_tables(conn: sqlite3.Connection) -> None:
     conn.executescript("""
+        CREATE TABLE IF NOT EXISTS collections (
+            id          INTEGER PRIMARY KEY,
+            type        TEXT    NOT NULL,
+            name        TEXT    NOT NULL,
+            created_at  TEXT    NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS files (
+            id            INTEGER PRIMARY KEY,
+            collection_id INTEGER REFERENCES collections(id),
+            path          TEXT    UNIQUE NOT NULL,
+            status        TEXT    NOT NULL DEFAULT 'new',
+            checksum      TEXT,
+            imported_at   TEXT    NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS tasks (
+            id          INTEGER PRIMARY KEY,
+            file_id     INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+            daemon      TEXT    NOT NULL,
+            status      TEXT    NOT NULL DEFAULT 'pending',
+            error       TEXT,
+            updated_at  TEXT    NOT NULL,
+            UNIQUE(file_id, daemon)
+        );
+
         CREATE TABLE IF NOT EXISTS roles (
             id          INTEGER PRIMARY KEY,
             name        TEXT    UNIQUE NOT NULL,

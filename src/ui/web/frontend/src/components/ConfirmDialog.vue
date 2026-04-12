@@ -14,10 +14,11 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
-defineProps({
+const props = defineProps({
   visible: Boolean,
   title: String,
   message: String,
@@ -27,4 +28,13 @@ defineProps({
 const emit = defineEmits(['confirm', 'cancel'])
 const confirm = () => emit('confirm')
 const cancel = () => emit('cancel')
+
+function onKeydown(e) {
+  if (e.key === 'Escape') cancel()
+}
+
+watch(() => props.visible, (v) => {
+  if (v) document.addEventListener('keydown', onKeydown)
+  else document.removeEventListener('keydown', onKeydown)
+})
 </script>

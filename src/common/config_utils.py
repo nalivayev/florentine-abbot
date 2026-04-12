@@ -171,6 +171,19 @@ def load_optional_config(
         return default_dict
 
 
+def get_archive_path() -> Path | None:
+    """Return the archive root path from the global config, or None if not set."""
+    path = get_config_dir() / "config.json"
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        archive = data.get("archive", "").strip()
+        return Path(archive) if archive else None
+    except Exception:
+        return None
+
+
 def read_daemon_config(name: str) -> dict[str, Any]:
     """Read a daemon's config.json from the standard config directory."""
     path = get_config_dir() / name / "config.json"

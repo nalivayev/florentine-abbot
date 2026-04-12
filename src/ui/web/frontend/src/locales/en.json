@@ -1,79 +1,144 @@
 {
-  "admin": {
-    "nav": {
-      "settings": "Settings",
-      "management": "Management",
-      "organizer": "Organizer",
-      "processor": "Processor",
-      "detector": "Detector",
-      "logout": "Log out"
+  "nav": {
+    "photos": "Photos",
+    "map": "Map",
+    "albums": "Albums",
+    "people": "People",
+    "genealogy": "Genealogy",
+    "timeline": "Timeline",
+    "stats": "Statistics",
+    "import": "Import",
+    "settings": "Settings",
+    "services": "Services",
+    "users": "Users",
+    "logout": "Log out",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
+  },
+  "albums": {
+    "title": "Albums",
+    "empty": "No collections yet",
+    "import_btn": "Import photos",
+    "loading": "Loading…",
+    "no_files": "No files in this collection",
+    "no_preview": "No preview"
+  },
+  "wip": {
+    "title": "Section under development",
+    "hint": "This section is not ready yet. Check back later."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Core project paths",
+    "inbox": "Inbox",
+    "inbox_hint": "Folder where the organizer picks up new files.",
+    "archive": "Archive folder",
+    "archive_hint": "Changing this will require resetting the database.",
+    "save": "Save",
+    "change_archive": "Change archive",
+    "confirm_archive_title": "Change archive folder",
+    "confirm_archive_message": "All daemons will be restarted with the new paths.\nThis will also require a database reset in the future.",
+    "saved": "Saved",
+    "save_error": "Error",
+    "inbox_placeholder": "/path/to/inbox",
+    "archive_placeholder": "/path/to/archive"
+  },
+  "daemons": {
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "crashed": "Crashed",
+      "not_configured": "Not configured"
     },
-    "settings": {
-      "title": "Settings",
-      "subtitle": "Core project paths",
-      "inbox": "Inbox",
-      "inbox_hint": "Folder where the organizer picks up new files.",
-      "archive": "Archive folder",
-      "archive_hint": "Changing this will require resetting the database.",
-      "save": "Save",
-      "change_archive": "Change archive",
-      "confirm_archive_title": "Change archive folder",
-      "confirm_archive_message": "All daemons will be restarted with the new paths.\nThis will also require a database reset in the future.",
-      "saved": "Saved",
-      "save_error": "Error",
-      "inbox_placeholder": "/path/to/inbox",
-      "archive_placeholder": "/path/to/archive"
-    },
-    "daemons": {
-      "status": {
-        "running": "Running",
-        "stopped": "Stopped",
-        "crashed": "Crashed",
-        "not_configured": "Not configured"
-      },
-      "start": "Start",
-      "stop": "Stop",
-      "restart": "Restart",
-      "watch": "Watch",
-      "output": "Output",
-      "no_logs": "No data",
-      "not_configured_hint": "Set the required paths in {link} to enable this daemon.",
-      "go_to_settings": "Settings"
-    },
-    "tasks": {
-      "organizer": {
-        "label": "File Organizer",
-        "description": "Watches inbox for new scans and moves them to the archive."
-      },
-      "processor": {
-        "label": "Preview Maker",
-        "description": "Watches archive for new masters and generates PRV previews."
-      },
-      "detector": {
-        "label": "Face Detector",
-        "description": "Scans archive for unprocessed photos and detects faces."
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
+    "watch": "Watch",
+    "output": "Output",
+    "no_logs": "No data",
+    "not_configured_hint": "Set the required paths in {link} to enable this daemon.",
+    "go_to_settings": "Settings"
+  },
+  "import": {
+    "title": "Import",
+    "subtitle": "Select the type of content to import.",
+    "types": {
+      "scans": {
+        "label": "Scanned photos",
+        "desc": "Import files processed by scan-batcher. Files must follow the archive naming scheme."
       }
+    },
+    "scans": {
+      "title": "Import — Scanned photos",
+      "subtitle": "Import scanned files from a local folder into the archive.",
+      "intro": "This import is for files processed by scan-batcher. It places them into the archive according to the naming scheme and fills in the metadata.",
+      "requires_title": "What the files must have",
+      "req_naming": "File name matches the archive naming scheme: year.month.day.hour.minute.second.modifier.group.subgroup.sequence.side.suffix.extension — e.g. 2024.01.15.10.30.00.E.FAM.POR.0001.A.MSR.tif.",
+      "req_extensions": "Image format: TIFF or JPEG. PNG is technically supported but XMP in PNG is less standardised.",
+      "req_ids": "XMP DocumentID and InstanceID set by scan-batcher — these identify the file uniquely and link it to its scan session.",
+      "writes_title": "What will be written during import",
+      "write_identifier": "dc:identifier / xmp:Identifier — internal archive ID (UUID) for linking previews and derivatives.",
+      "write_date": "EXIF DateTimeOriginal and XMP-photoshop:DateCreated — date decoded from the file name. For exact dates (modifier E) the full timestamp is written; for approximate dates — a partial value.",
+      "write_history": "XMP History entry (xmpMM:History) — records that file-organizer processed this file, with timestamp and version.",
+      "write_instance": "xmpMM:InstanceID — updated to reflect this version of the file after metadata is written.",
+      "format_hint": "These templates determine how files will be named and organised in the archive. The defaults match the standard scheme — change only if you know what you are doing.",
+      "start": "Continue",
+      "source_path": "Source folder",
+      "source_path_placeholder": "C:\\scans",
+      "transfer_mode": "Transfer mode",
+      "copy": "Copy",
+      "move": "Move",
+      "recursive": "Include subfolders",
+      "preview_btn": "Scan",
+      "scanning": "Scanning…",
+      "error_scan": "Error scanning folder",
+      "error_import": "Import error",
+      "summary_ok": "{n} files ready to import",
+      "summary_skip": "{n} will be skipped",
+      "change_source": "Change folder",
+      "col_file": "File",
+      "col_status": "Status",
+      "status_ok": "Ready",
+      "status_invalid": "Invalid",
+      "import_btn": "Import {n} files",
+      "importing": "Importing…",
+      "done_ok": "{n} files imported successfully",
+      "done_failed": "{n} files failed",
+      "import_more": "Import more",
+      "collection_existing": "Add to existing collection",
+      "collection_new": "Create new collection",
+      "collection_none": "No collections yet. Create a new one.",
+      "collection_name": "Collection name",
+      "collection_name_placeholder": "e.g. Summer 1987 at the dacha",
+      "collection_name_required": "Enter a collection name",
+      "collection_select_required": "Select a collection",
+      "collection_create_error": "Failed to create collection",
+      "collection_creating": "Creating…"
     }
   },
-  "app": {
-    "nav": {
-      "photos": "Photos",
-      "map": "Map",
-      "albums": "Albums",
-      "people": "People",
-      "genealogy": "Genealogy",
-      "timeline": "Timeline",
-      "stats": "Statistics",
-      "logout": "Log out"
+  "services": {
+    "title": "Services",
+    "subtitle": "Background processing daemons.",
+    "log": "Log",
+    "organizer": {
+      "label": "File Organizer",
+      "description": "Watches inbox for new scans and moves them to the archive."
     },
-    "albums": {
-      "title": "Albums",
-      "empty": "No albums yet",
-      "import_btn": "Import photos"
+    "processor": {
+      "label": "Preview Maker",
+      "description": "Watches archive for new masters and generates PRV previews."
     },
-    "wip": {
-      "title": "Section under development",
-      "hint": "This section is not ready yet. Check back later."
+    "tiler": {
+      "label": "Tile Cutter",
+      "description": "Watches archive for new masters and generates image tile pyramids."
+    },
+    "keeper": {
+      "label": "Archive Keeper",
+      "description": "Monitors archive integrity: checksums, missing files, lifecycle tracking."
+    },
+    "detector": {
+      "label": "Face Detector",
+      "description": "Scans archive for unprocessed photos and detects faces."
     }
   },
   "login": {
@@ -169,6 +234,26 @@
         "hint": "Review your settings and click Launch."
       }
     }
+  },
+  "users": {
+    "title": "Users",
+    "subtitle": "Manage access to the application.",
+    "col_username": "Username",
+    "col_role": "Role",
+    "col_last_login": "Last login",
+    "role_admin": "Admin",
+    "role_user": "User",
+    "delete": "Delete",
+    "add_title": "Add user",
+    "username_placeholder": "Username",
+    "password_placeholder": "Password",
+    "add_btn": "Add",
+    "confirm_delete_title": "Delete user",
+    "confirm_delete_message": "Delete user \"{name}\"? This action cannot be undone.",
+    "error_username_taken": "Username is already taken",
+    "error_username_too_short": "Username must be at least 3 characters",
+    "error_password_too_short": "Password must be at least 6 characters",
+    "error_invalid_role": "Invalid role"
   },
   "confirm": {
     "cancel": "Cancel",

@@ -93,21 +93,6 @@ class MetadataWorkflow(Workflow):
         self._exifer = Exifer()
         self._no_metadata = no_metadata
 
-    def _get_major_version(self) -> str:
-        """
-        Get major version number from package version.
-        
-        Returns:
-            Major version string (e.g., "1.0" from "1.0.5").
-        """
-        version = get_version()
-        if version == "unknown":
-            return "0.0"
-        parts = version.split(".")
-        if len(parts) >= 2:
-            return f"{parts[0]}.{parts[1]}"
-        return version
-
     def _get_digitized_datetime(self, file_path: Path) -> datetime.datetime:
         """
         Extract datetime from file EXIF or use file modification time.
@@ -308,7 +293,7 @@ class MetadataWorkflow(Workflow):
             self._logger.debug(f"Copying Software to XMP: {ifd0_software}")
 
         # XMP History entries
-        agent = f"scan-batcher {self._get_major_version()}"
+        agent = f"scan-batcher {get_version()}"
 
         tagger.write(HistoryTag(
             action=XMP_ACTION_CREATED,

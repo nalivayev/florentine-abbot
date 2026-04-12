@@ -1,127 +1,150 @@
 """
-File system watcher for Preview Maker using watchdog.
+Polling-based daemon for Preview Maker.
 
-:class:`PreviewWatcher` is a thin wrapper around :class:`PreviewMaker` that
-reacts to file-system events instead of scanning a directory once.  All
-per-file logic (filtering, conversion, metadata) is delegated to
-:meth:`PreviewMaker.should_process` and :meth:`PreviewMaker.process_single_file`.
+Periodically queries the database for files that need preview generation,
+processes them, and records the result.
 """
 
+import sqlite3
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileSystemEvent, FileSystemMovedEvent
-
+from common.config_utils import get_archive_path
+from common.db import (
+    get_conn, init_db,
+    FILE_STATUS_NEW, FILE_STATUS_MODIFIED,
+    TASK_STATUS_RUNNING, TASK_STATUS_DONE, TASK_STATUS_FAILED, TASK_STATUS_SKIPPED,
+)
 from common.logger import Logger
-from common.utils import wait_for_stable
 from preview_maker.maker import PreviewMaker
 
-class PreviewWatcher(FileSystemEventHandler):
-    """
-    Watch an archive tree for new source files and generate previews.
+_DAEMON_NAME = "preview-maker"
+_POLL_INTERVAL = 30  # seconds
 
-    Monitors the archive root recursively for files matching the configured
-    ``source_priority`` patterns and automatically generates preview JPEGs
-    using :class:`PreviewMaker`.
+
+class PreviewWatcher:
+    """
+    Polls the database for new/modified files and generates previews.
+
+    On each poll cycle:
+    1. Query files with status 'new' or 'modified' that have no preview-maker task.
+    2. Create a 'running' task for each.
+    3. Process each file, update task to 'done', 'skipped', or 'failed'.
     """
 
     def __init__(
         self,
         logger: Logger,
-        path: str,
         *,
         config_path: str | Path | None = None,
-        no_metadata: bool = False,
+        poll_interval: int = _POLL_INTERVAL,
     ) -> None:
-        """
-        Initialize the watcher.
-
-        Args:
-            logger: Logger instance.
-            path: Archive root to watch (recursively).
-            config_path: Optional path to preview-maker config JSON.
-            no_metadata: If True, skip writing EXIF/XMP metadata.
-        """
-        super().__init__()
-        self._path = Path(path).resolve()
         self._logger = logger
-        self._maker = PreviewMaker(logger, config_path, no_metadata=no_metadata)
-        self._observer = Observer()
+        self._maker = PreviewMaker(logger, config_path)
+        self._poll_interval = poll_interval
         self._stop_event = threading.Event()
-
-
-    def on_created(self, event: FileSystemEvent) -> None:
-        """
-        Handle file creation events.
-        """
-        if event.is_directory:
-            return
-        self._process_file(Path(str(event.src_path)), wait=True)
-
-    def on_moved(self, event: FileSystemEvent) -> None:
-        """
-        Handle file movement events.
-        """
-        if event.is_directory:
-            return
-        if isinstance(event, FileSystemMovedEvent):
-            self._process_file(Path(str(event.dest_path)), wait=False)
-
-
-    def _process_file(self, file_path: Path, wait: bool = True) -> None:
-        """
-        Filter and delegate a single file to :class:`PreviewMaker`.
-
-        Steps:
-        1. Check the file still exists.
-        2. Apply the same extension / suffix filter that batch mode uses.
-        3. For on_created events: wait until the file size stabilises
-           (handles OS copy and cross-filesystem moves).
-        4. Delegate to :meth:`PreviewMaker.process_single_file`.
-        """
-        if not file_path.exists():
-            return
-
-        if not self._maker.should_process(file_path):
-            return
-
-        try:
-            if wait:
-                wait_for_stable(file_path)
-            self._maker.process_single_file(
-                file_path,
-                archive_path=self._path,
-            )
-        except Exception as e:
-            self._logger.error(f"Error processing {file_path}: {e}")
-
+        self._path: Path | None = None
 
     def start(self) -> None:
-        """
-        Start watching.
-
-        Watches the archive root recursively for new source files.
-        Runs until interrupted by KeyboardInterrupt.
-        """
-        if not self._path.exists():
-            self._logger.error(f"Path does not exist: {self._path}")
+        """Start polling loop. Runs until stop() is called or KeyboardInterrupt."""
+        archive_path = get_archive_path()
+        if archive_path is None or not archive_path.exists():
+            self._logger.error("Archive path not configured or does not exist")
             return
+        self._path = archive_path
 
-        self._observer.schedule(self, str(self._path), recursive=True)
-        self._observer.start()
-        self._logger.info(f"Started watching for new sources in {self._path}")
+        init_db(self._path)
+        self._logger.info(
+            f"Started preview-maker daemon, archive={self._path}, "
+            f"polling every {self._poll_interval}s"
+        )
 
         try:
-            self._stop_event.wait()
+            while not self._stop_event.is_set():
+                self._poll()
+                self._stop_event.wait(self._poll_interval)
         except KeyboardInterrupt:
             pass
-        self._observer.stop()
-        self._observer.join()
-        self._logger.info("Stopped watching")
+
+        self._logger.info("Stopped preview-maker daemon")
 
     def stop(self) -> None:
-        """
-        Signal watching to stop. Safe to call from any thread.
-        """
+        """Signal the polling loop to stop. Safe to call from any thread."""
         self._stop_event.set()
+
+    def _poll(self) -> None:
+        """One poll cycle: find pending files, process them."""
+        try:
+            conn = get_conn()
+        except RuntimeError:
+            self._logger.warning("Database not initialized, skipping poll")
+            return
+
+        rows = conn.execute(
+            """
+            SELECT f.id, f.path FROM files f
+            WHERE f.status IN (?, ?)
+              AND NOT EXISTS (
+                  SELECT 1 FROM tasks t
+                  WHERE t.file_id = f.id AND t.daemon = ?
+              )
+            """,
+            (FILE_STATUS_NEW, FILE_STATUS_MODIFIED, _DAEMON_NAME),
+        ).fetchall()
+
+        if not rows:
+            return
+
+        self._logger.info(f"Found {len(rows)} file(s) to process")
+
+        for row in rows:
+            self._process_file(conn, file_id=row["id"], rel_path=row["path"])
+
+    def _process_file(
+        self,
+        conn: sqlite3.Connection,
+        file_id: int,
+        rel_path: str,
+    ) -> None:
+        def now() -> str:
+            return datetime.now(timezone.utc).isoformat()
+
+        conn.execute(
+            "INSERT OR IGNORE INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+            (file_id, _DAEMON_NAME, TASK_STATUS_RUNNING, now()),
+        )
+        conn.commit()
+
+        assert self._path is not None
+        src_path = self._path / rel_path
+
+        if not src_path.exists():
+            self._logger.warning(f"File not found, skipping: {src_path}")
+            conn.execute(
+                "UPDATE tasks SET status=?, error=?, updated_at=? WHERE file_id=? AND daemon=?",
+                (TASK_STATUS_FAILED, "File not found", now(), file_id, _DAEMON_NAME),
+            )
+            conn.commit()
+            return
+
+        try:
+            if not self._maker.should_process(src_path):
+                conn.execute(
+                    "UPDATE tasks SET status=?, updated_at=? WHERE file_id=? AND daemon=?",
+                    (TASK_STATUS_SKIPPED, now(), file_id, _DAEMON_NAME),
+                )
+            else:
+                self._maker.process_single_file(src_path, archive_path=self._path)
+                conn.execute(
+                    "UPDATE tasks SET status=?, updated_at=? WHERE file_id=? AND daemon=?",
+                    (TASK_STATUS_DONE, now(), file_id, _DAEMON_NAME),
+                )
+        except Exception as e:
+            self._logger.error(f"Error processing {src_path.name}: {e}")
+            conn.execute(
+                "UPDATE tasks SET status=?, error=?, updated_at=? WHERE file_id=? AND daemon=?",
+                (TASK_STATUS_FAILED, str(e), now(), file_id, _DAEMON_NAME),
+            )
+
+        conn.commit()

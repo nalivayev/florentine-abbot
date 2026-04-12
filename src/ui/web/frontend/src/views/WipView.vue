@@ -1,8 +1,8 @@
 <template>
   <div class="wip">
     <p class="wip-icon">🚧</p>
-    <h2 class="wip-title">{{ t('app.wip.title') }}</h2>
-    <p class="wip-hint">{{ t('app.wip.hint') }}</p>
+    <h2 class="wip-title">{{ t('wip.title') }}</h2>
+    <p class="wip-hint">{{ t('wip.hint') }}</p>
   </div>
 </template>
 
