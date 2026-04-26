@@ -8,27 +8,7 @@ from common.tagger import Tagger
 from common.tags import KeyValueTag, HistoryTag
 from common.logger import Logger
 from common.version import get_version
-from common.constants import (
-    EXIFTOOL_LARGE_FILE_TIMEOUT,
-    MIME_TYPE_MAP,
-    TAG_XMP_XMPMM_DOCUMENT_ID,
-    TAG_XMP_XMPMM_INSTANCE_ID,
-    XMP_ACTION_CREATED,
-    XMP_ACTION_EDITED,
-    TAG_XMP_DC_FORMAT,
-    TAG_XMP_EXIF_DATETIME_DIGITIZED,
-    TAG_EXIFIFD_DATETIME_DIGITIZED,
-    TAG_EXIFIFD_CREATE_DATE,
-    TAG_EXIF_OFFSET_TIME_DIGITIZED,
-    TAG_IFD0_DATETIME,
-    TAG_IFD0_MAKE,
-    TAG_IFD0_MODEL,
-    TAG_IFD0_SOFTWARE,
-    TAG_XMP_TIFF_MAKE,
-    TAG_XMP_TIFF_MODEL,
-    TAG_XMP_TIFF_SOFTWARE,
-    TAG_XMP_XMP_CREATOR_TOOL,
-)
+from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, MIME_TYPE_MAP, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED, TAG_XMP_DC_FORMAT, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIFIFD_CREATE_DATE, TAG_EXIF_OFFSET_TIME_DIGITIZED, TAG_IFD0_DATETIME, TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_IFD0_SOFTWARE, TAG_XMP_TIFF_MAKE, TAG_XMP_TIFF_MODEL, TAG_XMP_TIFF_SOFTWARE, TAG_XMP_XMP_CREATOR_TOOL
 from scan_batcher.constants import EXIF_DATETIME_FORMAT, EXIF_DATETIME_FORMAT_MS
 
 
@@ -191,7 +171,6 @@ class MetadataWorkflow(Workflow):
             file_path, exifer=self._exifer, timeout=EXIFTOOL_LARGE_FILE_TIMEOUT,
         )
 
-        # ── batch-read existing tags ──────────────────────────────
         self._logger.debug(f"Reading existing XMP tags from {file_path.name}...")
         tagger.begin()
         for tag in (
@@ -206,8 +185,6 @@ class MetadataWorkflow(Workflow):
         ):
             tagger.read(KeyValueTag(tag))
         existing_tags = tagger.end() or {}
-
-        # ── prepare values ────────────────────────────────────────
 
         # Get or generate DocumentID (without dashes)
         document_id = existing_tags.get(TAG_XMP_XMPMM_DOCUMENT_ID)
