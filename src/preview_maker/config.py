@@ -7,7 +7,8 @@ from typing import Any
 
 from common.logger import Logger
 from common.config_utils import get_config_dir, ensure_config_exists, load_config, get_template_path
-from preview_maker.constants import DEFAULT_FORMAT_OPTIONS, DEFAULT_SIZE, DEFAULT_FORMAT
+from preview_maker.classes import MakerSettings
+from preview_maker.constants import DAEMON_NAME
 
 
 class Config:
@@ -25,17 +26,6 @@ class Config:
     syntax as ``archive_filename_template`` in ``formats.json``.
     """
 
-    _DEFAULT_SOURCE_PRIORITY: list[str] = [
-        "*.MSR.*",
-        "*.RAW.*",
-    ]
-    _DEFAULT_TEMPLATE: str = (
-        "{year:04d}.{month:02d}.{day:02d}"
-        ".{hour:02d}.{minute:02d}.{second:02d}"
-        ".{modifier}.{group}.{subgroup}"
-        ".{sequence:04d}.{side}.PRV"
-    )
-
     def __init__(self, logger: Logger, config_path: str | Path | None = None) -> None:
         """Initialize configuration.
 
@@ -50,7 +40,7 @@ class Config:
             self._config_path = Path(config_path)
         else:
             config_dir = get_config_dir()
-            self._config_path = config_dir / "preview-maker" / "config.json"
+            self._config_path = config_dir / DAEMON_NAME / "config.json"
 
         template_path = get_template_path("preview_maker", "config.template.json")
         default_config: dict[str, Any] = {
@@ -71,49 +61,15 @@ class Config:
         else:
             self._logger.debug("Config not found or empty — using defaults")
 
-    @property
-    def source_priority(self) -> list[str]:
-        """Ordered list of glob patterns identifying source files.
-
-        The first pattern has the highest priority.  When multiple files
-        in a folder match different patterns, the one matching an earlier
-        pattern is preferred as the preview source.
-        """
-        return self._data.get("priority", self._DEFAULT_SOURCE_PRIORITY)
-
-    @property
-    def template(self) -> str:
-        """Template for preview filename stem (without extension).
-
-        Uses the same ``{field}`` syntax as ``archive_filename_template``.
-        The literal preview marker (e.g. ``PRV``) should be embedded
-        directly in the template string.
-        """
-        return self._data.get("template", self._DEFAULT_TEMPLATE)
-
-    @property
-    def image_format(self) -> str:
-        """Output image format name (jpeg, png, webp, tiff)."""
-        image = self._data.get("image", {})
-        return image.get("format", DEFAULT_FORMAT)
-
-    @property
-    def image_size(self) -> int:
-        """Maximum long edge in pixels for preview images."""
-        image = self._data.get("image", {})
-        return int(image.get("size", DEFAULT_SIZE))
-
-    @property
-    def save_options(self) -> dict[str, Any]:
-        """PIL save keyword arguments for the configured image format.
-
-        Merges built-in defaults with user overrides from the
-        format-specific section (e.g. ``image.jpeg.quality``).
-        """
-        fmt = self.image_format
-        defaults = dict(DEFAULT_FORMAT_OPTIONS.get(fmt, {}))
-        image = self._data.get("image", {})
-        overrides = image.get(fmt, {})
-        defaults.update(overrides)
-        return defaults
-
+    def to_settings(
+        self,
+        *,
+        project_data: dict[str, Any] | None = None,
+        no_metadata: bool = False,
+    ) -> MakerSettings:
+        """Convert loaded file-backed config data to normalized settings."""
+        return MakerSettings.from_data(
+            local_data=self._data,
+            project_data=project_data,
+            no_metadata=no_metadata,
+        )

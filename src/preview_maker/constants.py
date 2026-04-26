@@ -28,3 +28,6 @@ FORMAT_ALIASES: dict[str, str] = {
 
 DEFAULT_SIZE: int = 2000
 DEFAULT_FORMAT: str = "jpeg"
+
+DAEMON_NAME: str = "preview-maker"
+PREVIEWS_DIR: str = "previews"  # directory name under ARCHIVE_SYSTEM_DIR for preview files

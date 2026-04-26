@@ -7,6 +7,10 @@ so that tools like File Organizer and Preview Maker stay in sync.
 
 from typing import Any
 
+# Archive system directory name and database filename
+ARCHIVE_SYSTEM_DIR = ".system"
+ARCHIVE_DB_FILENAME = "florentine.db"
+
 # Common set of supported image file extensions (lowercase).
 # Used by File Organizer and Preview Maker to detect real image files
 # and skip sidecar/auxiliary artifacts such as .log, .icc, etc.
@@ -126,10 +130,10 @@ XMP_ACTION_SAVED = "saved"                  # File saved
 #   protect (optional, default false) = make the file read-only after placement
 DEFAULT_ROUTES: dict[str, list[list[Any]]] = {
     "rules": [
-        ["*.RAW.*",  "SOURCES",     True],
-        ["*.MSR.*",  "SOURCES",     True],
-        ["*.PRV.*",  "."],
-        ["*",        "DERIVATIVES"],
+        ["*.RAW.*", "SOURCES", True],
+        ["*.MSR.*", "SOURCES", True],
+        ["*.PRV.*", "."],
+        ["*", "DERIVATIVES"],
     ],
 }
 
@@ -148,6 +152,7 @@ DEFAULT_FORMATS: dict[str, str] = {
 
 # Complete default configuration — used as fallback when config.json is absent
 DEFAULT_CONFIG: dict[str, Any] = {
+    "archive_path": "",
     "formats": DEFAULT_FORMATS,
     "routes": DEFAULT_ROUTES,
 }

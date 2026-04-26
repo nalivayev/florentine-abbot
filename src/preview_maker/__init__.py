@@ -3,8 +3,10 @@
 Public API for the Preview Maker.
 """
 
-from preview_maker.config import Config
-from preview_maker.maker import PreviewMaker
-from preview_maker.watcher import PreviewWatcher
+from preview_maker.classes import MakerSettings
+from preview_maker.maker import Maker
+from preview_maker.processor import MakerProcessor
+from preview_maker.store import MakerStore
+from preview_maker.watcher import MakerWatcher
 
-__all__ = ["Config", "PreviewMaker", "PreviewWatcher"]
+__all__ = ["MakerSettings", "MakerStore", "Maker", "MakerProcessor", "MakerWatcher"]

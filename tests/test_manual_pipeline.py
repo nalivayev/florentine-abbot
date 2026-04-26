@@ -12,29 +12,15 @@ for manual inspection with exiftool.
 import pytest
 from pathlib import Path
 
+from common.database import ArchiveDatabase
 from file_organizer.organizer import FileOrganizer
-from preview_maker.maker import PreviewMaker
+from preview_maker.classes import MakerSettings as MakerSettings
+from preview_maker.maker import Maker
 from common.logger import Logger
 from common.exifer import Exifer
 from common.tagger import Tagger
 from common.tags import HistoryTag
-from common.constants import (
-    TAG_IFD0_MAKE,
-    TAG_IFD0_MODEL,
-    TAG_XMP_TIFF_MAKE,
-    TAG_XMP_TIFF_MODEL,
-    TAG_XMP_XMPMM_DOCUMENT_ID,
-    TAG_XMP_XMPMM_INSTANCE_ID,
-    TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID,
-    TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID,
-    TAG_XMP_DC_IDENTIFIER,
-    TAG_XMP_DC_RELATION,
-    TAG_XMP_DC_FORMAT,
-    TAG_XMP_EXIF_DATETIME_DIGITIZED,
-    XMP_ACTION_CREATED,
-    XMP_ACTION_EDITED,
-    XMP_ACTION_CONVERTED,
-)
+from common.constants import TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_XMP_TIFF_MAKE, TAG_XMP_TIFF_MODEL, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, TAG_XMP_DC_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_FORMAT, TAG_XMP_EXIF_DATETIME_DIGITIZED, XMP_ACTION_CREATED, XMP_ACTION_EDITED, XMP_ACTION_CONVERTED
 from tests.common.test_utils import create_test_image
 
 
@@ -58,7 +44,7 @@ class TestManualPipeline:
     """
 
     @pytest.mark.manual
-    def test_full_pipeline(self, tmp_path):
+    def test_full_pipeline(self, tmp_path: Path) -> None:
         """Full pipeline: create file -> organize -> generate preview.
 
         Creates a test TIFF with scanner metadata (IFD0:Make/Model, DocumentID,
@@ -153,17 +139,17 @@ class TestManualPipeline:
         print(f"[OK] Master history entries: {len(master_history)}")
         print("=" * 60)
 
-        # === Step 2: Run PreviewMaker ===
-        print("\n[Step 2] Running PreviewMaker...")
-        maker = PreviewMaker(logger)
-        prv_count = maker(
-            path=output_dir,
-            overwrite=False,
-            max_size=1200,
-            quality=85,
+        # === Step 2: Run Maker ===
+        print("\n[Step 2] Running Maker...")
+        maker = Maker(
+            logger,
+            settings=MakerSettings.from_data(
+                local_data={"image": {"size": 1200, "format": "jpeg", "jpeg": {"quality": 85}}},
+            ),
         )
+        prv_count = maker.execute(path=output_dir, overwrite=False)
         assert prv_count == 1
-        print(f"[OK] PreviewMaker generated {prv_count} preview(s)")
+        print(f"[OK] Maker generated {prv_count} preview(s)")
 
         prv = _find_file(output_dir, "*.PRV.jpg")
         print(f"[OK] Preview file: {prv}")

@@ -2,6 +2,8 @@
   <h1 class="page-title">{{ t('import.scans.title') }}</h1>
   <p class="page-subtitle">{{ t('import.scans.subtitle') }}</p>
 
+  <div class="wizard-column">
+
   <!-- Step: Intro -->
   <div v-if="step === 'intro'" class="step-content">
     <p class="intro-text">{{ t('import.scans.intro') }}</p>
@@ -129,6 +131,94 @@
     <span class="field-error-inline" v-if="importError">{{ importError }}</span>
   </div>
 
+  <!-- Step: Metadata -->
+  <div v-if="step === 'metadata'" class="step-content">
+    <p class="intro-text">{{ t('import.scans.metadata_hint') }}</p>
+
+    <div class="metadata-lang-tabs">
+      <button
+        v-for="lang in metadataLangOrder"
+        :key="lang"
+        type="button"
+        class="metadata-lang-tab"
+        :class="{ active: activeMetadataLang === lang }"
+        @click="activeMetadataLang = lang"
+      >
+        {{ lang }}
+      </button>
+    </div>
+
+    <div class="field">
+      <label class="field-label">{{ t('import.scans.metadata_default_language') }}</label>
+      <div class="radio-group">
+        <label v-for="lang in metadataLangOrder" :key="`default-${lang}`" class="radio-label">
+          <input
+            type="radio"
+            name="metadata-default-language"
+            :checked="metadataDefaultLanguage === lang"
+            @change="setDefaultMetadataLanguage(lang)"
+          />
+          {{ lang }}
+        </label>
+      </div>
+    </div>
+
+    <div v-if="activeMetadataBlock">
+      <div class="field">
+        <label class="field-label">{{ t('import.scans.metadata_description') }}</label>
+        <p class="hint-text metadata-field-hint">{{ t('import.scans.metadata_description_hint') }}</p>
+        <textarea class="field-input field-textarea" v-model="activeMetadataBlock.description" :placeholder="metadataPlaceholder('description')"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">{{ t('import.scans.metadata_creator') }}</label>
+        <p class="hint-text metadata-field-hint">{{ t('import.scans.metadata_creator_help') }}</p>
+        <textarea class="field-input field-textarea" v-model="activeMetadataBlock.creator" :placeholder="metadataPlaceholder('creator')"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">{{ t('import.scans.metadata_rights') }}</label>
+        <p class="hint-text metadata-field-hint">{{ t('import.scans.metadata_rights_hint') }}</p>
+        <textarea class="field-input field-textarea" v-model="activeMetadataBlock.rights" :placeholder="metadataPlaceholder('rights')"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">{{ t('import.scans.metadata_source') }}</label>
+        <p class="hint-text metadata-field-hint">{{ t('import.scans.metadata_source_hint') }}</p>
+        <textarea class="field-input field-textarea" v-model="activeMetadataBlock.source" :placeholder="metadataPlaceholder('source')"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">{{ t('import.scans.metadata_credit') }}</label>
+        <p class="hint-text metadata-field-hint">{{ t('import.scans.metadata_credit_hint') }}</p>
+        <textarea class="field-input field-textarea" v-model="activeMetadataBlock.credit" :placeholder="metadataPlaceholder('credit')"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="field-label">{{ t('import.scans.metadata_terms') }}</label>
+        <p class="hint-text metadata-field-hint">{{ t('import.scans.metadata_terms_hint') }}</p>
+        <textarea class="field-input field-textarea" v-model="activeMetadataBlock.terms" :placeholder="metadataPlaceholder('terms')"></textarea>
+      </div>
+
+      <div class="field">
+        <p class="hint-text metadata-field-hint">{{ t('import.scans.metadata_marked_hint') }}</p>
+        <label class="radio-label">
+          <input type="checkbox" v-model="activeMetadataBlock.marked" />
+          {{ t('import.scans.metadata_marked') }}
+        </label>
+      </div>
+    </div>
+
+    <div class="metadata-actions">
+      <button class="btn-edit" @click="saveMetadataDefaults" :disabled="metadataSaving">
+        {{ metadataSaving ? t('import.scans.metadata_saving') : t('import.scans.metadata_save_defaults') }}
+      </button>
+      <span v-if="metadataSaveMessage" class="metadata-save-ok">{{ metadataSaveMessage }}</span>
+    </div>
+
+    <span class="field-error-inline" v-if="metadataSaveError">{{ metadataSaveError }}</span>
+  </div>
+
   <!-- Step: Done -->
   <div v-if="step === 'done'" class="step-content">
     <p class="summary-stat summary-ok" style="font-size: var(--fs-base); margin-bottom: var(--sp-2);">
@@ -158,7 +248,10 @@
     <button v-else-if="step === 'format'" class="btn-next" @click="runPreview" :disabled="previewing">
       {{ previewing ? t('import.scans.scanning') : t('import.scans.preview_btn') }}
     </button>
-    <button v-else-if="step === 'preview'" class="btn-next" @click="startImport" :disabled="summary.ok === 0 || importing">
+    <button v-else-if="step === 'preview'" class="btn-next" @click="step = 'metadata'" :disabled="summary.ok === 0">
+      {{ t('setup.next') }}
+    </button>
+    <button v-else-if="step === 'metadata'" class="btn-next" @click="startImport" :disabled="summary.ok === 0 || importing">
       {{ importing ? t('import.scans.importing') : t('import.scans.import_btn', { n: summary.ok }) }}
     </button>
     <button v-else-if="step === 'done'" class="btn-next" @click="reset">
@@ -167,6 +260,8 @@
   </div>
 
   <span class="field-error-inline" v-if="step === 'source' && previewError">{{ previewError }}</span>
+
+  </div>
 
   <!-- Format dialogs -->
   <FormatEditDialog
@@ -196,7 +291,7 @@ import FormatEditDialog from '../components/FormatEditDialog.vue'
 const { t } = useI18n()
 const router = useRouter()
 
-const STEPS = ['intro', 'collection', 'source', 'format', 'preview', 'done']
+const STEPS = ['intro', 'collection', 'source', 'format', 'preview', 'metadata', 'done']
 
 const step = ref('intro')
 const sourcePath = ref('')
@@ -228,6 +323,40 @@ const importing = ref(false)
 const importError = ref('')
 const importResult = ref({ succeeded: 0, failed: 0 })
 
+const metadataLanguages = ref(createEmptyMetadataLanguages())
+const activeMetadataLang = ref('ru-RU')
+const metadataSaving = ref(false)
+const metadataSaveMessage = ref('')
+const metadataSaveError = ref('')
+
+const metadataLangOrder = computed(() => Object.keys(metadataLanguages.value))
+const metadataDefaultLanguage = computed(() => {
+  for (const [lang, block] of Object.entries(metadataLanguages.value)) {
+    if (block.default) return lang
+  }
+  return metadataLangOrder.value[0] || 'ru-RU'
+})
+const activeMetadataBlock = computed(() => metadataLanguages.value[activeMetadataLang.value] || null)
+
+const METADATA_PLACEHOLDERS = {
+  'ru-RU': {
+    description: 'Семейный портрет у дома в Минске, лето 1987 года.',
+    creator: 'Иван Иванов\nМария Иванова',
+    rights: 'Сканирование © 2026 Иван Иванов',
+    source: 'Семейный архив, альбом 3, лист 12',
+    credit: 'Семейный архив Ивановых',
+    terms: 'Только для личного использования.',
+  },
+  'en-US': {
+    description: 'Family portrait near the house in Minsk, summer 1987.',
+    creator: 'John Smith\nMary Smith',
+    rights: 'Scanning © 2026 John Smith',
+    source: 'Family archive, album 3, page 12',
+    credit: 'Smith family archive',
+    terms: 'Personal use only.',
+  },
+}
+
 onMounted(async () => {
   try {
     const res = await apiFetch('/config/format')
@@ -250,6 +379,8 @@ onMounted(async () => {
   } catch {
     collectionMode.value = 'new'
   }
+
+  await loadMetadataDefaults()
 })
 
 function goBack() {
@@ -316,6 +447,146 @@ function reset() {
   importResult.value = { succeeded: 0, failed: 0 }
   previewError.value = ''
   importError.value = ''
+  metadataSaveMessage.value = ''
+  metadataSaveError.value = ''
+}
+
+function createEmptyMetadataLanguages() {
+  return {
+    'ru-RU': {
+      default: true,
+      description: '',
+      creator: '',
+      rights: '',
+      source: '',
+      credit: '',
+      terms: '',
+      marked: false,
+    },
+    'en-US': {
+      default: false,
+      description: '',
+      creator: '',
+      rights: '',
+      source: '',
+      credit: '',
+      terms: '',
+      marked: false,
+    },
+  }
+}
+
+function normalizeTextValue(value) {
+  if (Array.isArray(value)) {
+    return value.join('\n')
+  }
+  return value ? String(value) : ''
+}
+
+function normalizeCreatorValue(value) {
+  if (Array.isArray(value)) {
+    return value.join('\n')
+  }
+  return value ? String(value) : ''
+}
+
+function normalizeMarkedValue(value) {
+  if (typeof value === 'boolean') return value
+  const normalized = String(value || '').trim().toLowerCase()
+  return normalized === 'true' || normalized === '1' || normalized === 'yes'
+}
+
+function metadataPlaceholder(fieldName) {
+  const lang = activeMetadataLang.value
+  const placeholders = METADATA_PLACEHOLDERS[lang]
+    || (lang.startsWith('ru') ? METADATA_PLACEHOLDERS['ru-RU'] : METADATA_PLACEHOLDERS['en-US'])
+  return placeholders[fieldName] || ''
+}
+
+function normalizeMetadataLanguages(languages) {
+  const base = createEmptyMetadataLanguages()
+  for (const [lang, raw] of Object.entries(languages || {})) {
+    const block = raw || {}
+    base[lang] = {
+      default: Boolean(block.default),
+      description: normalizeTextValue(block.description),
+      creator: normalizeCreatorValue(block.creator),
+      rights: normalizeTextValue(block.rights),
+      source: normalizeTextValue(block.source),
+      credit: normalizeTextValue(block.credit),
+      terms: normalizeTextValue(block.terms),
+      marked: normalizeMarkedValue(block.marked),
+    }
+  }
+  return base
+}
+
+function serializeMetadataLanguages() {
+  const languages = {}
+  const defaultLanguage = metadataDefaultLanguage.value
+
+  for (const [lang, block] of Object.entries(metadataLanguages.value)) {
+    languages[lang] = {
+      description: block.description.trim(),
+      creator: block.creator
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean),
+      rights: block.rights.trim(),
+      source: block.source.trim(),
+      credit: block.credit.trim(),
+      terms: block.terms.trim(),
+      marked: block.marked ? 'True' : '',
+    }
+    if (lang === defaultLanguage) {
+      languages[lang].default = true
+    }
+  }
+
+  return languages
+}
+
+function setDefaultMetadataLanguage(lang) {
+  for (const [code, block] of Object.entries(metadataLanguages.value)) {
+    block.default = code === lang
+  }
+}
+
+async function loadMetadataDefaults() {
+  try {
+    const res = await apiFetch('/config/metadata')
+    if (!res.ok) return
+    const data = await res.json()
+    metadataLanguages.value = normalizeMetadataLanguages(data.languages)
+    activeMetadataLang.value = metadataDefaultLanguage.value
+  } catch {
+    metadataLanguages.value = createEmptyMetadataLanguages()
+    activeMetadataLang.value = metadataDefaultLanguage.value
+  }
+}
+
+async function saveMetadataDefaults() {
+  metadataSaving.value = true
+  metadataSaveMessage.value = ''
+  metadataSaveError.value = ''
+
+  try {
+    const res = await apiFetch('/config/metadata', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ languages: serializeMetadataLanguages() }),
+    })
+    if (!res.ok) {
+      const data = await res.json()
+      metadataSaveError.value = data.detail || t('import.scans.metadata_save_error')
+      return
+    }
+    metadataSaveMessage.value = t('import.scans.metadata_saved')
+  } catch {
+    metadataSaveError.value = t('import.scans.metadata_save_error')
+  } finally {
+    metadataSaving.value = false
+  }
 }
 
 async function runPreview() {
@@ -378,6 +649,7 @@ async function startImport() {
         mode: transferMode.value,
         collection_id: selectedCollectionId.value,
         collection_type: 'scan',
+        metadata: { languages: serializeMetadataLanguages() },
       }),
     })
     if (!res.ok) {
@@ -398,7 +670,7 @@ async function startImport() {
 
 <style scoped>
 .step-content {
-  max-width: 560px;
+  width: 100%;
   margin-bottom: var(--sp-6);
 }
 .intro-text {
@@ -437,10 +709,10 @@ async function startImport() {
   gap: var(--sp-3);
   padding: var(--sp-3) var(--sp-4);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--fs-sm);
-  transition: border-color 0.15s;
+  transition: border-color var(--motion-base);
 }
 .collection-item:hover { border-color: var(--accent); }
 .collection-item.selected { border-color: var(--accent); background: var(--surface-muted); }
@@ -467,7 +739,7 @@ async function startImport() {
 .btn-edit {
   background: none;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: var(--sp-1) var(--sp-3);
   font-size: var(--fs-sm);
   color: var(--text-muted);
@@ -487,7 +759,7 @@ async function startImport() {
 .summary-skip { color: var(--text-muted); }
 .file-table {
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   max-height: 420px;
   overflow-y: auto;
@@ -524,4 +796,39 @@ async function startImport() {
 .status-invalid { color: var(--danger); white-space: nowrap; }
 .radio-group { display: flex; gap: var(--sp-5); margin-top: var(--sp-1); }
 .radio-label { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); cursor: pointer; }
+.field-textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+.metadata-field-hint {
+  margin: 0 0 var(--sp-2);
+}
+.metadata-lang-tabs {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+}
+.metadata-lang-tab {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.metadata-lang-tab.active {
+  border-color: var(--accent);
+  background: var(--surface-muted);
+}
+.metadata-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+.metadata-save-ok {
+  font-size: var(--fs-sm);
+  color: var(--success);
+}
 </style>

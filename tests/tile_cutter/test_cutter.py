@@ -1,6 +1,4 @@
-"""
-Tests for TileCutter batch and single-file processing.
-"""
+"""Regression tests for Cutter batch behavior."""
 
 import os
 import shutil
@@ -9,14 +7,33 @@ from pathlib import Path
 
 from PIL import Image
 
-from tile_cutter.cutter import TileCutter
+from common.constants import ARCHIVE_SYSTEM_DIR, DEFAULT_CONFIG
 from common.logger import Logger
 from common.project_config import ProjectConfig
-from common.constants import DEFAULT_CONFIG
 from tests.common.test_utils import create_test_image
+from tile_cutter.constants import TILES_DIR
+from tile_cutter.cutter import Cutter
 
 
-class TestTileCutterBatch:
+class CutterTestDouble(Cutter):
+    """Expose selected private cutter behavior through test-only wrappers."""
+
+    def process_single_file_for_test(
+        self,
+        src_path: Path,
+        *,
+        archive_path: Path,
+        overwrite: bool = False,
+    ) -> bool:
+        """Call the internal single-file tile path from regression tests."""
+        return self._process_single_file(
+            src_path,
+            archive_path=archive_path,
+            overwrite=overwrite,
+        )
+
+
+class TestCutterBatch:
 
     def setup_method(self) -> None:
         self.temp_dir: Path | None = None
@@ -46,7 +63,15 @@ class TestTileCutterBatch:
         return temp_dir / "archive", src
 
     def _tile_dir(self, archive: Path, stem: str) -> Path:
-        return archive / ".system" / "scan" / "tiles" / "1950" / "1950.06.15" / stem
+        return (
+            archive
+            / ARCHIVE_SYSTEM_DIR
+            / TILES_DIR
+            / "1950"
+            / "1950.06.15"
+            / "SOURCES"
+            / stem
+        )
 
     def _make_archive_at(self, root: Path, size: tuple[int, int]) -> Path:
         sources = root / "archive" / "1950" / "1950.06.15" / "SOURCES"
@@ -56,18 +81,26 @@ class TestTileCutterBatch:
         return root / "archive"
 
     def _zoom_levels(self, archive: Path, stem: str) -> int:
-        tile_dir = archive / ".system" / "scan" / "tiles" / "1950" / "1950.06.15" / stem
+        tile_dir = (
+            archive
+            / ARCHIVE_SYSTEM_DIR
+            / TILES_DIR
+            / "1950"
+            / "1950.06.15"
+            / "SOURCES"
+            / stem
+        )
         return len([d for d in tile_dir.iterdir() if d.is_dir()])
 
     def test_batch_generates_tile_pyramid(self) -> None:
-        """Batch call produces a tile set with the expected zoom structure."""
+        """Batch execute produces a tile set with the expected zoom structure."""
         temp_dir = self.create_temp_dir()
         archive, src = self._make_archive(
             temp_dir, "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff", size=(800, 600)
         )
 
-        cutter = TileCutter(Logger("test_tile_cutter"))
-        count = cutter(path=archive, overwrite=False)
+        cutter = Cutter(Logger("test_tile_cutter"))
+        count = cutter.execute(path=archive, overwrite=False)
         assert count == 1
 
         tile_dir = self._tile_dir(archive, src.stem)
@@ -76,7 +109,7 @@ class TestTileCutterBatch:
         # At least zoom level 0 must exist
         z0 = tile_dir / "0"
         assert z0.is_dir()
-        tiles = list(z0.glob("*.png"))
+        tiles = list(z0.rglob("*.png"))
         assert len(tiles) >= 1
 
     def test_tiles_are_valid_pngs(self) -> None:
@@ -86,10 +119,10 @@ class TestTileCutterBatch:
             temp_dir, "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff", size=(512, 512)
         )
 
-        cutter = TileCutter(Logger("test_tile_cutter"))
-        cutter(path=archive, overwrite=False)
+        cutter = Cutter(Logger("test_tile_cutter"))
+        cutter.execute(path=archive, overwrite=False)
 
-        for tile_path in (archive / ".system" / "scan" / "tiles").rglob("*.png"):
+        for tile_path in (archive / ARCHIVE_SYSTEM_DIR / TILES_DIR).rglob("*.png"):
             with Image.open(tile_path) as img:
                 assert img.format == "PNG"
                 assert img.mode == "RGBA"
@@ -101,10 +134,10 @@ class TestTileCutterBatch:
             temp_dir, "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff", size=(1024, 768)
         )
 
-        cutter = TileCutter(Logger("test_tile_cutter"))
-        cutter(path=archive, overwrite=False)
+        cutter = Cutter(Logger("test_tile_cutter"))
+        cutter.execute(path=archive, overwrite=False)
 
-        for tile_path in (archive / ".system" / "scan" / "tiles").rglob("*.png"):
+        for tile_path in (archive / ARCHIVE_SYSTEM_DIR / TILES_DIR).rglob("*.png"):
             with Image.open(tile_path) as img:
                 assert max(img.size) <= 256
 
@@ -115,11 +148,11 @@ class TestTileCutterBatch:
             temp_dir, "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff"
         )
 
-        cutter = TileCutter(Logger("test_tile_cutter"))
-        first = cutter(path=archive, overwrite=False)
+        cutter = Cutter(Logger("test_tile_cutter"))
+        first = cutter.execute(path=archive, overwrite=False)
         assert first == 1
 
-        second = cutter(path=archive, overwrite=False)
+        second = cutter.execute(path=archive, overwrite=False)
         assert second == 0
 
     def test_overwrite_regenerates_tile_set(self) -> None:
@@ -129,9 +162,9 @@ class TestTileCutterBatch:
             temp_dir, "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff"
         )
 
-        cutter = TileCutter(Logger("test_tile_cutter"))
-        cutter(path=archive, overwrite=False)
-        count = cutter(path=archive, overwrite=True)
+        cutter = Cutter(Logger("test_tile_cutter"))
+        cutter.execute(path=archive, overwrite=False)
+        count = cutter.execute(path=archive, overwrite=True)
         assert count == 1
 
     def test_prefers_msr_over_raw(self) -> None:
@@ -146,8 +179,8 @@ class TestTileCutterBatch:
         create_test_image(raw, size=(400, 300), format="TIFF")
 
         archive = temp_dir / "archive"
-        cutter = TileCutter(Logger("test_tile_cutter"))
-        count = cutter(path=archive, overwrite=False)
+        cutter = Cutter(Logger("test_tile_cutter"))
+        count = cutter.execute(path=archive, overwrite=False)
 
         # Only one tile set — for MSR
         assert count == 1
@@ -166,9 +199,9 @@ class TestTileCutterBatch:
         small_archive = self._make_archive_at(small_dir, (256, 256))
         large_archive = self._make_archive_at(large_dir, (2048, 2048))
 
-        cutter = TileCutter(Logger("test_tile_cutter"))
-        cutter(path=small_archive, overwrite=False)
-        cutter(path=large_archive, overwrite=False)
+        cutter = Cutter(Logger("test_tile_cutter"))
+        cutter.execute(path=small_archive, overwrite=False)
+        cutter.execute(path=large_archive, overwrite=False)
 
         stem = "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR"
         small_levels = self._zoom_levels(small_archive, stem)
@@ -182,15 +215,15 @@ class TestTileCutterBatch:
             temp_dir, "1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff"
         )
 
-        cutter = TileCutter(Logger("test_tile_cutter"))
-        cutter(path=archive, overwrite=False)
+        cutter = Cutter(Logger("test_tile_cutter"))
+        cutter.execute(path=archive, overwrite=False)
 
         tile_dir = self._tile_dir(archive, src.stem)
         staging = tile_dir.parent / (tile_dir.name + ".tmp")
         assert not staging.exists()
 
 
-class TestTileCutterSingleFile:
+class TestCutterSingleFile:
 
     def setup_method(self) -> None:
         self.temp_dir: Path | None = None
@@ -212,8 +245,12 @@ class TestTileCutterSingleFile:
         create_test_image(src, size=(512, 384), format="TIFF")
 
         archive = temp_dir / "archive"
-        cutter = TileCutter(Logger("test"))
-        result = cutter.process_single_file(src, archive_path=archive, overwrite=False)
+        cutter = CutterTestDouble(Logger("test"))
+        result = cutter.process_single_file_for_test(
+            src,
+            archive_path=archive,
+            overwrite=False,
+        )
         assert result is True
 
     def test_process_single_file_skips_on_second_call(self) -> None:
@@ -224,9 +261,13 @@ class TestTileCutterSingleFile:
         create_test_image(src, size=(512, 384), format="TIFF")
 
         archive = temp_dir / "archive"
-        cutter = TileCutter(Logger("test"))
-        cutter.process_single_file(src, archive_path=archive, overwrite=False)
-        result = cutter.process_single_file(src, archive_path=archive, overwrite=False)
+        cutter = CutterTestDouble(Logger("test"))
+        cutter.process_single_file_for_test(src, archive_path=archive, overwrite=False)
+        result = cutter.process_single_file_for_test(
+            src,
+            archive_path=archive,
+            overwrite=False,
+        )
         assert result is False
 
     def test_tile_dir_path_matches_date_from_filename(self) -> None:
@@ -238,8 +279,16 @@ class TestTileCutterSingleFile:
         create_test_image(src, size=(400, 300), format="TIFF")
 
         archive = temp_dir / "archive"
-        cutter = TileCutter(Logger("test"))
-        cutter.process_single_file(src, archive_path=archive, overwrite=False)
+        cutter = CutterTestDouble(Logger("test"))
+        cutter.process_single_file_for_test(src, archive_path=archive, overwrite=False)
 
-        expected = archive / ".system" / "scan" / "tiles" / "1963" / "1963.11.22" / src.stem
+        expected = (
+            archive
+            / ARCHIVE_SYSTEM_DIR
+            / TILES_DIR
+            / "1963"
+            / "1963.11.22"
+            / "SOURCES"
+            / src.stem
+        )
         assert expected.exists()

@@ -90,7 +90,6 @@ class FileProcessor:
 
         return parsed
 
-
     def process(self, dest_path: Path, parsed: dict[str, int | str], no_metadata: bool = False) -> None:
         """
         Write EXIF/XMP metadata to destination file.
@@ -111,7 +110,6 @@ class FileProcessor:
         self._write_metadata(dest_path, parsed)
         self._logger.info(f"Successfully processed: {dest_path.name}")
 
-
     def _parse_and_validate(self, file_path: Path) -> dict[str, int | str] | None:
         """
         Parse and validate a filename.
@@ -131,7 +129,6 @@ class FileProcessor:
             return None
 
         return parsed
-
 
     def _write_metadata(self, file_path: Path, parsed: dict[str, int | str]) -> None:
         """

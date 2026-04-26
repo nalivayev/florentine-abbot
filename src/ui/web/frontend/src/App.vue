@@ -3,15 +3,17 @@
 
     <aside v-if="showSidebar" class="sidebar" :class="{ collapsed }">
       <div class="sidebar-top">
-        <div class="sidebar-logo" v-show="!collapsed">Florentine Abbot</div>
-        <button class="sidebar-toggle" @click="toggleSidebar" :title="collapsed ? t('nav.expand') : t('nav.collapse')">
+        <button class="sidebar-toggle sidebar-utility-btn" @click="toggleSidebar" :title="collapsed ? t('nav.expand') : t('nav.collapse')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="3" y1="6" x2="21" y2="6"/>
             <line x1="3" y1="12" x2="21" y2="12"/>
             <line x1="3" y1="18" x2="21" y2="18"/>
           </svg>
         </button>
+        <div class="sidebar-logo" v-show="!collapsed">Florentine Abbot</div>
       </div>
+
+      <div class="sidebar-nav">
 
       <RouterLink class="sidebar-link" to="/photos" active-class="active" :title="collapsed ? t('nav.photos') : ''">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
@@ -21,9 +23,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
         <span>{{ t('nav.map') }}</span>
       </RouterLink>
-      <RouterLink class="sidebar-link" to="/albums" active-class="active" :title="collapsed ? t('nav.albums') : ''">
+      <RouterLink class="sidebar-link" to="/collections" active-class="active" :title="collapsed ? t('nav.collections') : ''">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        <span>{{ t('nav.albums') }}</span>
+        <span>{{ t('nav.collections') }}</span>
       </RouterLink>
       <RouterLink class="sidebar-link" to="/people" active-class="active" :title="collapsed ? t('nav.people') : ''">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -67,19 +69,29 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         <span>{{ t('nav.logout') }}</span>
       </a>
-    </aside>
 
-    <div class="lang-switcher lang-switcher-top">
-      <button class="lang-btn theme-btn" @click="toggle" :title="isDark ? 'Light' : 'Dark'">{{ isDark ? '☀' : '☽' }}</button>
-      <span class="switcher-sep">|</span>
-      <button
-        v-for="lang in langs"
-        :key="lang"
-        class="lang-btn"
-        :class="{ active: locale === lang }"
-        @click="setLang(lang)"
-      >{{ lang.toUpperCase() }}</button>
-    </div>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="sidebar-switcher" :class="{ collapsed }">
+          <button class="lang-btn theme-btn sidebar-utility-btn" @click="toggle" :title="isDark ? 'Light' : 'Dark'">{{ isDark ? '☀' : '☽' }}</button>
+          <button
+            v-if="collapsed"
+            class="lang-btn sidebar-utility-btn"
+            @click="toggleCollapsedLang"
+          >{{ collapsedLangLabel }}</button>
+          <template v-else>
+            <button
+              v-for="lang in langs"
+              :key="lang"
+              class="lang-btn sidebar-utility-btn"
+              :class="{ active: locale === lang }"
+              @click="setLang(lang)"
+            >{{ lang.toUpperCase() }}</button>
+          </template>
+        </div>
+      </div>
+    </aside>
 
     <main class="content" :class="{ 'content-full': !showSidebar, 'content-viewer': route.meta.viewer, 'content-collapsed': showSidebar && collapsed }">
       <RouterView />
@@ -104,6 +116,8 @@ const noSidebarPaths = ['/login']
 const showSidebar = computed(() => !noSidebarPaths.includes(route.path))
 
 const langs = ['ru', 'en']
+const activeLang = computed(() => (langs.includes(locale.value) ? locale.value : langs[0]))
+const collapsedLangLabel = computed(() => activeLang.value.toUpperCase())
 const userRole = ref(null)
 const isAdmin = computed(() => userRole.value === 'admin')
 
@@ -132,6 +146,12 @@ function setLang(lang) {
   localStorage.setItem('lang', lang)
 }
 
+function toggleCollapsedLang() {
+  const currentIndex = langs.indexOf(activeLang.value)
+  const nextLang = langs[(currentIndex + 1) % langs.length]
+  setLang(nextLang)
+}
+
 async function logout() {
   try {
     await apiFetch('/auth/logout', { method: 'POST' })
@@ -144,9 +164,4 @@ async function logout() {
 
 <style scoped>
 .divider { margin: var(--sp-4) 0; }
-.switcher-sep {
-  color: var(--border);
-  font-size: var(--fs-sm);
-  user-select: none;
-}
 </style>

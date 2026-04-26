@@ -38,10 +38,10 @@ const importTypes = [
   gap: var(--sp-1);
   padding: var(--sp-4) var(--sp-5);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--surface);
   text-decoration: none;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color var(--motion-base), background var(--motion-base);
 }
 .import-type-card:hover {
   border-color: var(--accent);

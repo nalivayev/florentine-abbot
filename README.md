@@ -371,9 +371,9 @@ preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
 preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES"
 ```
 
-**Convert a single file (no pipeline, no metadata):**
+**Process a single file (no metadata, no database orchestration):**
 ```sh
-preview-maker convert --file "D:\photo.jpg" --size 2000 --format jpeg --quality 80
+preview-maker process --file "D:\Archive\PHOTO_ARCHIVES\1950\1950.06.15\SOURCES\1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff" --output "D:\Temp\1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
 ```
 
 Logging follows the same convention as other tools:
@@ -382,11 +382,11 @@ Logging follows the same convention as other tools:
 
 ### Key modules
 
-- `preview_maker/cli.py` — CLI (`batch`, `watch`, `convert` subcommands).
-- `preview_maker/maker.py` — core PRV generation logic.
-- `preview_maker/converter.py` — pure image conversion (resize + format); used by both the pipeline and `convert`.
+- `preview_maker/cli.py` — CLI (`batch`, `process`, `watch` subcommands).
+- `preview_maker/maker.py` — preview orchestration for batch and daemon modes.
+- `preview_maker/processor.py` — low-level single-file preview processing (resize + format write) without metadata or DB logic.
 - `preview_maker/constants.py` — format maps, default sizes, and format aliases.
-- `preview_maker/watcher.py` — daemon mode via watchdog, delegates to `PreviewMaker`.
+- `preview_maker/watcher.py` — daemon mode via watchdog, delegates to `Maker`.
 
 ## Archive Integrity (Archive Keeper)
 
@@ -412,10 +412,12 @@ This will create `archive.db` and populate it with the current state of the arch
 ### Key modules
 
 - `archive_keeper/cli.py` — CLI entry point (`archive-keeper` command).
-- `archive_keeper/engine.py` — scan, hash, and diff logic.
-- `archive_keeper/scanner.py` — filesystem traversal and SHA-256 calculation.
+- `archive_keeper/keeper.py` — batch orchestration for archive integrity reconciliation.
+- `archive_keeper/processor.py` — SHA-256 checksum calculation for one file.
+- `archive_keeper/store.py` — DB boundary for archive lifecycle state transitions.
+- `archive_keeper/watcher.py` — polling daemon wrapper over `Keeper`.
 
-## Face Detection (Face Detector)
+## Face Recognition (Face Recognizer)
 
 > **⚠️ Status**: In development. Not yet fully tested or documented. Not included in the installable package; run from source.
 
@@ -440,38 +442,51 @@ Run from the source tree using the module entry point:
 
 **Scan for faces and cluster:**
 ```sh
-python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES"
+python -m face_recognizer.cli batch --path "D:\Archive\PHOTO_ARCHIVES"
 ```
 
 **Skip clustering:**
 ```sh
-python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluster
+python -m face_recognizer.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluster
 ```
 
 **Re-process already indexed files:**
 ```sh
-python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
+python -m face_recognizer.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
+```
+
+**Detect faces in one file (no database orchestration):**
+```sh
+python -m face_recognizer.cli process --file "D:\Archive\2024\photo.jpg"
 ```
 
 **Preview detected faces on an image:**
 ```sh
-python -m face_detector.cli preview --file "D:\Archive\2024\photo.jpg"
+python -m face_recognizer.cli preview --file "D:\Archive\2024\photo.jpg"
+```
+
+**Daemon mode:**
+```sh
+python -m face_recognizer.cli watch
 ```
 
 For a full list of arguments:
 
 ```sh
-python -m face_detector.cli --help
+python -m face_recognizer.cli --help
 ```
 
 ### Key modules
 
-- `face_detector/cli.py` — CLI (`batch`, `preview` subcommands).
-- `face_detector/engine.py` — orchestrates batch detection over a directory tree.
-- `face_detector/detector.py` — abstract base class for detector plugins.
-- `face_detector/store.py` — SQLite persistence for face embeddings.
-- `face_detector/clusterer.py` — DBSCAN-based identity clustering.
-- `face_detector/visualizer.py` — visualization of detected faces on image previews.
+- `face_recognizer/cli.py` — CLI (`batch`, `process`, `preview`, `watch` subcommands).
+- `face_recognizer/recognizer.py` — face-recognition orchestration for batch and daemon modes.
+- `face_recognizer/detector.py` — detector plugin contract and registry.
+- `face_recognizer/classes.py` — shared recognizer settings and data types.
+- `face_recognizer/processor.py` — low-level single-file face detection without DB orchestration.
+- `face_recognizer/store.py` — SQLite persistence for face embeddings.
+- `face_recognizer/clusterer.py` — DBSCAN-based identity clustering.
+- `face_recognizer/previewer.py` — visualization of detected faces on image previews.
+- `face_recognizer/watcher.py` — polling daemon wrapper over `Recognizer`.
 
 ## Setup (Setup Runner)
 
@@ -481,7 +496,7 @@ A one-time interactive configuration tool. Run it once after installation to set
 
 - **Checks ExifTool** — verifies the dependency is installed; offers automatic installation via winget (Windows) or Homebrew (macOS), or prints manual instructions.
 - **Configures paths** — asks for the inbox folder (where new scans arrive) and the archive root (where organized files go), and creates them if needed.
-- **Writes daemon configs** — generates `config.json` for `file-organizer`, `preview-maker`, and `face-detector`.
+- **Writes daemon configs** — generates `config.json` for `file-organizer`, `preview-maker`, `tile-cutter`, and `face-recognizer`.
 - **Creates a desktop shortcut** — places a shortcut to the web dashboard (`http://127.0.0.1:8000/`) on the desktop (Windows, macOS, Linux).
 - **Optionally launches the web dashboard** — starts `florentine-web` immediately after setup.
 
@@ -566,7 +581,7 @@ All utilities write logs to a centralized location:
 - `file_organizer.log` — File Organizer (`file-organizer`) activity
 - `archive_keeper.log` — Archive Keeper activity
 - `preview_maker.log` — Preview Maker (`preview-maker`) activity
-- `face_detector.log` — Face Detector activity
+- `face_recognizer.log` — Face Recognizer activity
 
 **Custom log location:**
 

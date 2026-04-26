@@ -1,1 +1,0 @@
-"""InsightFace detector sub-package."""

@@ -21,7 +21,8 @@
             @click="locale = lang; saveLang(lang)">{{ lang.toUpperCase() }}</button>
         </div>
 
-        <div class="setup-content">
+          <div class="wizard-column setup-wizard">
+          <div class="setup-content">
 
       <!-- Step 1: Welcome -->
       <section v-if="step === 1">
@@ -57,8 +58,8 @@
           <p class="subsection-label">{{ t('setup.steps.archive.archive_section_label') }}</p>
           <div class="field">
             <label>{{ t('setup.archive_path') }}</label>
-            <input v-model="archive" type="text" placeholder="C:\archive" :class="{ invalid: fieldErrors.archive }" />
-            <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.archive }">{{ t('setup.steps.archive.archive_path_hint') }}</p>
+            <input v-model="archivePath" type="text" placeholder="C:\archive" :class="{ invalid: fieldErrors.archive_path }" />
+            <p class="field-hint" :class="{ 'field-hint-error': fieldErrors.archive_path }">{{ t('setup.steps.archive.archive_path_hint') }}</p>
           </div>
         </div>
 
@@ -89,7 +90,7 @@
 
         <div class="summary-list">
           <div class="summary-row">
-            <span>{{ t('setup.archive_path') }}</span><b>{{ archive }}</b>
+            <span>{{ t('setup.archive_path') }}</span><b>{{ archivePath }}</b>
           </div>
           <div class="summary-row">
             <span>{{ t('setup.username') }}</span><b>{{ username }}</b>
@@ -114,6 +115,7 @@
             {{ t('setup.submit') }}
           </button>
         </div>
+        </div>
       </div><!-- /setup-main -->
     </div><!-- /setup-box -->
   </div>
@@ -135,7 +137,7 @@ function saveLang(lang) {
 // Steps: 1=welcome, 2=sysreq, 3=account+archive, 4=launch
 const step = ref(1)
 
-const archive = ref('')
+const archivePath = ref('')
 const username = ref('')
 const password = ref('')
 const password2 = ref('')
@@ -186,7 +188,7 @@ async function validateStep(stepNum) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         step: stepNum,
-        archive: archive.value,
+        archive_path: archivePath.value,
         username: username.value,
         password: password.value,
         password2: password2.value,
@@ -252,7 +254,7 @@ async function submit() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        archive: archive.value,
+        archive_path: archivePath.value,
         username: username.value,
         password: password.value,
       }),
@@ -324,6 +326,12 @@ initTheme()
   padding-left: var(--sp-7);
   min-width: 0;
 }
+.setup-wizard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
 .setup-content {
   flex: 1;
   overflow-y: auto;
@@ -337,10 +345,10 @@ initTheme()
   margin-bottom: var(--sp-4);
 }
 .lang-btn {
-  padding: 0.2rem var(--sp-2);
+  padding: var(--inset-chip-y) var(--sp-2);
   font-size: var(--fs-xs);
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -381,9 +389,9 @@ label {
 input[type="text"],
 input[type="password"] {
   width: 100%;
-  padding: var(--sp-2) 0.6rem;
+  padding: var(--inset-control-y) var(--inset-control-x);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--surface);
   color: var(--text);
   font-size: var(--fs-base);
@@ -417,7 +425,7 @@ input.invalid:focus { border-color: var(--danger); }
   padding: 0.9rem var(--sp-4);
   background: var(--bg-warning);
   border-left: 3px solid var(--warning);
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
 }
 .sysreq-row {
   display: flex;
@@ -433,7 +441,7 @@ input.invalid:focus { border-color: var(--danger); }
 .exiftool-cmd {
   background: var(--surface-muted);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   padding: var(--sp-2) var(--sp-3);
   font-family: monospace;
   font-size: var(--fs-sm);

@@ -355,9 +355,9 @@ preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
 preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES"
 ```
 
-**Канвертацыя адзінкавага файла (без пайплайна, без метаданых):**
+**Апрацоўка аднаго файла (без метаданых і без аркестрацыі праз БД):**
 ```sh
-preview-maker convert --file "D:\photo.jpg" --size 2000 --format jpeg --quality 80
+preview-maker process --file "D:\Archive\PHOTO_ARCHIVES\1950\1950.06.15\SOURCES\1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff" --output "D:\Temp\1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
 ```
 
 Логі пішуцца па тых жа правілах, што і ў іншых утыліт:
@@ -366,11 +366,11 @@ preview-maker convert --file "D:\photo.jpg" --size 2000 --format jpeg --quality 
 
 ### Ключавыя модулі
 
-- `preview_maker/cli.py` — CLI (падкаманды `batch`, `watch`, `convert`).
-- `preview_maker/maker.py` — ядро логікі генерацыі PRV.
-- `preview_maker/converter.py` — чыстая канвертацыя выяў (рэсайз + фармат); выкарыстоўваецца і пайплайнам, і падкамандай `convert`.
+- `preview_maker/cli.py` — CLI (падкаманды `batch`, `process`, `watch`).
+- `preview_maker/maker.py` — orchestration-слой генерацыі PRV для batch і daemon рэжымаў.
+- `preview_maker/processor.py` — нізкаўзроўневая апрацоўка аднаго файла (рэсайз + запіс фармату) без метаданых і без DB-логікі.
 - `preview_maker/constants.py` — карты фарматаў, памеры па змаўчанні, аліасы фарматаў.
-- `preview_maker/watcher.py` — рэжым дэмана праз watchdog, дэлегуе `PreviewMaker`.
+- `preview_maker/watcher.py` — рэжым дэмана праз watchdog, дэлегуе `Maker`.
 
 ## Цэласнасць архіва (Archive Keeper)
 
@@ -396,10 +396,12 @@ python -m archive_keeper.cli "D:\Archive\Photos"
 ### Ключавыя модулі
 
 - `archive_keeper/cli.py` — кропка ўваходу CLI (каманда `archive-keeper`).
-- `archive_keeper/engine.py` — логіка сканавання, хэшавання і параўнання.
-- `archive_keeper/scanner.py` — абход файлавай сістэмы і вылічэнне SHA-256.
+- `archive_keeper/keeper.py` — batch-аркестрацыя сверкі цэласнасці архіва.
+- `archive_keeper/processor.py` — вылічэнне SHA-256 для аднаго файла.
+- `archive_keeper/store.py` — DB-мяжа для пераходаў станаў файлаў архіва.
+- `archive_keeper/watcher.py` — polling-абгортка рэжыму дэмана паверх `Keeper`.
 
-## Распазнаванне твараў (Face Detector)
+## Распазнаванне твараў (Face Recognizer)
 
 > **⚠️ Статус**: У распрацоўцы. Пакуль не цалкам пратэсціраваны або дакументаваны. Не ўваходзіць ва ўсталяваны пакет; запускаць з зыходнікаў.
 
@@ -424,38 +426,51 @@ pip install -e .[face-insightface]
 
 **Сканаванне і кластарызацыя:**
 ```sh
-python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES"
+python -m face_recognizer.cli batch --path "D:\Archive\PHOTO_ARCHIVES"
 ```
 
 **Без кластарызацыі:**
 ```sh
-python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluster
+python -m face_recognizer.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluster
 ```
 
 **Паўторная апрацоўка ўжо праіндэксаваных файлаў:**
 ```sh
-python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
+python -m face_recognizer.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
+```
+
+**Выяўленне твараў у адным файле (без аркестрацыі праз БД):**
+```sh
+python -m face_recognizer.cli process --file "D:\Archive\2024\photo.jpg"
 ```
 
 **Прэв'ю выяўленых твараў:**
 ```sh
-python -m face_detector.cli preview --file "D:\Archive\2024\photo.jpg"
+python -m face_recognizer.cli preview --file "D:\Archive\2024\photo.jpg"
+```
+
+**Рэжым дэмана:**
+```sh
+python -m face_recognizer.cli watch
 ```
 
 Поўны спіс аргументаў:
 
 ```sh
-python -m face_detector.cli --help
+python -m face_recognizer.cli --help
 ```
 
 ### Ключавыя модулі
 
-- `face_detector/cli.py` — CLI (падкаманды `batch`, `preview`).
-- `face_detector/engine.py` — аркестрацыя пакетнага выяўлення па дрэве каталогаў.
-- `face_detector/detector.py` — абстрактны базавы клас для дэтэктар-плагінаў.
-- `face_detector/store.py` — SQLite-сховішча для эмбедынгаў твараў.
-- `face_detector/clusterer.py` — кластарызацыя ідэнтычнасцяў на аснове DBSCAN.
-- `face_detector/visualizer.py` — візуалізацыя выяўленых твараў на прэв'ю выяў.
+- `face_recognizer/cli.py` — CLI (падкаманды `batch`, `process`, `preview`, `watch`).
+- `face_recognizer/recognizer.py` — orchestration-слой распазнавання твараў для batch і daemon рэжымаў.
+- `face_recognizer/detector.py` — plugin contract і рэестр дэтэктараў.
+- `face_recognizer/classes.py` — агульныя налады распазнавальніка і тыпы даных.
+- `face_recognizer/processor.py` — нізкаўзроўневае выяўленне твараў у адным файле без DB-аркестрацыі.
+- `face_recognizer/store.py` — SQLite-сховішча для эмбедынгаў твараў.
+- `face_recognizer/clusterer.py` — кластарызацыя ідэнтычнасцяў на аснове DBSCAN.
+- `face_recognizer/previewer.py` — візуалізацыя выяўленых твараў на прэв'ю выяў.
+- `face_recognizer/watcher.py` — polling-абгортка рэжыму дэмана паверх `Recognizer`.
 
 ## Налада (Setup Runner)
 
@@ -465,7 +480,7 @@ python -m face_detector.cli --help
 
 - **Правярае ExifTool** — правярае наяўнасць залежнасці; прапануе аўтаматычную ўсталёўку праз winget (Windows) або Homebrew (macOS) або выводзіць інструкцыі для ручной усталёўкі.
 - **Наладжвае шляхі** — запытвае папку ўваходных файлаў (inbox) і корань архіва, стварае іх пры неабходнасці.
-- **Стварае канфігі дэманаў** — генеруе `config.json` для `file-organizer`, `preview-maker` і `face-detector`.
+- **Стварае канфігі дэманаў** — генеруе `config.json` для `file-organizer`, `preview-maker`, `tile-cutter` і `face-recognizer`.
 - **Стварае ярлык на працоўным стале** — ярлык для вэб-дашборда (`http://127.0.0.1:8000/`) на працоўным стале (Windows, macOS, Linux).
 - **Апцыянальна запускае вэб-дашборд** — адразу пасля налады можа запусціць `florentine-web`.
 
@@ -550,7 +565,7 @@ pip install --upgrade .
 - `file_organizer.log` — актыўнасць File Organizer (`file-organizer`)
 - `archive_keeper.log` — актыўнасць Archive Keeper
 - `preview_maker.log` — актыўнасць Preview Maker (`preview-maker`)
-- `face_detector.log` — актыўнасць Face Detector
+- `face_recognizer.log` — актыўнасць Face Recognizer
 
 **Карыстальніцкае размяшчэнне логаў:**
 

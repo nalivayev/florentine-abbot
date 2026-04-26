@@ -10,6 +10,7 @@ from unittest.mock import patch
 from common.logger import Logger
 from file_organizer.processor import FileProcessor
 
+
 class TestFileProcessor:
     """
     Tests for FileProcessor suffix routing and file processing.
@@ -80,4 +81,3 @@ class TestFileProcessor:
             processor.process(Path("dummy.tiff"), parsed, no_metadata=False)
 
         mock_write.assert_called_once()
-

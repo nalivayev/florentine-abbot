@@ -28,6 +28,7 @@ def _get_subclasses(cls: type) -> list[type]:
         subclasses.extend(_get_subclasses(subclass))
     return subclasses
 
+
 def _create_batch(
     logger: Logger,
     batch: Sequence[str] | None, 
@@ -69,6 +70,7 @@ def _create_batch(
     
     raise ValueError(f"Unknown batch type: {batch[0]}")
 
+
 def _create_workflow(logger: Logger, engine: str = DEFAULT_ENGINE, no_metadata: bool = False) -> Workflow:
     """
     Get a registered workflow class by engine name and return its instance.
@@ -85,6 +87,7 @@ def _create_workflow(logger: Logger, engine: str = DEFAULT_ENGINE, no_metadata: 
     """
     workflow_class = get_workflow(engine)
     return workflow_class(logger, no_metadata=no_metadata)
+
 
 def main() -> None:
     """
@@ -137,6 +140,7 @@ def main() -> None:
             continue
 
     logger.info("Script has been completed")
+
 
 if __name__ == "__main__":
     main()

@@ -15,10 +15,6 @@
       <span class="info-label">{{ t('daemons.watch') }}</span>
       <span class="info-value">{{ item.daemon.watch_path }}</span>
     </div>
-    <div class="info-row" v-if="item.daemon?.output_path">
-      <span class="info-label">{{ t('daemons.output') }}</span>
-      <span class="info-value">{{ item.daemon.output_path }}</span>
-    </div>
 
     <div class="service-actions">
       <button v-if="item.daemon?.status === 'running'"
@@ -62,13 +58,18 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { apiFetch, apiUrl } from '../api.js'
+import { replaceForRouteFailure, ROUTE_LOAD_TIMEOUT_MS } from '../routeErrors.js'
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 
 const DAEMON_LIST = [
   { key: 'processor', name: 'preview-maker' },
   { key: 'tiler', name: 'tile-cutter' },
+  { key: 'recognizer', name: 'face-recognizer' },
   { key: 'keeper', name: 'archive-keeper' },
 ]
 
@@ -86,9 +87,20 @@ const daemonItems = computed(() =>
   }))
 )
 
-async function fetchDaemons() {
-  const res = await apiFetch('/daemons')
-  daemons.value = await res.json()
+async function fetchDaemons({ fatal = false } = {}) {
+  try {
+    const res = await apiFetch('/daemons', { timeoutMs: ROUTE_LOAD_TIMEOUT_MS })
+    if (!res.ok) {
+      if (fatal) await replaceForRouteFailure(router, route, res)
+      return false
+    }
+
+    daemons.value = await res.json()
+    return true
+  } catch (error) {
+    if (fatal) await replaceForRouteFailure(router, route, error)
+    return false
+  }
 }
 
 async function start(name) {
@@ -121,8 +133,10 @@ function closeLog() {
 }
 
 onMounted(() => {
-  fetchDaemons()
-  pollInterval = setInterval(fetchDaemons, 5000)
+  void fetchDaemons({ fatal: true })
+  pollInterval = setInterval(() => {
+    void fetchDaemons()
+  }, 5000)
 })
 
 onUnmounted(() => {

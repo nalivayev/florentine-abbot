@@ -1,9 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { apiUrl } from './api.js'
 import LoginView from './views/LoginView.vue'
-import AlbumsView from './views/AlbumsView.vue'
+import CollectionsView from './views/CollectionsView.vue'
 import CollectionView from './views/CollectionView.vue'
+import ErrorView from './views/ErrorView.vue'
 import FileView from './views/FileView.vue'
+import NotFoundView from './views/NotFoundView.vue'
 import WipView from './views/WipView.vue'
 import ConfigView from './views/ConfigView.vue'
 import ImportView from './views/ImportView.vue'
@@ -13,9 +15,11 @@ import UsersView from './views/UsersView.vue'
 
 const routes = [
   { path: '/login', component: LoginView },
-  { path: '/albums', component: AlbumsView, meta: { requiresAuth: true } },
-  { path: '/albums/:id', component: CollectionView, meta: { requiresAuth: true } },
-  { path: '/albums/:id/:fileId', component: FileView, meta: { requiresAuth: true, viewer: true } },
+  { path: '/collections', component: CollectionsView, meta: { requiresAuth: true } },
+  { path: '/collections/:id', component: CollectionView, meta: { requiresAuth: true } },
+  { path: '/collections/:id/:fileId', component: FileView, meta: { requiresAuth: true, viewer: true } },
+  { path: '/error', name: 'error', component: ErrorView, meta: { requiresAuth: true } },
+  { path: '/not-found', name: 'not-found', component: NotFoundView, meta: { requiresAuth: true } },
   { path: '/photos', component: WipView, meta: { requiresAuth: true } },
   { path: '/map', component: WipView, meta: { requiresAuth: true } },
   { path: '/people', component: WipView, meta: { requiresAuth: true } },
@@ -27,7 +31,7 @@ const routes = [
   { path: '/import/scan', component: ImportScanView, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/services', component: ServicesView, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/users', component: UsersView, meta: { requiresAuth: true, requiresAdmin: true } },
-  { path: '/:pathMatch(.*)*', redirect: '/albums' },
+  { path: '/:pathMatch(.*)*', component: NotFoundView, meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({
@@ -77,7 +81,7 @@ router.beforeEach(async (to) => {
     }
 
     if (to.meta.requiresAdmin && _user.role !== 'admin') {
-      return '/albums'
+      return '/collections'
     }
   }
 

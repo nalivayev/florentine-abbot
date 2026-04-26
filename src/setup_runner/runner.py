@@ -27,7 +27,7 @@ class Runner(ABC):
     Platform subclasses override the exiftool-related methods.
     """
 
-    _DAEMON_NAMES = ("file-organizer", "preview-maker", "face-detector")
+    _DAEMON_NAMES = ("file-organizer", "preview-maker", "tile-cutter", "face-recognizer")
 
     def __init__(self) -> None:
         if sys.platform == "win32":
@@ -80,12 +80,21 @@ class Runner(ABC):
         path = Path(__file__).resolve().parent.parent / module / "config.template.json"
         return self._load_json(path) if path.exists() else {}
 
-    def _merge_watch(self, existing: dict[str, Any], template: dict[str, Any],
-                     watch_update: dict[str, Any]) -> dict[str, Any]:
-        """Start from template, overlay existing settings, then apply watch_update."""
+    def _merge_config(
+        self,
+        existing: dict[str, Any],
+        template: dict[str, Any],
+        updates: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Start from template, overlay existing settings, then apply explicit updates."""
         result = dict(template)
         result.update({k: v for k, v in existing.items() if k != "watch"})
-        result["watch"] = {**template.get("watch", {}), **existing.get("watch", {}), **watch_update}
+        result.update({k: v for k, v in updates.items() if k != "watch"})
+
+        template_watch = template.get("watch") if isinstance(template.get("watch"), dict) else None
+        update_watch = updates.get("watch") if isinstance(updates.get("watch"), dict) else None
+        if template_watch is not None or update_watch is not None:
+            result["watch"] = {**(template_watch or {}), **(update_watch or {})}
         return result
 
     def _ensure_dir(self, path_str: str, label: str) -> None:
@@ -99,11 +108,22 @@ class Runner(ABC):
         else:
             print("  Skipped — make sure to create it before starting the daemon.")
 
-    def _configure_daemon(self, daemon: str, module: str, watch_update: dict[str, Any]) -> None:
+    def _configure_daemon(self, daemon: str, module: str, updates: dict[str, Any]) -> None:
         path = self.config_dir / daemon / "config.json"
-        data = self._merge_watch(self._load_json(path) if path.exists() else {},
-                                 self._load_template(module),
-                                 watch_update)
+        data = self._merge_config(
+            self._load_json(path) if path.exists() else {},
+            self._load_template(module),
+            updates,
+        )
+        self._save_json(path, data)
+
+    def _write_global_config(self, archive: str) -> None:
+        path = self.config_dir / "config.json"
+        data = self._merge_config(
+            self._load_json(path) if path.exists() else {},
+            self._load_template("common"),
+            {"archive_path": archive},
+        )
         self._save_json(path, data)
 
     def _exiftool_ok(self) -> bool:
@@ -143,9 +163,11 @@ class Runner(ABC):
 
     def _step_write_configs(self, inbox: str, archive: str) -> None:
         print("  Writing configuration files...")
-        self._configure_daemon("file-organizer", "file_organizer", {"path": inbox, "output": archive})
-        self._configure_daemon("preview-maker",  "preview_maker",  {"path": archive})
-        self._configure_daemon("face-detector",  "face_detector",  {"path": archive})
+        self._write_global_config(archive)
+        self._configure_daemon("file-organizer", "file_organizer", {"watch": {"path": inbox}})
+        self._configure_daemon("preview-maker",  "preview_maker",  {})
+        self._configure_daemon("tile-cutter",    "tile_cutter",    {})
+        self._configure_daemon("face-recognizer",  "face_recognizer",  {})
         print()
 
     def _step_shortcut(self) -> None:

@@ -2,7 +2,7 @@
   "nav": {
     "photos": "Photos",
     "map": "Map",
-    "albums": "Albums",
+    "collections": "Collections",
     "people": "People",
     "genealogy": "Genealogy",
     "timeline": "Timeline",
@@ -15,17 +15,91 @@
     "collapse": "Collapse sidebar",
     "expand": "Expand sidebar"
   },
-  "albums": {
-    "title": "Albums",
+  "collections": {
+    "title": "Collections",
     "empty": "No collections yet",
     "import_btn": "Import photos",
     "loading": "Loading…",
     "no_files": "No files in this collection",
-    "no_preview": "No preview"
+    "no_preview": "No preview",
+    "details": "Details",
+    "map": "Map",
+    "map_title": "Map and place",
+    "map_placeholder": "The map panel is a placeholder for now. Photo geolocation and place binding will appear here later.",
+    "people": "People",
+    "people_title": "People in photo",
+    "people_placeholder": "The people panel is a placeholder for now. Portraits and captions for recognized people will appear here later.",
+    "faces_detected": "Faces detected: {count}",
+    "no_faces": "No faces detected in this photo yet.",
+    "unknown_person": "Unassigned",
+    "unknown_person_numbered": "Unknown {index}",
+    "cluster_short": "Cluster #{id}",
+    "open_details": "Open details",
+    "open_map": "Open map",
+    "open_people": "Open people panel",
+    "close_panel": "Close panel",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "previous": "Previous",
+    "next": "Next",
+    "status": "Status",
+    "date": "Photo date",
+    "imported_at": "Imported",
+    "description": "Description",
+    "creators": "Creators",
+    "source": "Source",
+    "credit": "Credit",
+    "history": "History",
+    "no_metadata": "No semantic metadata available for this file yet.",
+    "file_status": {
+      "active": "Ready",
+      "new": "Pending",
+      "modified": "Updated",
+      "missing": "Missing",
+      "deleted": "Deleted",
+      "corrupted": "Corrupted"
+    },
+    "history_action": {
+      "managed": "Managed",
+      "created": "Created",
+      "edited": "Edited",
+      "converted": "Converted"
+    },
+    "history_changed": {
+      "metadata": "Metadata",
+      "content": "Content",
+      "history": "History"
+    },
+    "date_accuracy": {
+      "exact": "exact",
+      "before": "before",
+      "circa": "circa",
+      "after": "after",
+      "unknown": "unknown"
+    }
   },
   "wip": {
     "title": "Section under development",
     "hint": "This section is not ready yet. Check back later."
+  },
+  "not_found": {
+    "title": "Page not found",
+    "hint": "This address does not exist in the current frontend route structure.",
+    "action": "Back"
+  },
+  "error_view": {
+    "title": "Failed to open the page",
+    "hint": "An error occurred while loading this page. Please try again later.",
+    "network_title": "Server unavailable",
+    "network_hint": "The app could not reach the server. Check the connection and try again.",
+    "timeout_title": "Request timed out",
+    "timeout_hint": "The server did not respond in time. Please try again later.",
+    "server_title": "Server error",
+    "server_hint": "The server could not process this request. Please try again later.",
+    "http_title": "Page load error",
+    "http_hint": "The server returned an error while loading this page.",
+    "retry": "Retry",
+    "back": "Back"
   },
   "settings": {
     "title": "Settings",
@@ -79,9 +153,30 @@
       "writes_title": "What will be written during import",
       "write_identifier": "dc:identifier / xmp:Identifier — internal archive ID (UUID) for linking previews and derivatives.",
       "write_date": "EXIF DateTimeOriginal and XMP-photoshop:DateCreated — date decoded from the file name. For exact dates (modifier E) the full timestamp is written; for approximate dates — a partial value.",
-      "write_history": "XMP History entry (xmpMM:History) — records that file-organizer processed this file, with timestamp and version.",
+      "write_history": "XMP History entry (xmpMM:History) — records that scan import updated the file inside the archive, with timestamp and version.",
       "write_instance": "xmpMM:InstanceID — updated to reflect this version of the file after metadata is written.",
       "format_hint": "These templates determine how files will be named and organised in the archive. The defaults match the standard scheme — change only if you know what you are doing.",
+      "metadata_hint": "This step lets you fill additional archive fields for the whole batch. You can also save them as future defaults.",
+      "metadata_default_language": "Default language",
+      "metadata_description": "Description",
+      "metadata_description_hint": "Briefly describe what is shown or what series this image belongs to.",
+      "metadata_creator": "Creator",
+      "metadata_creator_hint": "One name per line",
+      "metadata_creator_help": "List the original author, scanning author, or archive compilers when relevant.",
+      "metadata_rights": "Rights",
+      "metadata_rights_hint": "Rights statement for scanning, publication, or current use of the file.",
+      "metadata_source": "Source",
+      "metadata_source_hint": "Where the original comes from: album, box, folder, family archive, collection, etc.",
+      "metadata_credit": "Credit",
+      "metadata_credit_hint": "Who or which archive should be credited when the image is used.",
+      "metadata_terms": "Usage terms",
+      "metadata_terms_hint": "Short access or usage terms if they apply to the whole batch.",
+      "metadata_marked": "Mark as rights-managed content",
+      "metadata_marked_hint": "Enable only if this batch should explicitly signal rights ownership or restrictions.",
+      "metadata_save_defaults": "Save as defaults",
+      "metadata_saving": "Saving…",
+      "metadata_saved": "Defaults saved",
+      "metadata_save_error": "Failed to save defaults",
       "start": "Continue",
       "source_path": "Source folder",
       "source_path_placeholder": "C:\\scans",
@@ -136,8 +231,8 @@
       "label": "Archive Keeper",
       "description": "Monitors archive integrity: checksums, missing files, lifecycle tracking."
     },
-    "detector": {
-      "label": "Face Detector",
+    "recognizer": {
+      "label": "Face Recognizer",
       "description": "Scans archive for unprocessed photos and detects faces."
     }
   },

@@ -74,10 +74,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { apiFetch } from '../api.js'
+import { replaceForRouteFailure, ROUTE_LOAD_TIMEOUT_MS } from '../routeErrors.js'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const { t, locale } = useI18n()
+const route = useRoute()
+const router = useRouter()
 
 const users = ref([])
 const currentUserId = ref(null)
@@ -88,16 +92,24 @@ const formError = ref('')
 const form = ref({ username: '', password: '', role: 'user' })
 
 async function fetchUsers() {
-  const res = await apiFetch('/users')
+  const res = await apiFetch('/users', { timeoutMs: ROUTE_LOAD_TIMEOUT_MS })
+  if (!res.ok) throw res
   users.value = await res.json()
 }
 
 async function fetchMe() {
-  const res = await apiFetch('/auth/me')
+  const res = await apiFetch('/auth/me', { timeoutMs: ROUTE_LOAD_TIMEOUT_MS })
   if (res.ok) currentUserId.value = (await res.json()).id
 }
 
-onMounted(() => Promise.all([fetchUsers(), fetchMe()]))
+onMounted(async () => {
+  try {
+    await fetchUsers()
+    await fetchMe()
+  } catch (error) {
+    await replaceForRouteFailure(router, route, error)
+  }
+})
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString(locale.value, { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -169,7 +181,7 @@ async function addUser() {
 .role-badge {
   display: inline-block;
   padding: 0.1rem var(--sp-2);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   font-size: var(--fs-xs);
   font-weight: 500;
 }

@@ -1,14 +1,7 @@
-"""
-Shared constants for Tile Cutter.
-"""
-
-from typing import Any
-
-# Default PIL save kwargs for tile output
-DEFAULT_FORMAT_OPTIONS: dict[str, Any] = {
-    "quality": 85,
-    "optimize": True,
-}
+"""Shared constants for Tile Cutter."""
 
 DEFAULT_SIZE: int = 4000       # short side in pixels for the intermediate image
 DEFAULT_TILE_SIZE: int = 256   # tile side in pixels
+
+DAEMON_NAME: str = "tile-cutter"
+TILES_DIR: str = "tiles"    # directory name under ARCHIVE_SYSTEM_DIR for tile pyramids

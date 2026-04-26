@@ -65,7 +65,6 @@ class FileOrganizer:
                 f"({resolved_out}); they must not overlap"
             )
 
-
     def __init__(self, logger: Logger, config_path: str | Path | None = None) -> None:
         """
         Initialize the organizer.
@@ -82,7 +81,6 @@ class FileOrganizer:
         self._processor = FileProcessor(logger, metadata_config=self._config.metadata)
         self._router = Router(routes=cfg.routes, logger=logger, formats=cfg.formats)
 
-
     def reload_config(self) -> bool:
         """Reload file-organizer config and rebuild processor with updated metadata.
 
@@ -93,7 +91,6 @@ class FileOrganizer:
         if changed:
             self._processor = FileProcessor(self._logger, metadata_config=self._config.metadata)
         return changed
-
 
     def __call__(
         self,
@@ -134,7 +131,6 @@ class FileOrganizer:
             no_metadata=no_metadata,
             dry_run=dry_run,
         )
-
 
     def _run_batch(
         self,
@@ -232,7 +228,6 @@ class FileOrganizer:
             "errors": errors,
             "preview": preview,
         }
-
 
     def process_single_file(
         self,
@@ -375,7 +370,6 @@ class FileOrganizer:
 
         self._logger.info(f"Successfully processed: {dest_path.name}")
 
-
     def should_process(self, file_path: Path, output_path: Path | None = None) -> bool:
         """
         Check if a file should be processed.
@@ -414,7 +408,6 @@ class FileOrganizer:
             return False
 
         return True
-
 
     def _calculate_destination_paths(
         self,

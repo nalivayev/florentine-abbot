@@ -171,7 +171,7 @@ function cancel() {
 }
 .dialog {
   background: var(--surface);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: var(--sp-6);
   width: 560px;
   max-height: 80vh;
@@ -192,9 +192,9 @@ function cancel() {
 }
 .template-input {
   width: 100%;
-  padding: var(--sp-2) 0.6rem;
+  padding: var(--inset-control-y) var(--inset-control-x);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   font-family: monospace;
   font-size: var(--fs-base);
   color: var(--text);
@@ -246,8 +246,8 @@ function cancel() {
   align-items: baseline;
   gap: var(--sp-2);
   cursor: pointer;
-  padding: 0.2rem 0.4rem;
-  border-radius: 3px;
+  padding: var(--inset-chip-y) var(--inset-chip-x);
+  border-radius: var(--radius-xs);
 }
 .tag-item:hover { background: var(--bg); }
 .tag-chip {

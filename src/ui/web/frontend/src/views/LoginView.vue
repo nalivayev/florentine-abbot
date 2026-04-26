@@ -50,7 +50,7 @@ async function submit() {
     if (window.location.pathname.startsWith('/admin')) {
       router.push('/admin/config')
     } else {
-      router.push('/albums')
+      router.push('/collections')
     }
   } catch {
     error.value = t('login.error_unavailable')
@@ -88,9 +88,9 @@ label {
 }
 input {
   width: 100%;
-  padding: var(--sp-2) 0.6rem;
+  padding: var(--inset-control-y) var(--inset-control-x);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--surface);
   color: var(--text);
   font-size: var(--fs-base);
@@ -103,11 +103,11 @@ input:focus {
 button {
   width: 100%;
   margin-top: var(--sp-2);
-  padding: 0.55rem;
+  padding: var(--inset-control-y-roomy);
   background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   font-size: var(--fs-base);
   cursor: pointer;
 }

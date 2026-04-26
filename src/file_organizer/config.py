@@ -3,7 +3,7 @@ Configuration management for file organizer.
 """
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from common.logger import Logger
 from common.config_utils import get_config_dir, ensure_config_exists, load_config, get_template_path
@@ -74,8 +74,10 @@ class Config:
             self._logger.debug("Configuration unchanged")
             return False
     
-
     @property
-    def metadata(self) -> dict:
+    def metadata(self) -> dict[str, Any]:
         """The ``metadata`` section (tag mapping + per-language texts)."""
-        return self._data.get("metadata", {})
+        metadata = self._data.get("metadata")
+        if isinstance(metadata, dict):
+            return cast(dict[str, Any], metadata)
+        return {}

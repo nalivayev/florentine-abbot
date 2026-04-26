@@ -1,0 +1,33 @@
+{
+
+  "help": [
+    "Configuration for Face Recognizer.",
+    "",
+    "detector:",
+    "  Symbolic name of the detector plugin to use (e.g. 'insightface').",
+    "  Plugin-specific settings live in a separate config file:",
+    "  detectors/<name>/config.json (created from the plugin's template).",
+    "",
+    "processing:",
+    "  source_extensions:  File extensions eligible for face detection.",
+    "  source_priority:    Deprecated legacy field. Ignored by face-recognizer.",
+    "                      Face detection now considers any eligible image.",
+    "",
+    "clustering:",
+    "  eps:          DBSCAN cosine distance threshold (0.0–1.0).",
+    "  min_samples:  Minimum faces to form a cluster."
+  ],
+
+  "detector": "insightface",
+
+  "processing": {
+    "source_extensions": [".jpg", ".jpeg", ".tif", ".tiff", ".png", ".bmp"],
+    "source_priority": []
+  },
+
+  "clustering": {
+    "eps": 0.4,
+    "min_samples": 2
+  }
+
+}

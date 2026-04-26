@@ -369,9 +369,9 @@ preview-maker batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
 preview-maker watch --path "D:\Archive\PHOTO_ARCHIVES"
 ```
 
-**Конвертация одиночного файла (без пайплайна, без метаданных):**
+**Обработка одного файла (без метаданных и без оркестрации через БД):**
 ```sh
-preview-maker convert --file "D:\photo.jpg" --size 2000 --format jpeg --quality 80
+preview-maker process --file "D:\Archive\PHOTO_ARCHIVES\1950\1950.06.15\SOURCES\1950.06.15.12.00.00.E.FAM.POR.0001.A.MSR.tiff" --output "D:\Temp\1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
 ```
 
 Логи пишутся по тем же правилам, что и у других утилит:
@@ -380,11 +380,11 @@ preview-maker convert --file "D:\photo.jpg" --size 2000 --format jpeg --quality 
 
 ### Ключевые модули
 
-- `preview_maker/cli.py` — CLI (подкоманды `batch`, `watch`, `convert`).
-- `preview_maker/maker.py` — ядро логики генерации PRV.
-- `preview_maker/converter.py` — чистая конвертация изображений (ресайз + формат); используется и пайплайном, и подкомандой `convert`.
+- `preview_maker/cli.py` — CLI (подкоманды `batch`, `process`, `watch`).
+- `preview_maker/maker.py` — orchestration-слой генерации PRV для batch и daemon режимов.
+- `preview_maker/processor.py` — низкоуровневая обработка одного файла (ресайз + запись формата) без метаданных и без DB-логики.
 - `preview_maker/constants.py` — карты форматов, размеры по умолчанию, алиасы форматов.
-- `preview_maker/watcher.py` — режим демона через watchdog, делегирует `PreviewMaker`.
+- `preview_maker/watcher.py` — режим демона через watchdog, делегирует `Maker`.
 
 ## Целостность архива (Archive Keeper)
 
@@ -410,10 +410,12 @@ python -m archive_keeper.cli "D:\Archive\Photos"
 ### Ключевые модули
 
 - `archive_keeper/cli.py` — точка входа CLI (команда `archive-keeper`).
-- `archive_keeper/engine.py` — логика сканирования, хеширования и сравнения.
-- `archive_keeper/scanner.py` — обход файловой системы и вычисление SHA-256.
+- `archive_keeper/keeper.py` — batch-оркестрация сверки целостности архива.
+- `archive_keeper/processor.py` — вычисление SHA-256 для одного файла.
+- `archive_keeper/store.py` — DB-граница для переходов состояний файлов архива.
+- `archive_keeper/watcher.py` — polling-обёртка режима демона поверх `Keeper`.
 
-## Распознавание лиц (Face Detector)
+## Распознавание лиц (Face Recognizer)
 
 > **⚠️ Статус**: В разработке. Пока не полностью протестирован или документирован. Не входит в устанавливаемый пакет; запускать из исходников.
 
@@ -438,38 +440,51 @@ pip install -e .[face-insightface]
 
 **Сканирование и кластеризация:**
 ```sh
-python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES"
+python -m face_recognizer.cli batch --path "D:\Archive\PHOTO_ARCHIVES"
 ```
 
 **Без кластеризации:**
 ```sh
-python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluster
+python -m face_recognizer.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --no-cluster
 ```
 
 **Повторная обработка уже проиндексированных файлов:**
 ```sh
-python -m face_detector.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
+python -m face_recognizer.cli batch --path "D:\Archive\PHOTO_ARCHIVES" --overwrite
+```
+
+**Обнаружение лиц в одном файле (без оркестрации через БД):**
+```sh
+python -m face_recognizer.cli process --file "D:\Archive\2024\photo.jpg"
 ```
 
 **Превью обнаруженных лиц:**
 ```sh
-python -m face_detector.cli preview --file "D:\Archive\2024\photo.jpg"
+python -m face_recognizer.cli preview --file "D:\Archive\2024\photo.jpg"
+```
+
+**Режим демона:**
+```sh
+python -m face_recognizer.cli watch
 ```
 
 Полный список аргументов:
 
 ```sh
-python -m face_detector.cli --help
+python -m face_recognizer.cli --help
 ```
 
 ### Ключевые модули
 
-- `face_detector/cli.py` — CLI (подкоманды `batch`, `preview`).
-- `face_detector/engine.py` — оркестрация пакетного обнаружения по дереву каталогов.
-- `face_detector/detector.py` — абстрактный базовый класс для детектор-плагинов.
-- `face_detector/store.py` — SQLite-хранилище для эмбеддингов лиц.
-- `face_detector/clusterer.py` — кластеризация идентичностей на основе DBSCAN.
-- `face_detector/visualizer.py` — визуализация обнаруженных лиц на превью изображений.
+- `face_recognizer/cli.py` — CLI (подкоманды `batch`, `process`, `preview`, `watch`).
+- `face_recognizer/recognizer.py` — orchestration-слой распознавания лиц для batch и daemon режимов.
+- `face_recognizer/detector.py` — plugin contract и реестр детекторов.
+- `face_recognizer/classes.py` — общие настройки распознавателя и типы данных.
+- `face_recognizer/processor.py` — низкоуровневое обнаружение лиц в одном файле без DB-оркестрации.
+- `face_recognizer/store.py` — SQLite-хранилище для эмбеддингов лиц.
+- `face_recognizer/clusterer.py` — кластеризация идентичностей на основе DBSCAN.
+- `face_recognizer/previewer.py` — визуализация обнаруженных лиц на превью изображений.
+- `face_recognizer/watcher.py` — polling-обёртка режима демона поверх `Recognizer`.
 
 ## Настройка (Setup Runner)
 
@@ -479,7 +494,7 @@ python -m face_detector.cli --help
 
 - **Проверяет ExifTool** — проверяет наличие зависимости; предлагает автоматическую установку через winget (Windows) или Homebrew (macOS) или выводит инструкции для ручной установки.
 - **Настраивает пути** — запрашивает папку входящих файлов (inbox) и корень архива, создаёт их при необходимости.
-- **Создаёт конфиги демонов** — генерирует `config.json` для `file-organizer`, `preview-maker` и `face-detector`.
+- **Создаёт конфиги демонов** — генерирует `config.json` для `file-organizer`, `preview-maker`, `tile-cutter` и `face-recognizer`.
 - **Создаёт ярлык на рабочем столе** — ярлык для веб-дашборда (`http://127.0.0.1:8000/`) на рабочем столе (Windows, macOS, Linux).
 - **Опционально запускает веб-дашборд** — сразу после настройки может запустить `florentine-web`.
 
@@ -564,7 +579,7 @@ pip install --upgrade .
 - `file_organizer.log` — активность File Organizer (`file-organizer`)
 - `archive_keeper.log` — активность Archive Keeper
 - `preview_maker.log` — активность Preview Maker (`preview-maker`)
-- `face_detector.log` — активность Face Detector
+- `face_recognizer.log` — активность Face Recognizer
 
 **Пользовательское расположение логов:**
 

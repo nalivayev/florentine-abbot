@@ -18,12 +18,7 @@ import pytest
 from file_organizer.organizer import FileOrganizer
 from file_organizer.constants import DEFAULT_METADATA
 from common.project_config import ProjectConfig
-from common.constants import (
-    DEFAULT_CONFIG,
-    TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID,
-    TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY,
-    XMP_ACTION_CREATED, XMP_ACTION_EDITED,
-)
+from common.constants import DEFAULT_CONFIG, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMP_CREATOR_TOOL, TAG_XMP_XMPMM_HISTORY, XMP_ACTION_CREATED, XMP_ACTION_EDITED
 from common.logger import Logger
 from common.exifer import Exifer
 from common.tagger import Tagger

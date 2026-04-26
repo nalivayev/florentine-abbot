@@ -3,13 +3,14 @@ Auth routes — login, logout, current user.
 """
 
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from common.auth import generate_token, hash_token, token_expires_at, verify_password
-from common.db import get_conn
-from ui.web.deps import get_current_user
+from common.auth import generate_token, token_expires_at, verify_password
+from ui.web.deps import get_current_user, get_web_store
+from ui.web.store import WebStore
 
 router = APIRouter()
 
@@ -20,12 +21,8 @@ class LoginRequest(BaseModel):
 
 
 @router.post("/auth/login")
-async def login(req: LoginRequest) -> dict:
-    conn = get_conn()
-    row = conn.execute(
-        "SELECT id, password_hash, is_active FROM users WHERE username = ?",
-        (req.username,),
-    ).fetchone()
+async def login(req: LoginRequest, store: WebStore = Depends(get_web_store)) -> dict[str, str]:
+    row = store.get_user_for_login(req.username)
 
     if not row or not verify_password(req.password, row["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -34,25 +31,26 @@ async def login(req: LoginRequest) -> dict:
 
     raw, hashed = generate_token()
     now = datetime.now(timezone.utc).isoformat()
-    conn.execute(
-        "INSERT INTO sessions (user_id, token_hash, created_at, expires_at) VALUES (?, ?, ?, ?)",
-        (row["id"], hashed, now, token_expires_at()),
+    store.create_session(
+        user_id=int(row["id"]),
+        token_hash=hashed,
+        created_at=now,
+        expires_at=token_expires_at(),
     )
-    conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (now, row["id"]))
-    conn.commit()
+    store.update_last_login(int(row["id"]), now)
 
     return {"token": raw}
 
 
 @router.post("/auth/logout")
-async def logout(user: dict = Depends(get_current_user)) -> dict:
-    conn = get_conn()
-    conn.execute("DELETE FROM sessions WHERE user_id = ? AND token_hash = ?",
-                 (user["id"], user["token_hash"]))
-    conn.commit()
+async def logout(
+    user: dict[str, Any] = Depends(get_current_user),
+    store: WebStore = Depends(get_web_store),
+) -> dict[str, bool]:
+    store.delete_session(int(user["id"]), str(user["token_hash"]))
     return {"ok": True}
 
 
 @router.get("/auth/me")
-async def me(user: dict = Depends(get_current_user)) -> dict:
+async def me(user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
     return {"id": user["id"], "username": user["username"], "role": user["role"]}

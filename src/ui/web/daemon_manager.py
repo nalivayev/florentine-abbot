@@ -1,21 +1,23 @@
 """
 Daemon process manager.
 
-Reads watch paths from each daemon's config.json, launches them as
-subprocesses using the installed CLI scripts, and tracks their lifecycle.
+Uses the global archive path from common config, launches daemon CLI
+processes, and tracks their lifecycle.
 """
 
-import json
+import os
 import subprocess
 import sys
 import threading
-from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
-from common.config_utils import get_config_dir, get_archive_path
+from common.config_utils import get_archive_path
+
+
+_SRC_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 class DaemonStatus(str, Enum):
@@ -37,7 +39,6 @@ class DaemonState:
     descriptor: DaemonDescriptor
     status: DaemonStatus
     watch_path: str | None = None
-    output_path: str | None = None  # file-organizer only
     error: str | None = None
 
 
@@ -45,7 +46,7 @@ class DaemonManager:
     """
     Manages background daemon subprocesses.
 
-    Reads paths from each daemon's config.json (watch.path / watch.output).
+    Reads the archive root from the shared global config.
     Uses the installed CLI scripts to launch subprocesses.
     Thread-safe: all mutations protected by a lock.
     """
@@ -65,6 +66,11 @@ class DaemonManager:
             name="archive-keeper",
             label="Archive Keeper",
             description="Monitors archive integrity: checksums, missing files, lifecycle tracking.",
+        ),
+        DaemonDescriptor(
+            name="face-recognizer",
+            label="Face Recognizer",
+            description="Watches archive for new masters and indexes detected faces.",
         ),
     ]
 
@@ -100,7 +106,7 @@ class DaemonManager:
         with self._lock:
             return list(self._logs.get(name, []))
 
-    def _find_script(self, name: str) -> str:
+    def _find_script(self, name: str) -> str | None:
         """
         Return the full path to an installed CLI script.
 
@@ -112,39 +118,40 @@ class DaemonManager:
             candidate = scripts_dir / f"{name}{ext}"
             if candidate.exists():
                 return str(candidate)
-        return name  # let the OS resolve via PATH
-
-    def _load_config(self, name: str) -> dict[str, Any]:
-        config_path = get_config_dir() / name / "config.json"
-        if not config_path.exists():
-            return {}
-        try:
-            with open(config_path, "r", encoding="utf-8") as fh:
-                return json.load(fh)
-        except Exception:
-            return {}
-
-    def _build_cmd(self, name: str, config: dict[str, Any]) -> list[str] | None:
-        """Build the subprocess argv for a daemon, or None if not configured."""
-        watch = config.get("watch", {})
-        script = self._find_script(name)
-
-        if name == "preview-maker":
-            if get_archive_path() is None:
-                return None
-            return [script, "watch"]
-
-        if name == "tile-cutter":
-            if get_archive_path() is None:
-                return None
-            return [script, "watch"]
-
-        if name == "archive-keeper":
-            if get_archive_path() is None:
-                return None
-            return [script, "watch"]
-
         return None
+
+    @staticmethod
+    def _module_name(name: str) -> str:
+        return name.replace("-", "_")
+
+    def _build_popen_env(self) -> dict[str, str]:
+        """Ensure daemon subprocesses can import packages from the local source tree."""
+        env = os.environ.copy()
+        src_root = str(_SRC_ROOT)
+        pythonpath = env.get("PYTHONPATH", "")
+
+        if pythonpath:
+            parts = pythonpath.split(os.pathsep)
+            if src_root not in parts:
+                env["PYTHONPATH"] = os.pathsep.join([src_root, pythonpath])
+        else:
+            env["PYTHONPATH"] = src_root
+
+        return env
+
+    def _build_cmd(self, name: str) -> list[str] | None:
+        """Build the subprocess argv for a daemon, or None if not configured."""
+        if name not in {"preview-maker", "tile-cutter", "archive-keeper", "face-recognizer"}:
+            return None
+
+        if get_archive_path() is None:
+            return None
+
+        script = self._find_script(name)
+        if script is not None:
+            return [script, "watch"]
+
+        return [sys.executable, "-m", self._module_name(name), "watch"]
 
     def _poll(self, name: str) -> None:
         """
@@ -166,19 +173,16 @@ class DaemonManager:
     def all(self) -> list[DaemonState]:
         """Return current state for every daemon."""
         states: list[DaemonState] = []
-        for d in self._DESCRIPTORS:
-            config = self._load_config(d.name)
-            watch = config.get("watch", {})
-            watch_path = watch.get("path") or None
-            output_path = watch.get("output") or None
+        archive = get_archive_path()
+        watch_path = str(archive) if archive is not None else None
 
-            cmd = self._build_cmd(d.name, config)
+        for d in self._DESCRIPTORS:
+            cmd = self._build_cmd(d.name)
             if cmd is None:
                 states.append(DaemonState(
                     descriptor=d,
                     status=DaemonStatus.NOT_CONFIGURED,
                     watch_path=watch_path,
-                    output_path=output_path,
                 ))
                 continue
 
@@ -199,7 +203,6 @@ class DaemonManager:
                 descriptor=d,
                 status=status,
                 watch_path=watch_path,
-                output_path=output_path,
                 error=error,
             ))
 
@@ -207,8 +210,7 @@ class DaemonManager:
 
     def start(self, name: str) -> None:
         """Launch the daemon subprocess. No-op if already running."""
-        config = self._load_config(name)
-        cmd = self._build_cmd(name, config)
+        cmd = self._build_cmd(name)
         if cmd is None:
             raise ValueError(f"Daemon {name!r} is not configured or has no watch mode")
 
@@ -223,6 +225,8 @@ class DaemonManager:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
+                cwd=str(_REPO_ROOT),
+                env=self._build_popen_env(),
             )
             self._processes[name] = proc
             threading.Thread(

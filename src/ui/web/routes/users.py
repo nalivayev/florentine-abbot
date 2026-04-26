@@ -9,8 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from common.auth import hash_password
-from common.db import get_conn
-from ui.web.deps import require_admin
+from ui.web.deps import get_web_store, require_admin
+from ui.web.store import WebStore
 
 router = APIRouter()
 
@@ -22,30 +22,24 @@ class CreateUserRequest(BaseModel):
 
 
 @router.get("/users")
-async def users_list(_user: dict[str, Any] = Depends(require_admin)) -> list[dict[str, Any]]:
-    conn = get_conn()
-    rows = conn.execute("""
-        SELECT u.id, u.username, r.name AS role, u.is_active, u.created_at, u.last_login_at
-        FROM users u
-        JOIN roles r ON r.id = u.role_id
-        ORDER BY u.id
-    """).fetchall()
-    return [dict(r) for r in rows]
+async def users_list(
+    _user: dict[str, Any] = Depends(require_admin),
+    store: WebStore = Depends(get_web_store),
+) -> list[dict[str, Any]]:
+    return store.list_users()
 
 
 @router.post("/users")
 async def create_user(
     req: CreateUserRequest,
     current_user: dict[str, Any] = Depends(require_admin),
+    store: WebStore = Depends(get_web_store),
 ) -> dict[str, Any]:
-    conn = get_conn()
-
-    role_row = conn.execute("SELECT id FROM roles WHERE name = ?", (req.role,)).fetchone()
-    if not role_row:
+    role_id = store.get_role_id(req.role)
+    if role_id is None:
         raise HTTPException(status_code=400, detail="invalid_role")
 
-    existing = conn.execute("SELECT id FROM users WHERE username = ?", (req.username,)).fetchone()
-    if existing:
+    if store.username_exists(req.username):
         raise HTTPException(status_code=409, detail="username_taken")
 
     if len(req.username) < 3:
@@ -54,34 +48,32 @@ async def create_user(
         raise HTTPException(status_code=400, detail="password_too_short")
 
     now = datetime.now(timezone.utc).isoformat()
-    conn.execute(
-        "INSERT INTO users (username, password_hash, role_id, is_active, created_by, created_at) VALUES (?, ?, ?, 1, ?, ?)",
-        (req.username, hash_password(req.password), role_row["id"], current_user["id"], now),
+    store.create_user(
+        username=req.username,
+        password_hash=hash_password(req.password),
+        role_id=role_id,
+        created_at=now,
+        created_by=int(current_user["id"]),
     )
-    conn.commit()
 
-    row = conn.execute("""
-        SELECT u.id, u.username, r.name AS role, u.is_active, u.created_at, u.last_login_at
-        FROM users u JOIN roles r ON r.id = u.role_id
-        WHERE u.username = ?
-    """, (req.username,)).fetchone()
-    return dict(row)
+    row = store.get_user_summary(req.username)
+    assert row is not None
+    return row
 
 
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: int,
     current_user: dict[str, Any] = Depends(require_admin),
+    store: WebStore = Depends(get_web_store),
 ) -> dict[str, Any]:
     if user_id == current_user["id"]:
         raise HTTPException(status_code=400, detail="cannot_delete_self")
 
-    conn = get_conn()
-    row = conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+    row = store.get_user_by_id(user_id)
     if not row:
         raise HTTPException(status_code=404, detail="not_found")
 
-    conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
-    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
-    conn.commit()
+    store.delete_user_sessions(user_id)
+    store.delete_user(user_id)
     return {"ok": True}

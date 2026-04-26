@@ -30,6 +30,7 @@ class ImportRequest(BaseModel):
     mode: str = "copy"
     collection_id: int | None = None
     collection_type: str = "scan"
+    metadata: dict[str, Any] | None = None
 
 
 def _get_archive_path() -> Path:
@@ -104,6 +105,7 @@ async def import_start(
         collection_type=req.collection_type,
         recursive=req.recursive,
         copy_mode=(req.mode == "copy"),
+        metadata_config=req.metadata,
     )
 
     return {

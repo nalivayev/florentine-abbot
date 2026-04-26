@@ -64,9 +64,7 @@ class Parser(ArgumentParser):
             version=f'scan-batcher (florentine-abbot {get_version()})'
         )
         
-        # Group required arguments for better help output
-        required_group = self.add_argument_group("required arguments")
-        # Add all arguments to the parser (same semantics as before)
+        # Add all arguments to the parser.
         self.add_argument(
             "-b",
             "--batch",

@@ -5,6 +5,7 @@ Provides helpers for config file discovery, loading, creation from templates,
 and fallback to defaults. Used by all major modules.
 """
 
+import copy
 import importlib.resources as resources
 import json
 import os
@@ -12,6 +13,8 @@ import shutil
 import sys
 from pathlib import Path
 from typing import Any
+
+from common.metadata import DEFAULT_METADATA_CONFIG
 
 
 def get_config_dir() -> Path:
@@ -46,6 +49,13 @@ def get_config_path(tool_name: str, custom_path: str | Path | None = None) -> Pa
     
     config_dir = get_config_dir()
     return config_dir / f"{tool_name}.json"
+
+
+def get_metadata_config_path(custom_path: str | Path | None = None) -> Path:
+    """Return the path to the reusable metadata config file."""
+    if custom_path:
+        return Path(custom_path)
+    return get_config_dir() / "metadata.json"
 
 
 def ensure_config_exists(
@@ -178,8 +188,11 @@ def get_archive_path() -> Path | None:
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        archive = data.get("archive", "").strip()
-        return Path(archive) if archive else None
+        archive_path = data.get("archive_path", "")
+        if isinstance(archive_path, str):
+            archive_path = archive_path.strip()
+            return Path(archive_path) if archive_path else None
+        return None
     except Exception:
         return None
 
@@ -195,11 +208,51 @@ def read_daemon_config(name: str) -> dict[str, Any]:
         return {}
 
 
+def read_metadata_config(logger: Any = None, custom_path: str | Path | None = None) -> dict[str, Any]:
+    """Read the reusable metadata config with defaults if absent or invalid."""
+    return load_optional_config(
+        logger,
+        get_metadata_config_path(custom_path),
+        copy.deepcopy(DEFAULT_METADATA_CONFIG),
+    )
+
+
+def write_metadata_config(data: dict[str, Any], custom_path: str | Path | None = None) -> None:
+    """Write the reusable metadata config file."""
+    path = get_metadata_config_path(custom_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def write_daemon_config(name: str, data: dict[str, Any]) -> None:
     """Write a daemon's config.json to the standard config directory."""
     path = get_config_dir() / name / "config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def remove_daemon_archive_settings() -> None:
+    """Remove archive-root settings from daemon configs.
+
+    The archive root is stored only in the shared global ``config.json``.
+    Daemon-specific configs may still keep unrelated settings such as the
+    file-organizer inbox path or preview-maker image options.
+    """
+    fo = read_daemon_config("file-organizer")
+    watch = fo.get("watch")
+    if isinstance(watch, dict):
+        watch.pop("output", None)
+        if watch:
+            fo["watch"] = watch
+        else:
+            fo.pop("watch", None)
+        write_daemon_config("file-organizer", fo)
+
+    for name in ("preview-maker", "tile-cutter", "face-recognizer"):
+        data = read_daemon_config(name)
+        if "watch" in data:
+            data.pop("watch", None)
+            write_daemon_config(name, data)
 
 
 def get_template_path(module_name: str, filename: str = "config.template.json") -> Path | None:

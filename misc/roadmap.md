@@ -2,9 +2,27 @@
 
 ## Ideas and future plans
 
+### Metadata profiles: advanced raw tag overrides
+
+Current metadata work is trending toward a small semantic field set
+(`description`, `creator`, `rights`, `source`, `credit`, `terms`, etc.)
+stored independently from concrete file-format tags.
+
+**Deferred feature:** allow advanced target-specific raw tag overrides
+(`image`/`pdf`, XMP/PDF-native fields) in metadata profiles or per-import
+overrides as an escape hatch for arbitrary tags.
+
+**Why not now:** this adds complexity to config structure, validation, and UI,
+while the currently needed metadata set appears limited and stable. The simpler
+near-term design is to keep profiles semantic, keep semantic-field → concrete-tag
+mapping in code, and postpone arbitrary raw-tag editing.
+
+**When to revisit:** when a real import or post-import workflow requires tags
+that cannot be expressed by the common semantic field set.
+
 ### Metadata synchronization across master and derivatives
 
-When a daemon (face-detector, future colorizer, etc.) updates metadata on a master file,
+When a daemon (face-recognizer, future colorizer, etc.) updates metadata on a master file,
 existing derivatives may become stale.
 
 **Current stance:** all derivatives are treated as regenerable. When master metadata
@@ -20,7 +38,7 @@ These cannot simply be discarded and re-created.
 Derivatives can potentially be classified by inspecting their XMP metadata:
 
 - *Indirect approach:* check the last `xmpMM:History` entry — if `softwareAgent` is a
-  known daemon (`preview-maker`, `face-detector`, etc.), the file is auto-generated and
+  known daemon (`preview-maker`, `face-recognizer`, etc.), the file is auto-generated and
   safe to regenerate. Unreliable: third-party tools may not write History at all.
 
 - *Explicit approach:* daemons write a dedicated tag when creating a derivative
@@ -60,7 +78,7 @@ equal in scope. Core functionality must be stable first.
 - Maintain clean, file-based configuration (no manual JSON editing required at runtime)
 - Ensure all daemons are startable/stoppable programmatically (needed for tray control)
 
-**When to revisit:** when core tools (file-organizer, preview-maker, face-detector) are
+**When to revisit:** when core tools (file-organizer, preview-maker, face-recognizer) are
 stable and feature-complete.
 
 ---
@@ -80,16 +98,16 @@ daemon's output.
 
 ### file-organizer: `sort` subcommand (lightweight mode without pipeline)
 
-Analogous to `preview-maker convert` — a low-level subcommand that sorts files by
+Analogous to `preview-maker process` — a low-level subcommand that sorts files by
 filename structure without requiring the full pipeline (no scan-batcher upstream,
 no metadata writing).
 
 **Motivation:** useful for ad-hoc sorting, testing routing rules, and importing files
 from outside the normal scan-batcher → file-organizer flow.
 
-**Key design question:** unlike `preview-maker convert`, file organization is inherently
+**Key design question:** unlike `preview-maker process`, file organization is inherently
 project-specific (filename parsing and destination routing both depend on Formatter and
-Router). There is no "pure" equivalent to `Converter`. The `sort` mode is therefore
+Router). There is no equally blind equivalent to `PreviewProcessor`. The `sort` mode is therefore
 not a separate low-level class but rather `FileOrganizer` with optional pipeline stages
 disabled.
 
@@ -222,6 +240,21 @@ configurable threshold, or all of them unconditionally with `--all`.
 
 **When to revisit:** when ghost records start accumulating in practice and become
 a usability problem.
+
+---
+
+### Archive pipeline: adding new daemon/task types to an existing archive
+
+If a new daemon or task type is introduced after an archive database already
+contains files, those existing rows will not automatically receive tasks for
+the new daemon.
+
+**Required follow-up:** provide an explicit mechanism to backfill/requeue tasks
+for already-registered files in existing archives (for example, a migration,
+backfill command, or requeue operation).
+
+**When to revisit:** when the first new daemon/task type is added to a live
+archive with pre-existing files in the database.
 
 ---
 

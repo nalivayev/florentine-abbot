@@ -269,4 +269,3 @@ class TestRouter:
         assert protect_raw is True
         assert protect_prv is False
         assert protect_other is False
-

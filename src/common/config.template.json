@@ -2,15 +2,18 @@
 
   "help": [
     "Unified project configuration for florentine-abbot.",
-    "This file combines format templates and routing rules.",
+    "This file combines the archive root path, format templates and routing rules.",
     "",
     "Sections:",
+    "  archive_path — absolute path to the archive root directory",
     "  formats  — filename parsing and archive formatting templates",
     "  routes   — pattern-based file routing rules",
     "",
     "Metadata configuration (tag mapping + multi-language texts) is defined",
     "separately in file-organizer/config.json (see file_organizer/config.template.json)."
   ],
+
+  "archive_path": "",
 
   "formats": {
 

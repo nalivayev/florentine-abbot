@@ -1,59 +1,46 @@
-"""
-Core implementation for Preview Maker.
-
-Provides utilities to generate preview JPEGs from source files whose
-names match configurable glob patterns listed in priority order.
-
-The primary API is exposed via the :class:`PreviewMaker` class, which is
-configured with parameters and then executed via :meth:`__call__`.
-"""
+"""High-level batch and orchestration logic for Preview Maker."""
 
 import fnmatch
 import uuid
 import datetime
 from pathlib import Path
 
+from common.database import FILE_STATUS_MODIFIED
 from common.logger import Logger
 from common.formatter import Formatter
-from common.constants import SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_FORMAT, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CONVERTED, XMP_ACTION_EDITED
+from common.constants import ARCHIVE_SYSTEM_DIR, SUPPORTED_IMAGE_EXTENSIONS, MIME_TYPE_MAP, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_FORMAT, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID, XMP_ACTION_CONVERTED, XMP_ACTION_EDITED
 from common.exifer import Exifer
 from common.tagger import Tagger
 from common.tags import KeyValueTag, HistoryTag
 from common.router import Router
 from common.version import get_version
-from common.project_config import ProjectConfig
-from preview_maker.config import Config
-from preview_maker.constants import FORMAT_MAP
-from preview_maker.converter import Converter
+from preview_maker.classes import MakerSettings
+from preview_maker.constants import FORMAT_MAP, PREVIEWS_DIR
+from preview_maker.processor import MakerProcessor
+from preview_maker.store import MakerStore
 
 
-class PreviewMaker:
-    """
-    Preview generator that can be executed like a function.
+class Maker:
+    """Preview orchestration layer for batch and daemon modes."""
 
-    In line with other workflow-like classes (such as :class:`VuescanWorkflow`),
-    a :class:`Logger` instance is provided at construction time, while
-    call-specific parameters are passed to :meth:`__call__`.
-    """
-
-    def __init__(self, logger: Logger, config_path: str | Path | None = None, no_metadata: bool = False) -> None:
+    def __init__(
+        self,
+        logger: Logger,
+        settings: MakerSettings | None = None,
+    ) -> None:
         self._logger = logger
-        self._config = Config(logger, config_path)
-        self._converter = Converter(
-            logger,
-            size=self._config.image_size,
-            image_format=self._config.image_format,
-            save_options=self._config.save_options,
+        self._settings = settings or MakerSettings.from_data()
+        self._processor = MakerProcessor(logger)
+
+        self._exifer = Exifer()
+        self._formatter = Formatter(logger=logger, formats=self._settings.formats)
+        self._router = Router(
+            routes=self._settings.routes,
+            logger=logger,
+            formats=self._settings.formats,
         )
 
-        cfg = ProjectConfig.instance()
-        self._exifer = Exifer()
-        self._formatter = Formatter(logger=logger, formats=cfg.formats)
-        self._router = Router(routes=cfg.routes, logger=logger, formats=cfg.formats)
-        self._no_metadata = no_metadata
-
-
-    def __call__(
+    def execute(
         self,
         *,
         path: Path,
@@ -65,14 +52,39 @@ class PreviewMaker:
         This is the primary workflow-style entry point and mirrors how other
         workflow classes are executed.
         """
+        if not path.exists():
+            raise ValueError(f"Archive path does not exist: {path}")
 
         return self._generate_previews_for_sources(
             path=path,
             overwrite=overwrite,
         )
 
-    
-    def should_process(self, file_path: Path) -> bool:
+    def poll(self, archive_path: Path) -> int:
+        """Process DB-backed preview tasks for files pending in the archive."""
+        if not archive_path.exists():
+            raise ValueError(f"Archive path does not exist: {archive_path}")
+
+        with MakerStore(archive_path) as store:
+            rows = store.list_pending_files()
+
+            if not rows:
+                return 0
+
+            self._logger.info(f"Found {len(rows)} file(s) to process")
+
+            for row in rows:
+                self._process_pending_file(
+                    store,
+                    file_id=row.file_id,
+                    rel_path=row.rel_path,
+                    file_status=row.status,
+                    archive_path=archive_path,
+                )
+
+            return len(rows)
+  
+    def _should_process(self, file_path: Path) -> bool:
         """Check whether a file is eligible for preview generation.
 
         Checks:
@@ -123,9 +135,8 @@ class PreviewMaker:
                         return False
 
         return True
-
-    
-    def process_single_file(
+   
+    def _process_single_file(
         self,
         src_path: Path,
         *,
@@ -135,20 +146,16 @@ class PreviewMaker:
         """Generate a preview for a single source file.
 
         This is the core per-file logic used by both batch and watch modes.
-        The caller is responsible for filtering (see :meth:`should_process`).
+        The caller is responsible for filtering (see :meth:`_should_process`).
 
         Args:
             src_path: Source file matching one of the ``source_priority`` patterns.
-            archive_path: Resolved archive root for preview destination routing.
+            archive_path: Archive root for preview destination routing.
             overwrite: If True, regenerate existing previews.
 
         Returns:
             True if a preview was generated, False otherwise.
         """
-        parsed = self._formatter.parse(src_path)
-        if not parsed:
-            raise ValueError(f"Cannot parse filename: {src_path.name}")
-
         # Verify that scan-batcher has registered this file before preview
         # generation. DocumentID/InstanceID are required for provenance metadata
         # in the derivative preview.
@@ -164,32 +171,45 @@ class PreviewMaker:
             )
             raise ValueError(f"Missing DocumentID or InstanceID in {src_path.name}")
 
-        # Build preview filename from configured template
-        prv_filename = self._build_preview_filename(parsed)
-
-        prv_dir = self._prv_dir(archive_path, src_path)
-        prv_dir.mkdir(parents=True, exist_ok=True)
-        prv_path = prv_dir / prv_filename
+        prv_path = self._build_output_path(src_path, archive_path=archive_path)
+        effective_overwrite = overwrite
 
         if prv_path.exists() and not overwrite:
             # Even without overwrite, regenerate preview when the existing one
             # was derived from a different source (e.g. RAW → MSR upgrade).
             if self._should_upgrade_prv(prv_path, src_path):
                 self._logger.info(f"Upgrading preview from higher-priority source: {prv_path}")
+                effective_overwrite = True
             else:
                 self._logger.debug(f"Skipping existing preview (overwrite disabled): {prv_path}")
                 return False
 
-        self._logger.info(f"Creating preview: {src_path.name} -> {prv_path}")
-
-        self._convert_to_prv(
-            input_path=src_path,
+        written, output_path = self._processor.process(
+            src_path,
             output_path=prv_path,
+            size=self._settings.image_size,
+            save_options=self._settings.save_options,
+            overwrite=effective_overwrite,
         )
 
-        return True
+        if not written:
+            return False
 
-    
+        # After pixels are written, propagate archival metadata from source
+        # to the preview derivative.
+        if self._settings.no_metadata:
+            self._logger.info(f"Skipping metadata write for {output_path.name} (--no-metadata)")
+        else:
+            try:
+                self._write_derivative_metadata(src_path, output_path)
+            except (FileNotFoundError, RuntimeError, ValueError) as exc:
+                # Treat metadata issues as errors in logs but keep the image.
+                self._logger.error(f"Failed to copy metadata to preview {output_path}: {exc}")
+
+        self._logger.info(f"Saved preview: {output_path}")
+
+        return True
+   
     def _should_upgrade_prv(self, prv_path: Path, src_path: Path) -> bool:
         """Check whether an existing preview should be regenerated.
 
@@ -221,8 +241,7 @@ class PreviewMaker:
         except Exception as exc:
             self._logger.debug(f"Cannot determine upgrade eligibility for {prv_path}: {exc}")
             return False
-
-    
+   
     def _generate_previews_for_sources(
         self,
         *,
@@ -233,18 +252,16 @@ class PreviewMaker:
 
         written = 0
 
-        self._logger.debug(f"Starting batch preview generation under {path} (overwrite={overwrite}, size={self._config.image_size}, format={self._config.image_format})")
+        self._logger.debug(f"Starting batch preview generation under {path} (overwrite={overwrite}, size={self._settings.image_size}, format={self._settings.image_format})")
 
         # Get folders where source files are stored according to routing rules
-        target_folders = self._router.get_folders_for_patterns(self._config.source_priority)
+        target_folders = self._router.get_folders_for_patterns(self._settings.source_priority)
 
         if not target_folders:
             self._logger.warning("No target folders found for source patterns in routing configuration")
             return 0
 
         self._logger.debug(f"Scanning for source files in folders: {target_folders}")
-
-        archive_path = path
 
         # Scan only target folders (e.g., SOURCES/)
         for folder_name in target_folders:
@@ -258,13 +275,13 @@ class PreviewMaker:
                     if not src_path.is_file():
                         continue
 
-                    if not self.should_process(src_path):
+                    if not self._should_process(src_path):
                         continue
 
                     try:
-                        if self.process_single_file(
+                        if self._process_single_file(
                             src_path,
-                            archive_path=archive_path,
+                            archive_path=path,
                             overwrite=overwrite,
                         ):
                             written += 1
@@ -275,23 +292,27 @@ class PreviewMaker:
 
         return written
 
-    
-    def _prv_dir(self, archive_path: Path, src_path: Path) -> Path:
-        """Build the output preview directory path for a source file.
+    def _build_output_path(self, src_path: Path, *, archive_path: Path) -> Path:
+        """Return the preview output path mirrored under ``.system/previews``."""
+        parsed = self._formatter.parse(src_path)
+        if not parsed:
+            raise ValueError(f"Cannot parse filename: {src_path.name}")
 
-        Mirrors the archive path structure:
-        scan/000001/2025/2025.06.01/file.tif
-        → .system/scan/previews/000001/2025/2025.06.01/
-        """
-        rel = src_path.relative_to(archive_path)
-        # rel.parts: ('scan', '000001', '2025', '2025.06.01', 'file.tif')
-        # → .system/previews/scan/000001/2025/2025.06.01/
-        return archive_path / ".system" / "previews" / Path(*rel.parts[:-1])
+        filename = self._build_preview_filename(parsed)
+
+        try:
+            relative_dir = src_path.relative_to(archive_path).parent
+        except ValueError as exc:
+            raise ValueError(
+                f"Source path {src_path} is not inside archive root {archive_path}"
+            ) from exc
+
+        return archive_path / ARCHIVE_SYSTEM_DIR / PREVIEWS_DIR / relative_dir / filename
 
     def _build_preview_filename(self, parsed: dict[str, int | str]) -> str:
-        """Build preview filename from configured template and parsed fields."""
-        stem = self._formatter.format_template(parsed, self._config.template)
-        return f"{stem}{FORMAT_MAP[self._config.image_format][1]}"
+        """Build the preview filename from configured template and format."""
+        stem = self._formatter.format_template(parsed, self._settings.template)
+        return f"{stem}{FORMAT_MAP[self._settings.image_format][1]}"
 
     
     def _get_match_priority(self, filename: str) -> int | None:
@@ -299,11 +320,10 @@ class PreviewMaker:
 
         Returns *None* when the filename does not match any pattern.
         """
-        for i, pattern in enumerate(self._config.source_priority):
+        for i, pattern in enumerate(self._settings.source_priority):
             if fnmatch.fnmatch(filename.upper(), pattern.upper()):
                 return i
         return None
-
     
     @staticmethod
     def _same_shot(a: dict[str, int | str], b: dict[str, int | str]) -> bool:
@@ -324,36 +344,47 @@ class PreviewMaker:
             and a["sequence"] == b["sequence"]
             and a["side"] == b["side"]
         )
-
-    
-    def _convert_to_prv(
+   
+    def _process_pending_file(
         self,
+        store: MakerStore,
         *,
-        input_path: Path,
-        output_path: Path,
+        file_id: int,
+        rel_path: str,
+        file_status: str,
+        archive_path: Path,
     ) -> None:
-        """Convert a single source image to a preview.
+        """Process one DB-backed preview task candidate."""
+        def now() -> str:
+            return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-        Delegates pixel conversion to :class:`Converter` and then
-        optionally writes archival metadata to the output file.
-        """
+        timestamp = now()
+        store.start_task(file_id, timestamp)
 
-        self._converter(input_path, output_path)
+        src_path = archive_path / rel_path
 
-        # After pixels are written, propagate archival metadata from source
-        # to the preview derivative.
-        if self._no_metadata:
-            self._logger.info(f"Skipping metadata write for {output_path.name} (--no-metadata)")
-        else:
-            try:
-                self._write_derivative_metadata(input_path, output_path)
-            except (FileNotFoundError, RuntimeError, ValueError) as exc:
-                # Treat metadata issues as errors in logs but keep the image.
-                self._logger.error(f"Failed to copy metadata to preview {output_path}: {exc}")
+        if not src_path.exists():
+            self._logger.warning(f"File not found, skipping: {src_path}")
+            store.mark_failed(file_id, "File not found", now())
+            return
 
-        self._logger.info(f"Saved preview: {output_path}")
-
-    
+        try:
+            if not self._should_process(src_path):
+                store.mark_skipped(file_id, now())
+            else:
+                written = self._process_single_file(
+                    src_path,
+                    archive_path=archive_path,
+                    overwrite=file_status == FILE_STATUS_MODIFIED,
+                )
+                if written:
+                    store.mark_done(file_id, now())
+                else:
+                    store.mark_skipped(file_id, now())
+        except Exception as e:
+            self._logger.error(f"Error processing {src_path.name}: {e}")
+            store.mark_failed(file_id, str(e), now())
+   
     def _write_derivative_metadata(self, master_path: Path, prv_path: Path) -> None:
         """Write EXIF/XMP metadata to preview derivative based on source.
 

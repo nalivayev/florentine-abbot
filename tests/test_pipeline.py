@@ -10,8 +10,9 @@ from pathlib import Path
 
 import pytest
 
+from common.database import ArchiveDatabase
 from file_organizer.organizer import FileOrganizer
-from preview_maker.maker import PreviewMaker
+from preview_maker.maker import Maker
 from common.exifer import Exifer
 from common.logger import Logger
 from common.tagger import Tagger
@@ -85,7 +86,7 @@ class TestPipeline:
 
     def test_full_pipeline(self) -> None:
         """
-        create_test_image -> FileOrganizer -> PreviewMaker with full metadata checks.
+        create_test_image -> FileOrganizer -> Maker with full metadata checks.
         """
         # === Step 0: create fake scan ===
         scan_file = self._create_scan()
@@ -163,10 +164,10 @@ class TestPipeline:
             f"Expected >= 3 history entries, got {len(master_history)}"
         )
 
-        # === Step 2: PreviewMaker ===
-        maker = PreviewMaker(self.logger)
-        prv_count = maker(path=self.output_dir, overwrite=False)
-        assert prv_count == 1, "PreviewMaker should generate 1 PRV"
+        # === Step 2: Maker ===
+        maker = Maker(self.logger)
+        prv_count = maker.execute(path=self.output_dir, overwrite=False)
+        assert prv_count == 1, "Maker should generate 1 PRV"
 
         prv = self._find_file(self.output_dir, "*.PRV.jpg")
         assert prv.exists()

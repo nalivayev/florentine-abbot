@@ -1,0 +1,35 @@
+{
+  "help": [
+    "Reusable metadata defaults for import and post-import workflows.",
+    "",
+    "languages: BCP-47 language codes like 'ru-RU' or 'en-US'.",
+    "Exactly one language SHOULD have 'default': true.",
+    "",
+    "Fields:",
+    "  description, creator, rights, source, credit, terms, marked",
+    "",
+    "Values may be strings or arrays of strings.",
+    "For creator, newline-separated text in the UI is normalized to a list."
+  ],
+  "languages": {
+    "ru-RU": {
+      "default": true,
+      "description": "",
+      "creator": [],
+      "rights": "",
+      "source": "",
+      "credit": "",
+      "terms": "",
+      "marked": ""
+    },
+    "en-US": {
+      "description": "",
+      "creator": [],
+      "rights": "",
+      "source": "",
+      "credit": "",
+      "terms": "",
+      "marked": ""
+    }
+  }
+}

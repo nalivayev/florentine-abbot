@@ -8,22 +8,41 @@ from unittest.mock import patch
 
 from PIL import Image
 
-from preview_maker import PreviewMaker
+from preview_maker import Maker
 from file_organizer.organizer import FileOrganizer
 from common.logger import Logger
-from common.constants import (
-    TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION,
-    TAG_XMP_DC_DESCRIPTION, TAG_XMP_DC_CREATOR, TAG_XMP_DC_RIGHTS,
-    TAG_XMP_PHOTOSHOP_CREDIT, TAG_XMP_XMPRIGHTS_USAGE_TERMS, TAG_XMP_DC_SOURCE,
-    TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID,
-)
+from common.constants import ARCHIVE_SYSTEM_DIR, TAG_XMP_DC_IDENTIFIER, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_DESCRIPTION, TAG_XMP_DC_CREATOR, TAG_XMP_DC_RIGHTS, TAG_XMP_PHOTOSHOP_CREDIT, TAG_XMP_XMPRIGHTS_USAGE_TERMS, TAG_XMP_DC_SOURCE, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID
 from common.exifer import Exifer
-from common.project_config import ProjectConfig
 from common.constants import DEFAULT_CONFIG
+from preview_maker.classes import MakerSettings
+from preview_maker.constants import PREVIEWS_DIR
 from tests.common.test_utils import create_test_image
 
 
-class TestPreviewMakerBatch:
+def _expected_preview_path(archive_base: Path, src_path: Path, preview_name: str) -> Path:
+    relative_dir = src_path.relative_to(archive_base).parent
+    return archive_base / ARCHIVE_SYSTEM_DIR / PREVIEWS_DIR / relative_dir / preview_name
+
+
+class MakerTestDouble(Maker):
+    """Expose selected private maker behavior through test-only wrappers."""
+
+    def process_single_file_for_test(
+        self,
+        src_path: Path,
+        *,
+        archive_path: Path,
+        overwrite: bool = False,
+    ) -> bool:
+        """Call the internal single-file preview path from regression tests."""
+        return self._process_single_file(
+            src_path,
+            archive_path=archive_path,
+            overwrite=overwrite,
+        )
+
+
+class TestMakerBatch:
     def setup_method(self) -> None:
         """
         Setup for each test method.
@@ -35,7 +54,7 @@ class TestPreviewMakerBatch:
         Cleanup after each test method.
         """
         if self.temp_dir and self.temp_dir.exists():
-            def _on_rm_error(_func, path, _exc_info):
+            def _on_rm_error(_func: object, path: str, _exc_info: object) -> None:
                 os.chmod(path, 0o700)
                 os.unlink(path)
             shutil.rmtree(self.temp_dir, onerror=_on_rm_error)
@@ -70,13 +89,17 @@ class TestPreviewMakerBatch:
         create_test_image(raw_path, color="white", format="TIFF")
         create_test_image(msr_path, color="white", format="TIFF")
 
-        maker = PreviewMaker(Logger("test_preview_maker"))
+        maker = Maker(Logger("test_preview_maker"))
         # Pass the archive base (where the year folders start)
         archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
-        count = maker(path=archive_base, overwrite=False)
+        count = maker.execute(path=archive_base, overwrite=False)
         assert count == 1
 
-        prv_path = date_dir / "1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
+        prv_path = _expected_preview_path(
+            archive_base,
+            msr_path,
+            "1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg",
+        )
         assert prv_path.exists()
 
         # Ensure size constraint respected (default max_size=2000)
@@ -95,27 +118,36 @@ class TestPreviewMakerBatch:
         msr_path = sources_dir / msr_name
         create_test_image(msr_path, size=(3000, 2000), color="white", format="TIFF")
 
-        prv_path = date_dir / "1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg"
-        # Create an initial PRV with a small size
-        create_test_image(prv_path, size=(500, 500), color="white", format="JPEG")
-
         # Use config with max_size=800 for this test
         config_dir = temp_dir / "config"
         config_dir.mkdir()
         pm_config = config_dir / "config.json"
         pm_config.write_text(json.dumps({"image": {"size": 800, "format": "jpeg", "jpeg": {"quality": 70}}}), encoding="utf-8")
 
-        maker = PreviewMaker(Logger("test_preview_maker"), config_path=pm_config)
+        maker = Maker(
+            Logger("test_preview_maker"),
+            settings=MakerSettings.from_data(
+                local_data={"image": {"size": 800, "format": "jpeg", "jpeg": {"quality": 70}}},
+            ),
+        )
         archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
+        prv_path = _expected_preview_path(
+            archive_base,
+            msr_path,
+            "1950.06.15.12.00.00.E.FAM.POR.0001.A.PRV.jpg",
+        )
+        prv_path.parent.mkdir(parents=True, exist_ok=True)
+        # Create an initial PRV with a small size
+        create_test_image(prv_path, size=(500, 500), color="white", format="JPEG")
 
         # Without overwrite, nothing should change
-        count_no_overwrite = maker(path=archive_base, overwrite=False)
+        count_no_overwrite = maker.execute(path=archive_base, overwrite=False)
         assert count_no_overwrite == 0
         with Image.open(prv_path) as img:
             assert max(img.size) == 500
 
         # With overwrite, PRV should be regenerated and respect config max_size
-        count_overwrite = maker(path=archive_base, overwrite=True)
+        count_overwrite = maker.execute(path=archive_base, overwrite=True)
         assert count_overwrite == 1
         with Image.open(prv_path) as img:
             assert max(img.size) <= 800
@@ -140,18 +172,22 @@ class TestPreviewMakerBatch:
         create_test_image(raw_path, size=(2000, 1500), color="blue", format="TIFF")
 
         logger = Logger("test_msr_upgrade")
-        maker = PreviewMaker(logger)
+        maker = MakerTestDouble(logger)
         archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
 
         # Step 1: generate PRV from RAW
-        result = maker.process_single_file(
+        result = maker.process_single_file_for_test(
             raw_path,
             archive_path=archive_base,
             overwrite=False,
         )
         assert result is True
 
-        prv_path = date_dir / "1952.01.10.08.00.00.E.FAM.POR.0001.A.PRV.jpg"
+        prv_path = _expected_preview_path(
+            archive_base,
+            raw_path,
+            "1952.01.10.08.00.00.E.FAM.POR.0001.A.PRV.jpg",
+        )
         assert prv_path.exists()
 
         # Read the PRV's DerivedFromDocumentID — should point to RAW's DocumentID
@@ -172,7 +208,7 @@ class TestPreviewMakerBatch:
         assert msr_doc_id != raw_meta[TAG_XMP_XMPMM_DOCUMENT_ID]
 
         # Step 3: process MSR — should upgrade PRV without overwrite flag
-        result = maker.process_single_file(
+        result = maker.process_single_file_for_test(
             msr_path,
             archive_path=archive_base,
             overwrite=False,
@@ -199,22 +235,26 @@ class TestPreviewMakerBatch:
         create_test_image(msr_path, size=(2000, 1500), color="red", format="TIFF")
 
         logger = Logger("test_msr_no_upgrade")
-        maker = PreviewMaker(logger)
+        maker = MakerTestDouble(logger)
         archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
 
         # Generate PRV from MSR
-        result = maker.process_single_file(
+        result = maker.process_single_file_for_test(
             msr_path,
             archive_path=archive_base,
             overwrite=False,
         )
         assert result is True
 
-        prv_path = date_dir / "1953.05.20.14.00.00.E.FAM.POR.0001.A.PRV.jpg"
+        prv_path = _expected_preview_path(
+            archive_base,
+            msr_path,
+            "1953.05.20.14.00.00.E.FAM.POR.0001.A.PRV.jpg",
+        )
         assert prv_path.exists()
 
         # Process MSR again — should skip (DerivedFromDocumentID matches)
-        result = maker.process_single_file(
+        result = maker.process_single_file_for_test(
             msr_path,
             archive_path=archive_base,
             overwrite=False,
@@ -241,12 +281,21 @@ class TestPreviewMakerBatch:
         pm_config = config_dir / "config.json"
         pm_config.write_text(json.dumps({"image": {"size": 900, "format": "jpeg", "jpeg": {"quality": 70}}}), encoding="utf-8")
 
-        maker = PreviewMaker(Logger("test_preview_maker"), config_path=pm_config)
+        maker = Maker(
+            Logger("test_preview_maker"),
+            settings=MakerSettings.from_data(
+                local_data={"image": {"size": 900, "format": "jpeg", "jpeg": {"quality": 70}}},
+            ),
+        )
         archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
-        count = maker(path=archive_base, overwrite=False)
+        count = maker.execute(path=archive_base, overwrite=False)
         assert count == 1
 
-        prv_path = date_dir / "1951.07.20.13.30.00.E.FAM.POR.0002.A.PRV.jpg"
+        prv_path = _expected_preview_path(
+            archive_base,
+            raw_path,
+            "1951.07.20.13.30.00.E.FAM.POR.0002.A.PRV.jpg",
+        )
         assert prv_path.exists()
 
         with Image.open(prv_path) as img:
@@ -258,7 +307,7 @@ class TestPreviewMakerBatch:
         PRV should inherit context metadata but have its own identifier.
 
         We create an MSR file, let FileOrganizer write full metadata to it,
-        then generate a PRV via PreviewMaker and verify that key fields are
+        then generate a PRV via Maker and verify that key fields are
         preserved while identifiers differ and a relation back to the master
         is recorded.
         """
@@ -319,18 +368,17 @@ class TestPreviewMakerBatch:
         master_usage = meta_master.get(TAG_XMP_XMPRIGHTS_USAGE_TERMS) or meta_master.get("XMP:UsageTerms")
         master_source = meta_master.get(TAG_XMP_DC_SOURCE) or meta_master.get("XMP:Source")
 
-        # Step 2: generate PRV via PreviewMaker
-        maker = PreviewMaker(logger)
+        # Step 2: generate PRV via Maker
+        maker = Maker(logger)
         # Pass the archive base where year folders begin
         archive_base = output_dir
-        count = maker(path=archive_base, overwrite=False)
+        count = maker.execute(path=archive_base, overwrite=False)
         assert count == 1
 
-        prv_path = (
-            output_dir
-            / "1950"
-            / "1950.06.15"
-            / "1950.06.15.12.30.45.E.FAM.POR.0001.A.PRV.jpg"
+        prv_path = _expected_preview_path(
+            archive_base,
+            processed_msr,
+            "1950.06.15.12.30.45.E.FAM.POR.0001.A.PRV.jpg",
         )
         assert prv_path.exists()
 
@@ -370,10 +418,13 @@ class TestPreviewMakerBatch:
 
         archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
         logger = Logger("test", console=False)
-        maker = PreviewMaker(logger, no_metadata=True)
+        maker = MakerTestDouble(
+            logger,
+            settings=MakerSettings.from_data(no_metadata=True),
+        )
 
         with patch.object(maker, '_write_derivative_metadata') as mock_write:
-            maker.process_single_file(msr_path, archive_path=archive_base, overwrite=False)
+            maker.process_single_file_for_test(msr_path, archive_path=archive_base, overwrite=False)
 
         mock_write.assert_not_called()
 
@@ -390,17 +441,20 @@ class TestPreviewMakerBatch:
 
         archive_base = temp_dir / "PHOTO_ARCHIVES" / "0001.Family"
         logger = Logger("test", console=False)
-        maker = PreviewMaker(logger, no_metadata=False)
+        maker = MakerTestDouble(
+            logger,
+            settings=MakerSettings.from_data(no_metadata=False),
+        )
 
         with patch.object(maker, '_write_derivative_metadata') as mock_write:
-            maker.process_single_file(msr_path, archive_path=archive_base, overwrite=False)
+            maker.process_single_file_for_test(msr_path, archive_path=archive_base, overwrite=False)
 
         mock_write.assert_called_once()
 
 
-class TestPreviewMakerCustomFormats:
+class TestMakerCustomFormats:
     """
-    Test PreviewMaker with custom path formats.
+    Test Maker with custom path formats.
     """
 
     def setup_method(self) -> None:
@@ -413,7 +467,6 @@ class TestPreviewMakerCustomFormats:
         """
         Cleanup after each test method.
         """
-        ProjectConfig.instance(data=DEFAULT_CONFIG)
         if self.temp_dir and self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 
@@ -442,22 +495,26 @@ class TestPreviewMakerCustomFormats:
         create_test_image(msr_path, color="green", format="TIFF")
 
         # Re-initialize ProjectConfig with flat path structure
-        ProjectConfig.instance(data={
-            **DEFAULT_CONFIG,
-            "formats": {
-                "archive_path_template": "{year:04d}.{month:02d}.{day:02d}",
-                "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
-            },
-        })
-        maker = PreviewMaker(logger=logger)
+        maker = Maker(
+            logger=logger,
+            settings=MakerSettings.from_data(
+                project_data={
+                    **DEFAULT_CONFIG,
+                    "formats": {
+                        "archive_path_template": "{year:04d}.{month:02d}.{day:02d}",
+                        "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
+                    },
+                },
+            ),
+        )
 
         # Generate preview
-        count = maker(path=temp_dir / "archive", overwrite=False)
+        count = maker.execute(path=temp_dir / "archive", overwrite=False)
         assert count == 1
 
         # Preview should be in: 2024.03.15/2024.03.15.10.30.00.E.TEST.GRP.0001.A.PRV.jpg
         prv_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.PRV.jpg"
-        prv_path = date_dir / prv_name
+        prv_path = _expected_preview_path(temp_dir / "archive", msr_path, prv_name)
 
         assert prv_path.exists(), f"PRV not found at {prv_path}"
 
@@ -477,21 +534,25 @@ class TestPreviewMakerCustomFormats:
         msr_path = sources_dir / msr_name
         create_test_image(msr_path, color="green", format="TIFF")
 
-        ProjectConfig.instance(data={
-            **DEFAULT_CONFIG,
-            "formats": {
-                "archive_path_template": "{year:04d}/{year:04d}.{month:02d}",
-                "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
-            },
-        })
-        maker = PreviewMaker(logger=logger)
+        maker = Maker(
+            logger=logger,
+            settings=MakerSettings.from_data(
+                project_data={
+                    **DEFAULT_CONFIG,
+                    "formats": {
+                        "archive_path_template": "{year:04d}/{year:04d}.{month:02d}",
+                        "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
+                    },
+                },
+            ),
+        )
 
-        count = maker(path=temp_dir / "archive", overwrite=False)
+        count = maker.execute(path=temp_dir / "archive", overwrite=False)
         assert count == 1
 
         # Preview should be in: 2024/2024.03/2024.03.15.10.30.00.E.TEST.GRP.0001.A.PRV.jpg
         prv_name = "2024.03.15.10.30.00.E.TEST.GRP.0001.A.PRV.jpg"
-        prv_path = date_dir / prv_name
+        prv_path = _expected_preview_path(temp_dir / "archive", msr_path, prv_name)
 
         assert prv_path.exists(), f"PRV not found at {prv_path}"
 
@@ -511,21 +572,25 @@ class TestPreviewMakerCustomFormats:
         msr_path = sources_dir / msr_name
         create_test_image(msr_path, color="green", format="TIFF")
 
-        ProjectConfig.instance(data={
-            **DEFAULT_CONFIG,
-            "formats": {
-                "archive_path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}",
-                "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
-            },
-        })
-        maker = PreviewMaker(logger=logger)
+        maker = Maker(
+            logger=logger,
+            settings=MakerSettings.from_data(
+                project_data={
+                    **DEFAULT_CONFIG,
+                    "formats": {
+                        "archive_path_template": "{group}/{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+                        "archive_filename_template": "{year:04d}.{month:02d}.{day:02d}.{hour:02d}.{minute:02d}.{second:02d}.{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}",
+                    },
+                },
+            ),
+        )
 
-        count = maker(path=temp_dir / "archive", overwrite=False)
+        count = maker.execute(path=temp_dir / "archive", overwrite=False)
         assert count == 1
 
         # Preview should be in: FAM/2024/2024.03.15/2024.03.15.10.30.00.E.FAM.POR.0001.A.PRV.jpg
         prv_name = "2024.03.15.10.30.00.E.FAM.POR.0001.A.PRV.jpg"
-        prv_path = date_dir / prv_name
+        prv_path = _expected_preview_path(temp_dir / "archive", msr_path, prv_name)
 
         assert prv_path.exists(), f"PRV not found at {prv_path}"
 
@@ -550,37 +615,35 @@ class TestPreviewMakerCustomFormats:
         msr_path = sources_dir / msr_name
         create_test_image(msr_path, color="green", format="TIFF")
 
-        ProjectConfig.instance(data={
-            **DEFAULT_CONFIG,
-            "formats": {
-                "archive_path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
-                "archive_filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}",
-            },
-            "routes": {
-                "rules": [
-                    ["*.MSR.*", "SOURCES"],
-                    ["*.RAW.*", "SOURCES"],
-                    ["*_PRV.*", "."],
-                    ["*", "DERIVATIVES"],
-                ],
-            },
-        })
+        maker = Maker(
+            logger=logger,
+            settings=MakerSettings.from_data(
+                local_data={
+                    "template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_PRV",
+                },
+                project_data={
+                    **DEFAULT_CONFIG,
+                    "formats": {
+                        "archive_path_template": "{year:04d}/{year:04d}.{month:02d}.{day:02d}",
+                        "archive_filename_template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_{suffix}",
+                    },
+                    "routes": {
+                        "rules": [
+                            ["*.MSR.*", "SOURCES"],
+                            ["*.RAW.*", "SOURCES"],
+                            ["*_PRV.*", "."],
+                            ["*", "DERIVATIVES"],
+                        ],
+                    },
+                },
+            ),
+        )
 
-        # Write preview-maker config with compact preview template
-        config_dir = temp_dir / "config"
-        config_dir.mkdir()
-        pm_config = config_dir / "config.json"
-        pm_config.write_text(json.dumps({
-            "template": "{year:04d}{month:02d}{day:02d}_{hour:02d}{minute:02d}{second:02d}_{group}_PRV"
-        }), encoding="utf-8")
-
-        maker = PreviewMaker(logger=logger, config_path=pm_config)
-
-        count = maker(path=temp_dir / "archive", overwrite=False)
+        count = maker.execute(path=temp_dir / "archive", overwrite=False)
         assert count == 1
 
         # Preview should have compact name: 20240315_103000_TEST_PRV.jpg
         prv_name = "20240315_103000_TEST_PRV.jpg"
-        prv_path = date_dir / prv_name
+        prv_path = _expected_preview_path(temp_dir / "archive", msr_path, prv_name)
 
         assert prv_path.exists(), f"PRV not found at {prv_path}"

@@ -22,7 +22,6 @@ dev = [
     "pytest-cov>=4.0.0",
 ]
 face-core = [
-    "sqlalchemy>=2.0.0",
     "scikit-learn>=1.3.0",
     "numpy>=1.24.0",
 ]
@@ -37,9 +36,18 @@ scan-batcher = "scan_batcher.cli:main"
 file-organizer = "file_organizer.cli:main"
 preview-maker = "preview_maker.cli:main"
 tile-cutter = "tile_cutter.cli:main"
+face-recognizer = "face_recognizer.cli:main"
 archive-keeper = "archive_keeper.cli:main"
 florentine-web = "ui.web.app:main"
 setup-runner = "setup_runner.cli:main"
+
+[project.entry-points."florentine_abbot.tasks"]
+preview-maker = "preview_maker.provider:MakerProvider"
+tile-cutter = "tile_cutter.provider:CutterProvider"
+face-recognizer = "face_recognizer.provider:RecognizerProvider"
+
+[project.entry-points."face_recognizer.detectors"]
+insightface = "face_recognizer.detectors.insightface.detector:InsightFaceDetector"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -48,6 +56,9 @@ packages = [
     "scan_batcher.workflows",
     "scan_batcher.workflows.vuescan",
     "file_organizer",
+    "face_recognizer",
+    "face_recognizer.detectors",
+    "face_recognizer.detectors.insightface",
     "preview_maker",
     "tile_cutter",
     "archive_keeper",
@@ -61,6 +72,8 @@ packages = [
 "scan_batcher.workflows.vuescan" = ["*.ini"]
 "common" = ["*.json"]
 "file_organizer" = ["*.json"]
+"face_recognizer" = ["*.json"]
+"face_recognizer.detectors.insightface" = ["*.json"]
 "preview_maker" = ["*.json"]
 "tile_cutter" = ["*.json"]
 "ui.web" = ["frontend/dist/**/*"]

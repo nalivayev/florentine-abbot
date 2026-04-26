@@ -194,7 +194,7 @@ class TestValidation:
         assert any('second' in error.lower() for error in errors)
 
     def test_invalid_modifier(self):
-        parsed = {
+        parsed: dict[str, int | str] = {
             "year": 1950, "month": 6, "day": 15,
             "hour": 12, "minute": 30, "second": 0,
             "modifier": "X",
@@ -206,7 +206,7 @@ class TestValidation:
         assert any('modifier' in error.lower() for error in errors)
 
     def test_invalid_side(self):
-        parsed = {
+        parsed: dict[str, int | str] = {
             "year": 1950, "month": 6, "day": 15,
             "hour": 12, "minute": 30, "second": 0,
             "modifier": "E",

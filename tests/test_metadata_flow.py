@@ -2,22 +2,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from common.constants import (
-    TAG_EXIF_DATETIME_ORIGINAL,
-    TAG_EXIFIFD_CREATE_DATE,
-    TAG_EXIFIFD_DATETIME_DIGITIZED,
-    TAG_XMP_DC_CREATOR,
-    TAG_XMP_DC_DESCRIPTION,
-    TAG_XMP_DC_IDENTIFIER,
-    TAG_XMP_DC_RELATION,
-    TAG_XMP_DC_RIGHTS,
-    TAG_XMP_DC_SOURCE,
-    TAG_XMP_EXIF_DATETIME_DIGITIZED,
-    TAG_XMP_PHOTOSHOP_CREDIT,
-    TAG_XMP_PHOTOSHOP_DATE_CREATED,
-    TAG_XMP_XMP_IDENTIFIER,
-    TAG_XMP_XMPRIGHTS_USAGE_TERMS,
-)
+from common.constants import TAG_EXIF_DATETIME_ORIGINAL, TAG_EXIFIFD_CREATE_DATE, TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_XMP_DC_CREATOR, TAG_XMP_DC_DESCRIPTION, TAG_XMP_DC_IDENTIFIER, TAG_XMP_DC_RELATION, TAG_XMP_DC_RIGHTS, TAG_XMP_DC_SOURCE, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_XMP_PHOTOSHOP_CREDIT, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_XMP_IDENTIFIER, TAG_XMP_XMPRIGHTS_USAGE_TERMS
 from common.logger import Logger
 
 from file_organizer.metadata import ArchiveMetadata
@@ -87,7 +72,7 @@ class TestMetadataFlow:
         prv_path: Path,
     ) -> None:
         """
-        Simulate PreviewMaker._convert_to_prv() metadata logic.
+        Simulate Maker._convert_to_prv() metadata logic.
         """
         configurable_tags = metadata.get_configurable_tags()
         tags_to_read = list(IDENTIFIER_TAGS) + configurable_tags + list(DATE_TAGS)
@@ -168,7 +153,7 @@ class TestMetadataFlow:
         # Act: simulate FileProcessor writing master tags
         self._simulate_file_processor_write(exifer, am, master, parsed)
 
-        # Then simulate PreviewMaker writing derivative based on master
+        # Then simulate Maker writing derivative based on master
         self._simulate_preview_maker_write(exifer, am, master, prv)
 
         # Assert: compare contextual/date tags equality

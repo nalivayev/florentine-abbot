@@ -10,18 +10,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from common.constants import TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID
+from common.constants import TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_IFD0_SOFTWARE, TAG_XMP_DC_DESCRIPTION, TAG_XMP_DC_TITLE, TAG_XMP_PHOTOSHOP_DATE_CREATED, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID
 from common.exifer import Exifer
 from common.formatter import Formatter
 from common.logger import Logger
 from common.project_config import ProjectConfig
 from common.tagger import Tagger
 from common.tags import KeyValueTag
-from content_importer.classes import Result, Validator
+from content_importer.classes import ValidationResult, Validator
 
 
 @dataclass
-class ScanResult(Result):
+class ScanResult(ValidationResult):
     """Validation result for a scan-batcher output file.
 
     Extends Result with scan-specific fields: parsed filename components
@@ -60,6 +60,12 @@ class ScanValidator(Validator):
         tagger.begin()
         tagger.read(KeyValueTag(TAG_XMP_XMPMM_DOCUMENT_ID))
         tagger.read(KeyValueTag(TAG_XMP_XMPMM_INSTANCE_ID))
+        tagger.read(KeyValueTag(TAG_IFD0_MAKE))
+        tagger.read(KeyValueTag(TAG_IFD0_MODEL))
+        tagger.read(KeyValueTag(TAG_IFD0_SOFTWARE))
+        tagger.read(KeyValueTag(TAG_XMP_DC_TITLE))
+        tagger.read(KeyValueTag(TAG_XMP_DC_DESCRIPTION))
+        tagger.read(KeyValueTag(TAG_XMP_PHOTOSHOP_DATE_CREATED))
         existing = tagger.end() or {}
 
         missing: list[str] = []

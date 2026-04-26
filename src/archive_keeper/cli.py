@@ -1,13 +1,14 @@
 """
 Command Line Interface for Archive Keeper.
 
-Provides two subcommands:
+Provides three subcommands:
 
 * ``archive-keeper watch``  — daemon mode that polls the database for integrity checks.
+* ``archive-keeper process`` — low-level single-file checksum calculation.
 * ``archive-keeper scan``   — one-shot integrity scan of the archive.
 
 Global flags (``--verbose``, ``--log-path``, ``--version``)
-are shared across both subcommands.
+are shared across all subcommands.
 """
 
 import argparse
@@ -18,6 +19,8 @@ from pathlib import Path
 from common.logger import Logger
 from common.utils import log_banner
 from common.version import get_version
+from archive_keeper.keeper import Keeper
+from archive_keeper.processor import KeeperProcessor
 from archive_keeper.watcher import KeeperWatcher
 
 
@@ -47,6 +50,18 @@ def _build_parser() -> argparse.ArgumentParser:
         "watch",
         help="Daemon mode — poll database for integrity checks",
         description="Continuously poll the database and monitor archive integrity.",
+    )
+
+    process_parser = subparsers.add_parser(
+        "process",
+        help="Calculate the checksum of one file using the low-level processor",
+        description="Run one low-level checksum pass without database orchestration.",
+    )
+    process_parser.add_argument(
+        "--file",
+        required=True,
+        type=str,
+        help="Path to the source file",
     )
 
     scan_parser = subparsers.add_parser(
@@ -86,7 +101,21 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "watch":
             fields: dict[str, str] = {"Mode": "watch"}
             log_banner(logger, "archive-keeper", version, fields)
-            KeeperWatcher(logger).start()
+            keeper = Keeper(logger)
+            KeeperWatcher(logger, keeper=keeper).start()
+        elif args.command == "process":
+            file_path = Path(args.file)
+            if not file_path.exists():
+                logger.error("File does not exist: %s", file_path)
+                return 1
+            if not file_path.is_file():
+                logger.error("Path is not a file: %s", file_path)
+                return 1
+
+            fields = {"Mode": "process", "File": str(file_path)}
+            log_banner(logger, "archive-keeper", version, fields)
+            checksum = KeeperProcessor(logger).process(file_path)
+            logger.info("SHA-256: %s", checksum)
         else:
             path = Path(args.path)
             if not path.exists():
@@ -94,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             fields = {"Mode": "scan", "Path": str(path)}
             log_banner(logger, "archive-keeper", version, fields)
-            KeeperWatcher(logger).scan(path)
+            Keeper(logger).execute(path=path)
 
     except Exception as exc:  # pragma: no cover
         print(f"[archive_keeper] Error: {exc}", file=sys.stderr)

@@ -10,9 +10,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from common.auth import hash_token, token_is_expired
-from common.db import get_conn
 from ui.web.daemon_manager import DaemonState, manager
-from ui.web.deps import check_admin, require_admin
+from ui.web.deps import check_admin, get_web_store, require_admin
+from ui.web.store import WebStore
 
 router = APIRouter()
 
@@ -26,35 +26,26 @@ def _serialize(state: DaemonState) -> dict[str, Any]:
         },
         "status": state.status.value,
         "watch_path": state.watch_path,
-        "output_path": state.output_path,
         "error": state.error,
     }
 
 
-def _auth_by_token(token: str) -> dict[str, Any]:
+def _auth_by_token(token: str, store: WebStore) -> dict[str, Any]:
     """Authenticate by raw token string (for SSE query param fallback)."""
-    conn = get_conn()
     hashed = hash_token(token)
-    row = conn.execute("""
-        SELECT u.id, u.username, u.is_active, u.role_id,
-               r.name AS role, s.expires_at, s.token_hash
-        FROM sessions s
-        JOIN users u ON u.id = s.user_id
-        JOIN roles r ON r.id = u.role_id
-        WHERE s.token_hash = ?
-    """, (hashed,)).fetchone()
+    row = store.get_user_by_token_hash(hashed)
 
     if not row:
         raise HTTPException(status_code=401, detail="Invalid token")
-    if token_is_expired(row["expires_at"]):
+    if token_is_expired(str(row["expires_at"])):
         raise HTTPException(status_code=401, detail="Token expired")
     if not row["is_active"]:
         raise HTTPException(status_code=403, detail="User disabled")
-    return dict(row)
+    return row
 
 
-def _require_admin_by_token(token: str) -> dict[str, Any]:
-    return check_admin(_auth_by_token(token))
+def _require_admin_by_token(token: str, store: WebStore) -> dict[str, Any]:
+    return check_admin(_auth_by_token(token, store))
 
 
 @router.get("/daemons")
@@ -78,8 +69,9 @@ async def daemon_stop(name: str, _user: dict[str, Any] = Depends(require_admin))
 async def daemon_logs(
     name: str,
     token: str = Query(..., description="Session token"),
+    store: WebStore = Depends(get_web_store),
 ) -> StreamingResponse:
-    _require_admin_by_token(token)
+    _require_admin_by_token(token, store)
 
     async def generate():
         sent = 0

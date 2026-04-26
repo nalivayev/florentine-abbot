@@ -7,7 +7,8 @@ from typing import Any
 
 from common.logger import Logger
 from common.config_utils import get_config_dir, ensure_config_exists, load_config, get_template_path
-from tile_cutter.constants import DEFAULT_FORMAT_OPTIONS, DEFAULT_SIZE, DEFAULT_TILE_SIZE
+from tile_cutter.classes import CutterSettings
+from tile_cutter.constants import DAEMON_NAME
 
 
 class Config:
@@ -21,11 +22,6 @@ class Config:
     **priority order** — when multiple sources exist for the same shot,
     the file matching the earliest pattern wins.
     """
-
-    _DEFAULT_SOURCE_PRIORITY: list[str] = [
-        "*.MSR.*",
-        "*.RAW.*",
-    ]
 
     def __init__(self, logger: Logger, config_path: str | Path | None = None) -> None:
         """Initialize configuration.
@@ -41,7 +37,7 @@ class Config:
             self._config_path = Path(config_path)
         else:
             config_dir = get_config_dir()
-            self._config_path = config_dir / "tile-cutter" / "config.json"
+            self._config_path = config_dir / DAEMON_NAME / "config.json"
 
         template_path = get_template_path("tile_cutter", "config.template.json")
         default_config: dict[str, Any] = {
@@ -62,36 +58,9 @@ class Config:
         else:
             self._logger.debug("Config not found or empty — using defaults")
 
-    @property
-    def source_priority(self) -> list[str]:
-        """Ordered list of glob patterns identifying source files.
-
-        The first pattern has the highest priority.  When multiple files
-        in a folder match different patterns, the one matching an earlier
-        pattern is preferred as the tile source.
-        """
-        return self._data.get("priority", self._DEFAULT_SOURCE_PRIORITY)
-
-    @property
-    def preview_size(self) -> int:
-        """Target short side in pixels for the intermediate image used for tiling."""
-        image = self._data.get("image", {})
-        return int(image.get("size", DEFAULT_SIZE))
-
-    @property
-    def tile_size(self) -> int:
-        """Tile side in pixels."""
-        image = self._data.get("image", {})
-        return int(image.get("tile_size", DEFAULT_TILE_SIZE))
-
-    @property
-    def save_options(self) -> dict[str, Any]:
-        """PIL save keyword arguments for JPEG tile output.
-
-        Merges built-in defaults with user overrides from image.jpeg section.
-        """
-        defaults = dict(DEFAULT_FORMAT_OPTIONS)
-        image = self._data.get("image", {})
-        overrides = image.get("jpeg", {})
-        defaults.update(overrides)
-        return defaults
+    def to_settings(self, *, project_data: dict[str, Any] | None = None) -> CutterSettings:
+        """Convert loaded file-backed config data to normalized settings."""
+        return CutterSettings.from_data(
+            local_data=self._data,
+            project_data=project_data,
+        )

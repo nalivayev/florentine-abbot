@@ -3,15 +3,16 @@ Config routes — project paths.
 """
 
 import json
-from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from common.config_utils import read_daemon_config, write_daemon_config, get_config_dir
+from common.config_utils import get_archive_path, get_config_dir, read_daemon_config, read_metadata_config, remove_daemon_archive_settings, write_daemon_config, write_metadata_config
 from common.constants import DEFAULT_ARCHIVE_PATH_TEMPLATE, DEFAULT_ARCHIVE_FILENAME_TEMPLATE
 from ui.web.daemon_manager import manager
 from ui.web.deps import get_current_user, require_admin
+from ui.web.setup_store import SetupStore
 
 router = APIRouter()
 
@@ -26,15 +27,19 @@ class InboxSettings(BaseModel):
 
 
 class ArchiveSettings(BaseModel):
-    archive: str
+    archive_path: str
+
+
+class MetadataSettings(BaseModel):
+    languages: dict[str, dict[str, Any]]
 
 
 @router.get("/config/format")
-async def config_format_get(user: dict = Depends(get_current_user)) -> dict:
+async def config_format_get(_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, str]:
     config_path = get_config_dir() / "config.json"
     try:
-        data = json.loads(config_path.read_text(encoding="utf-8")) if config_path.exists() else {}
-        formats = data.get("formats", {})
+        data: dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8")) if config_path.exists() else {}
+        formats: dict[str, Any] = data.get("formats", {})
     except Exception:
         formats = {}
     return {
@@ -44,10 +49,10 @@ async def config_format_get(user: dict = Depends(get_current_user)) -> dict:
 
 
 @router.post("/config/format")
-async def config_format_save(settings: FormatSettings, user: dict = Depends(require_admin)) -> dict:
+async def config_format_save(settings: FormatSettings, _user: dict[str, Any] = Depends(require_admin)) -> dict[str, bool]:
     config_path = get_config_dir() / "config.json"
     try:
-        data = json.loads(config_path.read_text(encoding="utf-8")) if config_path.exists() else {}
+        data: dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8")) if config_path.exists() else {}
     except Exception:
         data = {}
     data.setdefault("formats", {})["archive_path_template"] = settings.archive_path_template
@@ -56,24 +61,46 @@ async def config_format_save(settings: FormatSettings, user: dict = Depends(requ
     return {"ok": True}
 
 
-@router.get("/config")
-async def config_get(user: dict = Depends(require_admin)) -> dict:
-    fo = read_daemon_config("file-organizer")
-    watch = fo.get("watch", {})
+@router.get("/config/metadata")
+async def config_metadata_get(_user: dict[str, Any] = Depends(get_current_user)) -> dict[str, Any]:
+    data = read_metadata_config()
     return {
-        "archive": watch.get("output", ""),
+        "languages": data.get("languages", {}),
+    }
+
+
+@router.post("/config/metadata")
+async def config_metadata_save(
+    settings: MetadataSettings,
+    _user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, bool]:
+    data = read_metadata_config()
+    data["languages"] = settings.languages
+    write_metadata_config(data)
+    return {"ok": True}
+
+
+@router.get("/config")
+async def config_get(_user: dict[str, Any] = Depends(require_admin)) -> dict[str, str]:
+    fo = read_daemon_config("file-organizer")
+    watch: dict[str, Any] = fo.get("watch", {})
+    archive_path = get_archive_path()
+    return {
+        "archive_path": str(archive_path) if archive_path is not None else "",
         "inbox": watch.get("path", ""),
     }
 
 
 @router.post("/config/inbox")
-async def config_save_inbox(settings: InboxSettings, user: dict = Depends(require_admin)) -> dict:
+async def config_save_inbox(settings: InboxSettings, _user: dict[str, Any] = Depends(require_admin)) -> dict[str, bool]:
     inbox = settings.inbox.strip()
     if not inbox:
         raise HTTPException(status_code=422, detail="required")
 
     fo = read_daemon_config("file-organizer")
-    fo.setdefault("watch", {})["path"] = inbox
+    watch = fo.setdefault("watch", {})
+    watch["path"] = inbox
+    watch.pop("output", None)
     write_daemon_config("file-organizer", fo)
 
     try:
@@ -85,21 +112,28 @@ async def config_save_inbox(settings: InboxSettings, user: dict = Depends(requir
     return {"ok": True}
 
 
-@router.post("/config/archive")
-async def config_save_archive(settings: ArchiveSettings, user: dict = Depends(require_admin)) -> dict:
-    archive = settings.archive.strip()
-    if not archive:
+@router.post("/config/archive-path")
+async def config_save_archive(
+    settings: ArchiveSettings,
+    _user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, bool]:
+    archive_path = settings.archive_path.strip()
+    if not archive_path:
         raise HTTPException(status_code=422, detail="required")
 
-    fo = read_daemon_config("file-organizer")
-    fo.setdefault("watch", {})["output"] = archive
-    write_daemon_config("file-organizer", fo)
+    config_path = get_config_dir() / "config.json"
+    try:
+        data: dict[str, Any] = json.loads(config_path.read_text(encoding="utf-8")) if config_path.exists() else {}
+    except Exception:
+        data = {}
+    data["archive_path"] = archive_path
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    pm = read_daemon_config("preview-maker")
-    pm.setdefault("watch", {})["path"] = archive
-    write_daemon_config("preview-maker", pm)
+    remove_daemon_archive_settings()
+    SetupStore(archive_path).ensure_ready()
 
-    for name in ("file-organizer", "preview-maker"):
+    for name in ("preview-maker", "tile-cutter", "archive-keeper"):
         try:
             manager.stop(name)
             manager.start(name)

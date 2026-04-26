@@ -43,11 +43,6 @@
     "png": {
       "optimize": true
     }
-  
-  },
-
-  "watch": {
-    "path": null
   }
 
 }

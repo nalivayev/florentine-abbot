@@ -7,7 +7,7 @@ The built-in fallback constant :data:`~file_organizer.constants.DEFAULT_METADATA
 lives in :mod:`file_organizer.constants` and is re-exported here for convenience.
 
 Actual reading/writing of metadata is done by individual components
-(FileProcessor, PreviewMaker) using :class:`~common.tagger.Tagger`.
+(FileProcessor, Maker) using :class:`~common.tagger.Tagger`.
 """
 
 from typing import Any, Optional

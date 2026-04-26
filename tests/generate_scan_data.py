@@ -13,9 +13,11 @@ Usage (from project root):
     python -m tests.generate_scan_data --output /tmp/scans --count 5
     python -m tests.generate_scan_data -o /tmp/scans -n 3 --date 2025-06-01
     python -m tests.generate_scan_data -o /tmp/scans --modifier E --group FAM
+    python -m tests.generate_scan_data -o /tmp/scans --image-style gray-flat --gray-level 160
 """
 
 import argparse
+import math
 import random
 import sys
 from datetime import datetime, date, timedelta
@@ -48,8 +50,6 @@ _SOURCE_TEMPLATE = (
     "{modifier}.{group}.{subgroup}.{sequence:04d}.{side}.{suffix}.{extension}"
 )
 
-_MIME_TYPES = {"tif": "image/tiff", "jpg": "image/jpeg"}
-
 _COLORS = [
     (225, 168, 168),  # red
     (168, 182, 225),  # blue
@@ -74,7 +74,7 @@ _BACKGROUNDS = [
 ]
 
 
-def _make_image(width: int, height: int, seed: int) -> Image.Image:
+def _make_synthetic_image(width: int, height: int, seed: int) -> Image.Image:
     """Generate a synthetic image with overlapping shapes and a border."""
     rng = random.Random(seed)
 
@@ -87,12 +87,10 @@ def _make_image(width: int, height: int, seed: int) -> Image.Image:
         cy = rng.randint(0, height)
         rx = rng.randint(width // 12, width // 4)
         ry = rng.randint(height // 12, height // 4)
-        bbox = [cx - rx, cy - ry, cx + rx, cy + ry]
 
         shape = Image.new("RGB", (width, height), (255, 255, 255))
         draw = ImageDraw.Draw(shape)
         # Random convex polygon with random number of sides
-        import math
         sides = rng.randint(3, 12)
         angles = sorted(rng.uniform(0, 2 * math.pi) for _ in range(sides))
         pts = [
@@ -116,6 +114,29 @@ def _make_image(width: int, height: int, seed: int) -> Image.Image:
     return result
 
 
+def _make_flat_gray_image(width: int, height: int, seed: int, gray_level: int | None) -> Image.Image:
+    """Generate a solid gray image for tests that need uniform content."""
+    if gray_level is None:
+        level = 96 + (seed * 17 % 96)
+    else:
+        level = max(0, min(255, gray_level))
+
+    return Image.new("RGB", (width, height), (level, level, level))
+
+
+def _make_image(
+    width: int,
+    height: int,
+    seed: int,
+    image_style: str,
+    gray_level: int | None,
+) -> Image.Image:
+    if image_style == "gray-flat":
+        return _make_flat_gray_image(width, height, seed, gray_level)
+
+    return _make_synthetic_image(width, height, seed)
+
+
 def generate_files(
     output: Path,
     count: int,
@@ -131,6 +152,8 @@ def generate_files(
     scanner_make: str,
     scanner_model: str,
     scanner_software: str,
+    image_style: str = "synthetic",
+    gray_level: int | None = None,
 ) -> list[Path]:
     output.mkdir(parents=True, exist_ok=True)
     exifer = FakeExifer()
@@ -161,9 +184,9 @@ def generate_files(
         )
         file_path = output / name
 
-        # Create synthetic image with geometric shapes and border
+        # Create test image while preserving the normal scan-batcher filename/metadata flow.
         fmt = "TIFF" if extension in ("tif", "tiff") else "JPEG"
-        img = _make_image(3000, 4000, seed=seq)
+        img = _make_image(3000, 4000, seed=seq, image_style=image_style, gray_level=gray_level)
         img.save(file_path, format=fmt)
 
         # Phase 1: scanner EXIF (VueScan writes these without TZ)
@@ -212,6 +235,10 @@ def parse_args() -> argparse.Namespace:
                         help="Filename suffix (default: RAW)")
     parser.add_argument("--extension", default="tif", choices=["tif", "jpg"],
                         help="File extension (default: tif)")
+    parser.add_argument("--image-style", default="synthetic", choices=["synthetic", "gray-flat"],
+                        help="Generated image style (default: synthetic)")
+    parser.add_argument("--gray-level", type=int, default=None,
+                        help="Gray level 0-255 for gray-flat images (default: vary by sequence)")
     parser.add_argument("--sequence-start", type=int, default=1,
                         help="Starting sequence number (default: 1)")
     parser.add_argument("--make", default=_SCANNER_MAKE,
@@ -250,6 +277,8 @@ def main() -> None:
         scanner_make=args.make,
         scanner_model=args.model,
         scanner_software=args.software,
+        image_style=args.image_style,
+        gray_level=args.gray_level,
     )
     print(f"Done. {len(generated)} file(s) created.")
 

@@ -4,7 +4,7 @@
     "Configuration for File Organizer.",
     "",
     "Sections:",
-    "  watch    — input/output paths for batch and watch mode",
+    "  watch    — input path for watch mode",
     "  metadata — XMP tag mapping and per-language metadata texts written to image files"
   ],
 
@@ -12,11 +12,9 @@
     "help": [
       "Paths used by the File Organizer.",
       "",
-      "path:   source folder to watch or process (required).",
-      "output: destination archive root (required)."
+      "path: source folder to watch or process (required)."
     ],
-    "path": null,
-    "output": null
+    "path": null
   },
 
   "metadata": {

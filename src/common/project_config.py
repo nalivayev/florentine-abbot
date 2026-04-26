@@ -1,7 +1,7 @@
 """Unified project configuration singleton.
 
 :class:`ProjectConfig` loads the shared ``config.json`` that contains
-formats, routes and metadata sections.  Every module accesses it
+archive path, formats, and routes. Every module accesses it
 via ``ProjectConfig.instance()``.
 
 Typical usage — CLI entry point::
@@ -34,12 +34,12 @@ class ProjectConfig:
     config directory (``%APPDATA%/florentine-abbot`` on Windows,
     ``~/.config/florentine-abbot`` on Linux).
 
-    Sections:
+        Sections:
 
-    * **formats** — ``source_filename_template``, ``archive_path_template``,
-      ``archive_filename_template``
-    * **routes** — ``rules`` list of ``[glob_pattern, subfolder]``
-    * **metadata** — ``tags`` mapping + ``languages`` dict with per-language values
+        * **archive_path** — runtime path to the archive root
+        * **formats** — ``source_filename_template``, ``archive_path_template``,
+            ``archive_filename_template``
+        * **routes** — ``rules`` list of ``[glob_pattern, subfolder]``
     """
 
     _instance: Optional["ProjectConfig"] = None
