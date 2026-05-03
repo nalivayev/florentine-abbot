@@ -2,13 +2,14 @@
 
 import datetime
 from pathlib import Path
+import shutil
 
-from PIL import Image
-
+from common.constants import ARCHIVE_SYSTEM_DIR
 from common.database import FILE_STATUS_MODIFIED
 from common.logger import Logger
 from face_recognizer.classes import RecognizerSettings
 from face_recognizer.clusterer import RecognizerClusterer
+from face_recognizer.constants import FACES_DIR
 from face_recognizer.processor import RecognizerProcessor
 from face_recognizer.store import RecognizerStore
 
@@ -78,6 +79,7 @@ class Recognizer:
         file_path: Path,
         store: RecognizerStore,
         *,
+        archive_path: Path,
         overwrite: bool = False,
     ) -> int:
         """Detect and store faces for a single *file_path*."""
@@ -87,31 +89,33 @@ class Recognizer:
 
         if overwrite and store.file_already_processed(file_path):
             deleted = store.delete_faces_by_file(file_path)
+            self._delete_face_thumb_dir(file_path, archive_path=archive_path)
             self._logger.debug(f"Overwrite: removed {deleted} existing record(s) for {file_path.name}")
 
-        faces = self._processor.process(file_path)
+        faces = self._processor.process_for_storage(file_path)
         if not faces:
             return 0
 
-        image_size = self._read_image_size(file_path)
         img_file = store.get_or_create_file(file_path)
         for face in faces:
-            store.add_face(
+            if face.thumb_webp is None:
+                raise ValueError(
+                    f"Processor returned face without thumbnail bytes: {file_path}"
+                )
+            stored_face = store.add_face(
                 file=img_file,
-                bbox=face.bbox,
-                image_size=image_size,
+                region=face.region,
                 embedding=face.embedding,
                 confidence=face.confidence,
             )
+            self._write_face_thumb(
+                file_path,
+                archive_path=archive_path,
+                face_id=stored_face.id,
+                thumb_webp=face.thumb_webp,
+            )
         self._logger.debug(f"Stored {len(faces)} face(s) from {file_path.name}")
         return len(faces)
-
-    @staticmethod
-    def _read_image_size(file_path: Path) -> tuple[int, int]:
-        """Read the source image dimensions without materializing full pixels."""
-        Image.MAX_IMAGE_PIXELS = None
-        with Image.open(file_path) as image:
-            return image.size
 
     def _should_process(self, file_path: Path) -> bool:
         """Return True if *file_path* passes the detector-level filters."""
@@ -142,7 +146,12 @@ class Recognizer:
             if not self._should_process(file_path):
                 continue
 
-            count = self._process_single_file(file_path, store, overwrite=overwrite)
+            count = self._process_single_file(
+                file_path,
+                store,
+                archive_path=path,
+                overwrite=overwrite,
+            )
             total += count
 
         self._logger.info(f"Scan complete: {total} face(s) detected under {path}")
@@ -178,6 +187,7 @@ class Recognizer:
             count = self._process_single_file(
                 file_path,
                 store,
+                archive_path=archive_path,
                 overwrite=file_status == FILE_STATUS_MODIFIED,
             )
             store.mark_done(file_id, now())
@@ -201,3 +211,31 @@ class Recognizer:
             min_samples=self._settings.clustering_min_samples,
         )
         clusterer.assign_domains(store)
+
+    def _build_face_thumb_dir(self, file_path: Path, *, archive_path: Path) -> Path:
+        try:
+            relative_path = file_path.relative_to(archive_path)
+        except ValueError as exc:
+            raise ValueError(
+                f"Source path {file_path} is not inside archive root {archive_path}"
+            ) from exc
+
+        return archive_path / ARCHIVE_SYSTEM_DIR / FACES_DIR / relative_path.parent / file_path.stem
+
+    def _write_face_thumb(
+        self,
+        file_path: Path,
+        *,
+        archive_path: Path,
+        face_id: int,
+        thumb_webp: bytes,
+    ) -> None:
+        output_dir = self._build_face_thumb_dir(file_path, archive_path=archive_path)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f"face-{face_id}.webp"
+        output_path.write_bytes(thumb_webp)
+
+    def _delete_face_thumb_dir(self, file_path: Path, *, archive_path: Path) -> None:
+        output_dir = self._build_face_thumb_dir(file_path, archive_path=archive_path)
+        if output_dir.exists():
+            shutil.rmtree(output_dir)

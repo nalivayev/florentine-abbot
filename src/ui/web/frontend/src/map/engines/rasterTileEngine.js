@@ -180,13 +180,14 @@ export function createRasterTileMapEngine(handlers = {}) {
     model.markers.forEach((marker) => {
       const screenPoint = worldToScreen(geoToNormalized(marker.position))
       if (!screenPoint) return
+      const markerTitle = marker.title ?? marker.label
 
       const markerEl = document.createElement('button')
       markerEl.type = 'button'
       markerEl.className = 'map-raster-engine__marker'
       markerEl.style.left = `${screenPoint.x}px`
       markerEl.style.top = `${screenPoint.y}px`
-      if (marker.label) markerEl.title = marker.label
+      if (markerTitle) markerEl.title = markerTitle
       markerEl.addEventListener('click', () => handlers.onMarkerClick?.(marker.id))
 
       const dotEl = document.createElement('span')

@@ -1,51 +1,107 @@
 """Global face routes."""
 
+import sqlite3
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 
-from common.config_utils import get_archive_path
-from face_recognizer.store import Face, RecognizerStore
-from ui.web.deps import get_current_user
+from face_recognizer.store import RecognizerStore
+from ui.web.deps import get_current_user, require_admin
+from ui.web.routes.faces_common import (
+    archive_path_or_404,
+    cluster_payload,
+    face_payload,
+    person_record_payload,
+)
 
 router = APIRouter()
 
 
-def region_payload(face: Face) -> dict[str, float]:
-    return {
-        "center_x": face.center_x,
-        "center_y": face.center_y,
-        "width": face.width,
-        "height": face.height,
-    }
+class AssignClusterPersonRequest(BaseModel):
+    person_id: int = Field(gt=0)
 
 
-def person_payload(face: Face) -> dict[str, Any] | None:
-    if face.person is None:
-        return None
-    return {
-        "id": face.person.id,
-        "name": face.person.name,
-    }
+class CreatePersonFromClusterRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    notes: str | None = None
 
 
-def face_payload(face: Face) -> dict[str, Any]:
-    return {
-        "id": face.id,
-        "file_id": face.file_id,
-        "region": region_payload(face),
-        "confidence": face.confidence,
-        "cluster": face.cluster,
-        "person": person_payload(face),
-        "created_at": face.created_at,
-    }
+def _not_found_from_value_error(exc: ValueError) -> HTTPException:
+    return HTTPException(status_code=404, detail=str(exc))
 
 
-def archive_path_or_404() -> Any:
-    archive_path = get_archive_path()
-    if archive_path is None:
-        raise HTTPException(status_code=404, detail="Archive not configured")
-    return archive_path
+@router.get("/people/review/clusters")
+async def list_review_clusters(
+    _user: dict[str, Any] = Depends(require_admin),
+) -> list[dict[str, Any]]:
+    archive_path = archive_path_or_404()
+    with RecognizerStore(archive_path) as store:
+        clusters = store.list_unconfirmed_clusters()
+        return [
+            cluster_payload(cluster, store.get_faces_by_cluster(cluster.cluster_id))
+            for cluster in clusters
+        ]
+
+
+@router.get("/people/review/persons")
+async def list_review_persons(
+    _user: dict[str, Any] = Depends(require_admin),
+) -> list[dict[str, Any]]:
+    archive_path = archive_path_or_404()
+    with RecognizerStore(archive_path) as store:
+        persons = store.get_all_persons()
+    return [person_record_payload(person) for person in persons]
+
+
+@router.post("/people/review/clusters/{cluster_id}/assign")
+async def assign_review_cluster_person(
+    cluster_id: int,
+    request: AssignClusterPersonRequest,
+    _user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, int]:
+    archive_path = archive_path_or_404()
+    with RecognizerStore(archive_path) as store:
+        try:
+            updated_faces = store.assign_cluster_to_person(cluster_id, request.person_id)
+        except ValueError as exc:
+            raise _not_found_from_value_error(exc) from exc
+    return {"updated_faces": updated_faces}
+
+
+@router.post("/people/review/clusters/{cluster_id}/create-person")
+async def create_review_cluster_person(
+    cluster_id: int,
+    request: CreatePersonFromClusterRequest,
+    _user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, Any]:
+    archive_path = archive_path_or_404()
+    with RecognizerStore(archive_path) as store:
+        try:
+            person = store.create_person_from_cluster(
+                cluster_id,
+                name=request.name.strip(),
+                notes=request.notes,
+            )
+        except ValueError as exc:
+            raise _not_found_from_value_error(exc) from exc
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(status_code=409, detail="Person with this name already exists") from exc
+    return {"person": person_record_payload(person)}
+
+
+@router.post("/people/review/faces/{face_id}/exclude")
+async def exclude_review_face(
+    face_id: int,
+    _user: dict[str, Any] = Depends(require_admin),
+) -> dict[str, int]:
+    archive_path = archive_path_or_404()
+    with RecognizerStore(archive_path) as store:
+        try:
+            store.exclude_face_from_cluster(face_id)
+        except ValueError as exc:
+            raise _not_found_from_value_error(exc) from exc
+    return {"excluded_face_id": face_id}
 
 
 @router.get("/faces/{face_id}")

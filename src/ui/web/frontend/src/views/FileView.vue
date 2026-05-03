@@ -97,106 +97,57 @@
         </div>
       </div>
 
-      <aside
-        v-if="fileInfo"
-        class="viewer-panel viewer-panel-info"
-        ref="infoPanelEl"
-        :class="{ open: infoPanelOpen }"
-      >
-          <p class="viewer-meta-title" :title="fileName">{{ fileName || '…' }}</p>
-
-          <dl class="viewer-meta-grid">
-            <div v-if="formattedPhotoDate" class="viewer-meta-row">
-              <dt>{{ t('collections.date') }}</dt>
-              <dd :title="formattedPhotoDate">{{ formattedPhotoDate }}</dd>
-            </div>
-            <div v-if="fileMetadata?.source" class="viewer-meta-row">
-              <dt>{{ t('collections.source') }}</dt>
-              <dd :title="fileMetadata.source">{{ fileMetadata.source }}</dd>
-            </div>
-            <div v-if="fileMetadata?.credit" class="viewer-meta-row">
-              <dt>{{ t('collections.credit') }}</dt>
-              <dd :title="fileMetadata.credit">{{ fileMetadata.credit }}</dd>
-            </div>
-          </dl>
-
-          <section v-if="fileDescription" class="viewer-meta-section">
-            <h2 class="viewer-section-title">{{ t('collections.description') }}</h2>
-            <p class="viewer-meta-text" :title="fileDescription">{{ fileDescription }}</p>
-          </section>
-
-          <section v-if="fileCreators.length > 0" class="viewer-meta-section">
-            <h2 class="viewer-section-title">{{ t('collections.creators') }}</h2>
-            <ul class="viewer-list">
-              <li v-for="creator in fileCreators" :key="creator" :title="creator">{{ creator }}</li>
-            </ul>
-          </section>
-
-          <p v-if="!hasSemanticMetadata" class="viewer-meta-empty">{{ t('collections.no_metadata') }}</p>
-      </aside>
-
-      <aside
-        class="viewer-panel viewer-panel-map"
-        ref="mapPanelEl"
-        :class="{ open: mapPanelOpen }"
-      >
-        <MapPanel
-          :model="mapModel"
-          :engine-factory="createRasterTileMapEngine"
-          :empty-text="t('collections.map_placeholder')"
+      <div ref="mobileDockEl" class="viewer-mobile-dock">
+        <InfoPanel
+          v-if="fileInfo"
+          ref="infoPanelEl"
+          :open="infoPanelOpen"
+          :file-name="fileName"
+          :formatted-photo-date="formattedPhotoDate"
+          :file-source="fileMetadata?.source || ''"
+          :file-credit="fileMetadata?.credit || ''"
+          :description="fileDescription"
+          :creators="fileCreators"
+          :has-semantic-metadata="hasSemanticMetadata"
         />
-      </aside>
 
-      <aside
-        class="viewer-panel viewer-panel-people"
+        <aside
+          class="viewer-panel viewer-panel-map"
+          ref="mapPanelEl"
+          :class="{ open: mapPanelOpen }"
+        >
+          <MapPanel
+            :model="mapModel"
+            :engine-factory="createRasterTileMapEngine"
+            :empty-text="t('collections.map_placeholder')"
+          />
+        </aside>
+      </div>
+
+      <PeoplePanel
         ref="peoplePanelEl"
-        :class="{ open: peoplePanelOpen }"
-      >
-        <div v-if="faces.length === 0" class="viewer-people-placeholder">
-          <p class="viewer-people-text">{{ t('collections.no_faces') }}</p>
-        </div>
-
-        <div v-else class="viewer-people-content">
-          <div ref="peopleListEl" class="viewer-people-list">
-            <button
-              v-for="(face, index) in faces"
-              :key="face.id"
-              type="button"
-              class="viewer-people-card"
-              :data-face-id="String(face.id)"
-              :style="faceCardStyle(face)"
-              @click="focusFace(face)"
-              @mouseenter="setHoveredCardFace(face.id)"
-              @mouseleave="setHoveredCardFace(null)"
-            >
-              <span class="viewer-people-thumb">
-                <img
-                  v-if="fileInfo?.preview_url"
-                  :src="fileInfo.preview_url"
-                  alt=""
-                  class="viewer-people-thumb-image"
-                  :style="faceCardImageStyle(face)"
-                >
-                <span v-else class="viewer-people-thumb-placeholder">{{ String(index + 1) }}</span>
-                <span class="viewer-face-badge viewer-people-badge">{{ String(index + 1) }}</span>
-              </span>
-
-              <span class="viewer-people-caption">
-                <span class="viewer-people-name" :title="faceDisplayName(face, index)">{{ faceDisplayName(face, index) }}</span>
-              </span>
-            </button>
-          </div>
-        </div>
-      </aside>
+        :open="peoplePanelOpen"
+        :face-cards="peopleFaceCards"
+        :preview-url="fileInfo?.preview_url || ''"
+        :has-left-fade="!peopleListAtStart"
+        :has-right-fade="!peopleListAtEnd"
+        :empty-text="peoplePanelEmptyText"
+        @scroll="updatePeopleListFade"
+        @face-click="focusFace"
+        @face-enter="setHoveredCardFace"
+        @face-leave="setHoveredCardFace(null)"
+      />
     </section>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import InfoPanel from '../components/InfoPanel.vue'
 import MapPanel from '../components/MapPanel.vue'
+import PeoplePanel from '../components/PeoplePanel.vue'
 import { apiFetch, fetchWithTimeout } from '../api.js'
 import { createRasterTileMapEngine } from '../map/engines/rasterTileEngine.js'
 import { fileMapModelFromFile } from '../map/fileModel.js'
@@ -207,22 +158,28 @@ const route = useRoute()
 const router = useRouter()
 const canvasEl = ref(null)
 const containerEl = ref(null)
+const mobileDockEl = ref(null)
 const infoPanelEl = ref(null)
 const mapPanelEl = ref(null)
 const peoplePanelEl = ref(null)
-const peopleListEl = ref(null)
 const collectionId = computed(() => String(route.params.id))
 const prevId = ref(null)
 const nextId = ref(null)
 const fileInfo = ref(null)
 const fileMetadata = ref(null)
 const faces = ref([])
+const facesLoading = ref(false)
+const facesLoadFailed = ref(false)
 const viewerReady = ref(false)
 const viewerLoading = ref(false)
 const infoPanelOpen = ref(false)
 const mapPanelOpen = ref(false)
 const peoplePanelOpen = ref(false)
 const compactLayout = ref(false)
+const viewerWidth = ref(typeof window === 'undefined' ? 1024 : window.innerWidth)
+const compactBottomInset = ref(0)
+const peopleListAtStart = ref(true)
+const peopleListAtEnd = ref(true)
 const hoveredFaceId = ref(null)
 const hoveredCardFaceId = ref(null)
 const hoverTooltipX = ref(0)
@@ -242,6 +199,9 @@ const FACE_FOCUS_TARGET_Y_RATIO = 0.43
 const FACE_TAG_HEIGHT = 20
 const FACE_TAG_PADDING_X = 6
 const FACE_TAG_FONT = '600 12px "Segoe UI", sans-serif'
+const COMPACT_LAYOUT_MAX_WIDTH = 900
+const COMPACT_DOCK_STACK_MAX_WIDTH = 640
+const PEOPLE_LIST_FADE_TOLERANCE_PX = 24
 
 let meta = null
 let scale = 1
@@ -257,6 +217,7 @@ let lastY = 0
 const tileCache = new Map()
 let rafId = null
 let fileLoadToken = 0
+let resizeObserver = null
 
 const fileName = computed(() => {
   const path = String(fileInfo.value?.path || '').replaceAll('\\', '/')
@@ -264,6 +225,8 @@ const fileName = computed(() => {
   const parts = String(path).split('/')
   return parts[parts.length - 1] || String(path)
 })
+
+const fileTitle = computed(() => fileName.value || '…')
 
 const fileDescription = computed(() => fileMetadata.value?.description || '')
 
@@ -283,6 +246,21 @@ const hasSemanticMetadata = computed(() => Boolean(
 
 const mapModel = computed(() => fileMapModelFromFile(fileInfo.value, fileMetadata.value))
 
+const peopleFaceCards = computed(() => faces.value.map((face, index) => ({
+  id: face.id,
+  face,
+  label: String(index + 1),
+  name: faceDisplayName(face, index),
+  cardStyle: faceCardStyle(face),
+  imageStyle: faceCardImageStyle(face),
+})))
+
+const peoplePanelEmptyText = computed(() => {
+  if (facesLoading.value) return t('collections.loading')
+  if (facesLoadFailed.value) return t('collections.faces_load_error')
+  return t('collections.no_faces')
+})
+
 const faceHoverTooltipText = computed(() => {
   if (peoplePanelOpen.value) return ''
 
@@ -296,26 +274,50 @@ const showViewerEmpty = computed(() => (
   fileInfo.value !== null && !viewerLoading.value && !viewerReady.value
 ))
 
+const compactDockOpen = computed(() => infoPanelOpen.value || mapPanelOpen.value)
+const compactDockSingle = computed(() => compactLayout.value && (infoPanelOpen.value !== mapPanelOpen.value))
+const compactDockStacked = computed(() => (
+  compactLayout.value
+  && infoPanelOpen.value
+  && mapPanelOpen.value
+  && viewerWidth.value <= COMPACT_DOCK_STACK_MAX_WIDTH
+))
+
 const stageClasses = computed(() => ({
-  'compact-panel-open': compactLayout.value && (infoPanelOpen.value || mapPanelOpen.value || peoplePanelOpen.value),
-  'compact-map-open': compactLayout.value && mapPanelOpen.value,
+  'compact-layout': compactLayout.value,
+  'compact-panel-open': compactLayout.value && (compactDockOpen.value || peoplePanelOpen.value),
+  'compact-dock-single': compactDockSingle.value,
+  'compact-dock-stacked': compactDockStacked.value,
   'compact-people-open': compactLayout.value && peoplePanelOpen.value,
 }))
 
-const stageStyle = computed(() => ({
-  '--controls-right': infoPanelOpen.value
-    ? 'calc(var(--viewer-edge) + var(--viewer-side-width) + var(--viewer-gap))'
-    : 'var(--viewer-edge)',
-  '--controls-bottom': peoplePanelOpen.value || (mapPanelOpen.value && !infoPanelOpen.value)
-    ? 'calc(var(--viewer-edge) + var(--viewer-people-height) + var(--viewer-gap))'
-    : 'var(--viewer-edge)',
-  '--people-right': infoPanelOpen.value || mapPanelOpen.value
-    ? 'calc(var(--viewer-edge) + var(--viewer-side-width) + var(--viewer-gap))'
-    : 'var(--viewer-edge)',
-  '--info-bottom': mapPanelOpen.value
-    ? 'calc(var(--viewer-edge) + var(--viewer-people-height) + var(--viewer-gap))'
-    : 'var(--viewer-edge)',
-}))
+const stageStyle = computed(() => {
+  if (compactLayout.value) {
+    return {
+      '--controls-right': 'var(--viewer-edge)',
+      '--controls-bottom': compactBottomInset.value > 0
+        ? `calc(var(--viewer-edge) + ${compactBottomInset.value}px + var(--viewer-gap))`
+        : 'var(--viewer-edge)',
+      '--people-right': 'var(--viewer-edge)',
+      '--info-bottom': 'var(--viewer-edge)',
+    }
+  }
+
+  return {
+    '--controls-right': infoPanelOpen.value
+      ? 'calc(var(--viewer-edge) + var(--viewer-side-width) + var(--viewer-gap))'
+      : 'var(--viewer-edge)',
+    '--controls-bottom': peoplePanelOpen.value || (mapPanelOpen.value && !infoPanelOpen.value)
+      ? 'calc(var(--viewer-edge) + var(--viewer-people-height) + var(--viewer-gap))'
+      : 'var(--viewer-edge)',
+    '--people-right': infoPanelOpen.value || mapPanelOpen.value
+      ? 'calc(var(--viewer-edge) + var(--viewer-side-width) + var(--viewer-gap))'
+      : 'var(--viewer-edge)',
+    '--info-bottom': mapPanelOpen.value
+      ? 'calc(var(--viewer-edge) + var(--viewer-people-height) + var(--viewer-gap))'
+      : 'var(--viewer-edge)',
+  }
+})
 
 async function loadFile() {
   const loadToken = ++fileLoadToken
@@ -325,6 +327,8 @@ async function loadFile() {
   fileInfo.value = null
   fileMetadata.value = null
   faces.value = []
+  facesLoading.value = true
+  facesLoadFailed.value = false
   hoveredFaceId.value = null
   hoveredCardFaceId.value = null
   hoverTooltipX.value = 0
@@ -337,11 +341,10 @@ async function loadFile() {
   try {
     const fileId = Number(route.params.fileId)
     const collectionRouteId = Number(collectionId.value)
-    const [fileRes, metadataRes, navigationRes, facesRes] = await Promise.all([
-      apiFetch(`/collections/${collectionRouteId}/files/${fileId}`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
-      apiFetch(`/collections/${collectionRouteId}/files/${fileId}/metadata`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
-      apiFetch(`/collections/${collectionRouteId}/files/${fileId}/navigation`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
-      apiFetch(`/collections/${collectionRouteId}/files/${fileId}/faces`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
+    const [fileRes, metadataRes, navigationRes] = await Promise.all([
+      apiFetch(`/files/${fileId}`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
+      apiFetch(`/files/${fileId}/metadata`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
+      apiFetch(`/files/${fileId}/navigation?collection_id=${collectionRouteId}`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
     ])
 
     if (loadToken !== fileLoadToken) return
@@ -356,20 +359,50 @@ async function loadFile() {
       return
     }
 
-    const [file, metadata] = await Promise.all([fileRes.json(), metadataRes.json()])
+    const [fileData, metadataData] = await Promise.all([
+      fileRes.json(),
+      metadataRes.json(),
+    ])
+
     if (loadToken !== fileLoadToken) return
 
-    fileInfo.value = file
-    fileMetadata.value = metadata
-    faces.value = facesRes.ok ? await facesRes.json() : []
-    if (navigationRes.ok) {
-      const navigation = await navigationRes.json()
-      prevId.value = navigation.prev_id
-      nextId.value = navigation.next_id
-    }
-    if (!file.tile_base_url) return
+    fileInfo.value = fileData
+    fileMetadata.value = metadataData
 
-    const metaRes = await fetchWithTimeout(`${file.tile_base_url}/meta.json`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS })
+    if (navigationRes.ok) {
+      const navigationData = await navigationRes.json()
+      prevId.value = navigationData.prev_id
+      nextId.value = navigationData.next_id
+    }
+
+    try {
+      const facesRes = await apiFetch(`/files/${fileId}/faces`, {
+        timeoutMs: ROUTE_LOAD_TIMEOUT_MS,
+      })
+
+      if (loadToken !== fileLoadToken) return
+
+      if (facesRes.ok) {
+        faces.value = await facesRes.json()
+        facesLoadFailed.value = false
+      } else {
+        faces.value = []
+        facesLoadFailed.value = true
+      }
+    } catch {
+      if (loadToken !== fileLoadToken) return
+      faces.value = []
+      facesLoadFailed.value = true
+    } finally {
+      if (loadToken === fileLoadToken) facesLoading.value = false
+    }
+
+    if (!fileData.tile_base_url) return
+
+    const metaRes = await fetchWithTimeout(`${fileData.tile_base_url}/meta.json`, {
+      timeoutMs: ROUTE_LOAD_TIMEOUT_MS,
+    })
+
     if (loadToken !== fileLoadToken) return
 
     if (!metaRes.ok) {
@@ -377,7 +410,11 @@ async function loadFile() {
       return
     }
 
-    meta = { ...(await metaRes.json()), tileBaseUrl: file.tile_base_url }
+    meta = {
+      ...(await metaRes.json()),
+      tileBaseUrl: fileData.tile_base_url,
+    }
+
     if (loadToken !== fileLoadToken) return
 
     resizeCanvas()
@@ -388,11 +425,12 @@ async function loadFile() {
     if (loadToken !== fileLoadToken) return
     await replaceForRouteFailure(router, route, error)
   } finally {
-    if (loadToken === fileLoadToken) viewerLoading.value = false
+    if (loadToken === fileLoadToken) {
+      viewerLoading.value = false
+      facesLoading.value = false
+    }
   }
 }
-
-let resizeObserver = null
 
 onMounted(() => {
   infoPanelOpen.value = localStorage.getItem(INFO_PANEL_KEY) === 'true'
@@ -404,24 +442,33 @@ onMounted(() => {
   if (containerEl.value instanceof Element) {
     resizeObserver.observe(containerEl.value)
   }
+  void nextTick(updateOverlayMetrics)
+  void nextTick(updatePeopleListFade)
   void loadFile()
 })
 
 watch(() => route.params.fileId, loadFile)
 
-watch(infoPanelOpen, (value) => {
-  localStorage.setItem(INFO_PANEL_KEY, value ? 'true' : 'false')
-})
-
-watch(mapPanelOpen, (value) => {
-  localStorage.setItem(MAP_PANEL_KEY, value ? 'true' : 'false')
-})
+persistPanelState(infoPanelOpen, INFO_PANEL_KEY)
+persistPanelState(mapPanelOpen, MAP_PANEL_KEY)
+persistPanelState(peoplePanelOpen, PEOPLE_PANEL_KEY)
 
 watch(peoplePanelOpen, (value) => {
-  localStorage.setItem(PEOPLE_PANEL_KEY, value ? 'true' : 'false')
   const hadHoveredFace = hoveredFaceId.value !== null || hoveredCardFaceId.value !== null
   if (!value) hoveredCardFaceId.value = null
   if (hadHoveredFace) scheduleRender()
+  void nextTick(updatePeopleListFade)
+})
+
+watch(faces, async () => {
+  await nextTick()
+  updatePeopleListFade()
+})
+
+watch([infoPanelOpen, mapPanelOpen, peoplePanelOpen, compactDockSingle, compactDockStacked], async () => {
+  await nextTick()
+  updateOverlayMetrics()
+  updatePeopleListFade()
 })
 
 onUnmounted(() => {
@@ -431,41 +478,68 @@ onUnmounted(() => {
 })
 
 function updateCompactLayout() {
-  compactLayout.value = (containerEl.value?.clientWidth ?? window.innerWidth) <= 900
+  viewerWidth.value = containerEl.value?.clientWidth ?? window.innerWidth
+  compactLayout.value = viewerWidth.value <= COMPACT_LAYOUT_MAX_WIDTH
 }
 
 function normalizePanelStateForLayout() {
   updateCompactLayout()
-  if (!compactLayout.value) return
+}
 
-  if (peoplePanelOpen.value) {
-    infoPanelOpen.value = false
-    mapPanelOpen.value = false
-  } else if (mapPanelOpen.value) {
-    infoPanelOpen.value = false
-    peoplePanelOpen.value = false
-  } else if (infoPanelOpen.value) {
-    mapPanelOpen.value = false
-    peoplePanelOpen.value = false
-  }
+function persistPanelState(panelState, storageKey) {
+  watch(panelState, (value) => {
+    localStorage.setItem(storageKey, value ? 'true' : 'false')
+  })
 }
 
 function togglePanel(panel) {
   updateCompactLayout()
 
-  if (compactLayout.value) {
-    const nextInfo = panel === 'info' ? !infoPanelOpen.value : false
-    const nextMap = panel === 'map' ? !mapPanelOpen.value : false
-    const nextPeople = panel === 'people' ? !peoplePanelOpen.value : false
-    infoPanelOpen.value = nextInfo
-    mapPanelOpen.value = nextMap
-    peoplePanelOpen.value = nextPeople
-    return
-  }
-
   if (panel === 'info') infoPanelOpen.value = !infoPanelOpen.value
   if (panel === 'map') mapPanelOpen.value = !mapPanelOpen.value
   if (panel === 'people') peoplePanelOpen.value = !peoplePanelOpen.value
+}
+
+function updateOverlayMetrics() {
+  if (!compactLayout.value) {
+    compactBottomInset.value = 0
+    return
+  }
+
+  const containerRect = containerEl.value?.getBoundingClientRect()
+  if (!containerRect) {
+    compactBottomInset.value = 0
+    return
+  }
+
+  let top = containerRect.bottom
+  const dockRect = compactDockOpen.value ? mobileDockEl.value?.getBoundingClientRect() : null
+  const peopleRect = peoplePanelOpen.value ? peoplePanelEl.value?.rootEl?.getBoundingClientRect() : null
+
+  if (dockRect && dockRect.height > 0) top = Math.min(top, dockRect.top)
+  if (peopleRect && peopleRect.height > 0) top = Math.min(top, peopleRect.top)
+
+  compactBottomInset.value = Math.max(0, Math.round(containerRect.bottom - top))
+}
+
+function updatePeopleListFade() {
+  const list = peoplePanelEl.value?.listEl
+  if (!list) {
+    peopleListAtStart.value = true
+    peopleListAtEnd.value = true
+    return
+  }
+
+  const maxScrollLeft = Math.max(0, list.scrollWidth - list.clientWidth)
+  if (maxScrollLeft <= 1) {
+    peopleListAtStart.value = true
+    peopleListAtEnd.value = true
+    return
+  }
+
+  const scrollLeft = Math.max(0, list.scrollLeft)
+  peopleListAtStart.value = scrollLeft <= 1
+  peopleListAtEnd.value = scrollLeft >= (maxScrollLeft - PEOPLE_LIST_FADE_TOLERANCE_PX)
 }
 
 function resizeCanvas() {
@@ -496,6 +570,8 @@ function fitImage() {
 function onResize() {
   updateCompactLayout()
   normalizePanelStateForLayout()
+  updateOverlayMetrics()
+  updatePeopleListFade()
   if (!meta) return
   const c = canvasEl.value
   const cx = (c.width / 2 - offsetX) / scale
@@ -637,7 +713,7 @@ function faceDisplayName(face, index) {
 function revealPeopleCard(faceId) {
   if (!peoplePanelOpen.value || faceId == null) return
 
-  const card = peopleListEl.value?.querySelector(`.viewer-people-card[data-face-id="${String(faceId)}"]`)
+  const card = peoplePanelEl.value?.listEl?.querySelector(`.viewer-people-card[data-face-id="${String(faceId)}"]`)
   if (!card) return
 
   card.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
@@ -651,13 +727,11 @@ function viewerTargetPoint() {
   let bottomInset = 0
 
   if (compactLayout.value) {
-    if (peoplePanelOpen.value) bottomInset = peoplePanelEl.value?.offsetHeight ?? 0
-    else if (mapPanelOpen.value) bottomInset = mapPanelEl.value?.offsetHeight ?? 0
-    else if (infoPanelOpen.value) bottomInset = infoPanelEl.value?.offsetHeight ?? 0
+    bottomInset = compactBottomInset.value
   } else {
-    if (infoPanelOpen.value) sideInset = Math.max(sideInset, infoPanelEl.value?.offsetWidth ?? 0)
+    if (infoPanelOpen.value) sideInset = Math.max(sideInset, infoPanelEl.value?.rootEl?.offsetWidth ?? 0)
     if (mapPanelOpen.value) sideInset = Math.max(sideInset, mapPanelEl.value?.offsetWidth ?? 0)
-    if (peoplePanelOpen.value) bottomInset = Math.max(bottomInset, peoplePanelEl.value?.offsetHeight ?? 0)
+    if (peoplePanelOpen.value) bottomInset = Math.max(bottomInset, peoplePanelEl.value?.rootEl?.offsetHeight ?? 0)
   }
 
   const width = Math.max(1, container.clientWidth - sideInset)
@@ -947,10 +1021,11 @@ function formatPhotoDate(metadata) {
   --viewer-badge-radius: var(--radius-xs);
   --viewer-edge: var(--sp-4);
   --viewer-gap: var(--sp-3);
+  --viewer-media-panel-padding: var(--sp-2-5);
   --viewer-side-width: clamp(17rem, 23vw, 20rem);
-  --viewer-people-height: clamp(10rem, 23.1vh, 13rem);
+  --viewer-people-height: 10rem;
   --viewer-mobile-sheet-height: clamp(11.25rem, 34vh, 15.5rem);
-  --viewer-mobile-people-height: clamp(10rem, 30.8vh, 13.95rem);
+  --viewer-mobile-people-height: var(--viewer-people-height);
   --controls-right: var(--viewer-edge);
   --controls-bottom: var(--viewer-edge);
   --people-right: var(--viewer-edge);
@@ -988,9 +1063,6 @@ function formatPhotoDate(metadata) {
 .viewer-empty {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: var(--sp-8);
   pointer-events: none;
 }
@@ -1027,95 +1099,16 @@ function formatPhotoDate(metadata) {
   color: var(--text-muted);
 }
 
-.viewer-meta-title {
-  margin: 0 0 var(--sp-4);
-  min-width: 0;
-  font-size: 0.82rem;
-  line-height: 1.35;
-  font-weight: 400;
-  color: var(--text);
+.viewer-face-hover-tooltip {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.viewer-meta-grid {
+.viewer-empty {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin: 0 0 var(--sp-4);
-}
-
-.viewer-meta-row {
-  display: grid;
-  grid-template-columns: 5.25rem minmax(0, 1fr);
-  gap: var(--sp-2);
-  align-items: start;
-}
-
-.viewer-meta-row dt {
-  font-size: 0.78rem;
-  line-height: 1.35;
-  font-weight: 400;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.viewer-meta-row dt::after {
-  content: ':';
-}
-
-.viewer-meta-row dd {
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.35;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.viewer-meta-section {
-  margin-top: var(--sp-3);
-  padding-top: var(--sp-3);
-  border-top: 1px solid var(--border);
-}
-
-.viewer-section-title {
-  margin: 0 0 var(--sp-2);
-  font-size: 0.74rem;
-  font-weight: 400;
-  color: var(--text-muted);
-}
-
-.viewer-meta-text {
-  margin: 0;
-  min-width: 0;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.viewer-list {
-  margin: 0;
-  padding-left: 1.125rem;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-}
-
-.viewer-list li {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.viewer-meta-empty {
-  margin: var(--sp-4) 0 0;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
+  align-items: center;
+  justify-content: center;
 }
 
 .viewer-controls {
@@ -1128,6 +1121,10 @@ function formatPhotoDate(metadata) {
   gap: var(--sp-2-5);
   z-index: 4;
   transition: right var(--motion-panel) var(--ease-standard), bottom var(--motion-panel) var(--ease-standard);
+}
+
+.viewer-mobile-dock {
+  display: contents;
 }
 
 .viewer-nav-row {
@@ -1168,6 +1165,7 @@ function formatPhotoDate(metadata) {
   pointer-events: none;
 }
 
+
 .viewer-panel {
   position: relative;
   display: flex;
@@ -1185,21 +1183,12 @@ function formatPhotoDate(metadata) {
   box-shadow: var(--shadow-panel);
   transform: translateY(0.5rem) scale(0.988);
   transition: transform var(--motion-panel) var(--ease-standard), opacity var(--motion-panel) var(--ease-standard);
-  scrollbar-width: none;
+  scrollbar-width: thin;
   scrollbar-color: rgba(82, 92, 105, 0.46) transparent;
   z-index: 3;
 }
 
-.viewer-panel:hover {
-  scrollbar-width: thin;
-}
-
 .viewer-panel::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-.viewer-panel:hover::-webkit-scrollbar {
   width: 0.4rem;
   height: 0.4rem;
 }
@@ -1232,6 +1221,13 @@ function formatPhotoDate(metadata) {
   bottom: var(--viewer-edge);
   width: var(--viewer-side-width);
   height: var(--viewer-people-height);
+  padding: var(--viewer-media-panel-padding);
+  overflow-y: hidden;
+  scrollbar-gutter: auto;
+}
+
+.viewer-panel-map :deep(.map-raster-engine__attribution) {
+  display: none;
 }
 
 .viewer-panel-people {
@@ -1239,142 +1235,9 @@ function formatPhotoDate(metadata) {
   left: var(--viewer-edge);
   right: var(--people-right);
   bottom: var(--viewer-edge);
-  padding: var(--sp-2-5) var(--sp-2-5) 0;
   height: var(--viewer-people-height);
+  padding: var(--viewer-media-panel-padding) var(--viewer-media-panel-padding) 0;
   z-index: 3;
-}
-
-.viewer-people-placeholder {
-  min-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 var(--sp-4);
-  text-align: center;
-}
-.viewer-people-text {
-  max-width: none;
-  margin: 0;
-  line-height: 1.55;
-  color: var(--text-muted);
-}
-
-.viewer-people-text {
-  max-width: 24rem;
-}
-
-.viewer-people-content {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-
-.viewer-people-list {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 4.7rem;
-  gap: var(--sp-3);
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: var(--sp-3);
-  scrollbar-gutter: stable;
-  align-items: start;
-}
-
-.viewer-people-list::-webkit-scrollbar {
-  height: 0.35rem;
-}
-
-.viewer-people-list::-webkit-scrollbar-thumb {
-  background: rgba(82, 92, 105, 0.46);
-}
-
-.viewer-people-card {
-  --face-card-accent: #d19b2f;
-  --face-card-fill: rgba(209, 155, 47, 0.14);
-  --face-card-stroke-width: 1.5px;
-  --face-card-tag-height: 20px;
-  --face-card-tag-padding-x: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1-5);
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-  border-radius: var(--viewer-card-radius);
-}
-
-.viewer-people-thumb {
-  position: relative;
-  aspect-ratio: 4 / 5;
-  box-sizing: border-box;
-  overflow: hidden;
-  border: var(--face-card-stroke-width) solid var(--face-card-accent);
-  border-radius: var(--viewer-card-radius);
-  background: var(--face-card-fill);
-}
-
-.viewer-people-thumb-image {
-  position: absolute;
-  max-width: none;
-}
-
-.viewer-people-thumb-placeholder {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-}
-
-.viewer-face-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: var(--face-card-tag-height);
-  min-width: 0;
-  padding: 0 var(--face-card-tag-padding-x);
-  box-sizing: border-box;
-  font-family: "Segoe UI", sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  color: #fff;
-  background: var(--face-card-accent);
-  border-radius: 0 0 var(--viewer-badge-radius) 0;
-  white-space: nowrap;
-}
-
-.viewer-people-badge {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.viewer-people-caption {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  align-items: center;
-  text-align: center;
-}
-
-.viewer-people-name {
-  width: 100%;
-  font-size: 12px;
-  line-height: 1.1;
-  font-weight: 400;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 [data-theme="dark"] .viewer-stage {
@@ -1390,57 +1253,54 @@ function formatPhotoDate(metadata) {
   box-shadow: var(--shadow-panel-dark);
 }
 
-[data-theme="dark"] .viewer-people-card {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-}
-
 [data-theme="dark"] .viewer-panel::-webkit-scrollbar-thumb {
   background: rgba(206, 214, 224, 0.18);
 }
 
-@media (max-width: 900px) {
-  .viewer-stage {
-    --viewer-edge: var(--sp-3);
-  }
-
-  .viewer-controls {
-    right: var(--viewer-edge);
-    bottom: var(--viewer-edge);
-  }
-
-  .viewer-stage.compact-panel-open .viewer-controls {
-    bottom: calc(var(--viewer-edge) + var(--viewer-mobile-sheet-height) + var(--viewer-gap));
-  }
-
-  .viewer-stage.compact-map-open .viewer-controls,
-  .viewer-stage.compact-people-open .viewer-controls {
-    bottom: calc(var(--viewer-edge) + var(--viewer-mobile-people-height) + var(--viewer-gap));
-  }
-
-  .viewer-panel-info,
-  .viewer-panel-map,
-  .viewer-panel-people {
-    top: auto;
-    left: var(--viewer-edge);
-    right: var(--viewer-edge);
-    bottom: var(--viewer-edge);
-    width: auto;
-    height: var(--viewer-mobile-sheet-height);
-  }
-
-  .viewer-panel-people {
-    height: var(--viewer-mobile-people-height);
-  }
-
-  .viewer-panel-map {
-    height: var(--viewer-mobile-people-height);
-  }
-
-  .viewer-meta-row {
-    grid-template-columns: max-content minmax(0, 1fr);
-    gap: var(--sp-2);
-    align-items: baseline;
-  }
+.viewer-stage.compact-layout {
+  --viewer-edge: var(--sp-3);
 }
+
+.viewer-stage.compact-layout .viewer-mobile-dock {
+  position: absolute;
+  left: var(--viewer-edge);
+  right: var(--viewer-edge);
+  bottom: var(--viewer-edge);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: var(--viewer-gap);
+  z-index: 3;
+}
+
+.viewer-stage.compact-people-open .viewer-mobile-dock {
+  bottom: calc(var(--viewer-edge) + var(--viewer-mobile-people-height) + var(--viewer-gap));
+}
+
+.viewer-stage.compact-dock-single .viewer-mobile-dock,
+.viewer-stage.compact-dock-stacked .viewer-mobile-dock {
+  grid-template-columns: 1fr;
+}
+
+.viewer-stage.compact-layout .viewer-mobile-dock > .viewer-panel {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  width: auto;
+  height: var(--viewer-mobile-sheet-height);
+}
+
+.viewer-stage.compact-layout .viewer-mobile-dock > .viewer-panel:not(.open) {
+  display: none;
+}
+
+.viewer-stage.compact-layout .viewer-panel-people {
+  left: var(--viewer-edge);
+  right: var(--viewer-edge);
+  bottom: var(--viewer-edge);
+  height: var(--viewer-mobile-people-height);
+}
+
 </style>

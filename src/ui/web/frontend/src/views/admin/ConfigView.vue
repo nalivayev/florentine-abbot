@@ -48,9 +48,9 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import ConfirmDialog from '../components/ConfirmDialog.vue'
-import { apiFetch } from '../api.js'
-import { replaceForRouteFailure, ROUTE_LOAD_TIMEOUT_MS } from '../routeErrors.js'
+import ConfirmDialog from '../../components/shared/ConfirmDialog.vue'
+import { apiFetch } from '../../api.js'
+import { replaceForRouteFailure, ROUTE_LOAD_TIMEOUT_MS } from '../../routeErrors.js'
 
 const { t, te } = useI18n()
 const route = useRoute()

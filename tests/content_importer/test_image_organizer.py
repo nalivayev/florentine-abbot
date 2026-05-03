@@ -20,7 +20,7 @@ class TestImageOrganizer:
         dest = tmp_path / "archive" / "2024" / "file.tif"
 
         organizer = ImageOrganizer()
-        report = organizer.process([(src, dest, [])], copy_mode=True)
+        report = organizer.organize([(src, dest, [])], copy_mode=True)
 
         assert report.succeeded == 1
         assert report.failed == 0
@@ -34,7 +34,7 @@ class TestImageOrganizer:
         dest = tmp_path / "archive" / "file.tif"
 
         organizer = ImageOrganizer()
-        organizer.process([(src, dest, [])], copy_mode=False)
+        organizer.organize([(src, dest, [])], copy_mode=False)
 
         assert dest.exists()
         assert not src.exists()
@@ -46,7 +46,7 @@ class TestImageOrganizer:
         dest.write_bytes(b"existing")
 
         organizer = ImageOrganizer()
-        report = organizer.process([(src, dest, [])], copy_mode=True)
+        report = organizer.organize([(src, dest, [])], copy_mode=True)
 
         assert report.succeeded == 0
         assert report.failed == 1
@@ -59,7 +59,7 @@ class TestImageOrganizer:
         dest = tmp_path / "a" / "b" / "c" / "file.tif"
 
         organizer = ImageOrganizer()
-        report = organizer.process([(src, dest, [])], copy_mode=True)
+        report = organizer.organize([(src, dest, [])], copy_mode=True)
 
         assert report.succeeded == 1
         assert dest.exists()
@@ -70,7 +70,7 @@ class TestImageOrganizer:
         dest = tmp_path / "out" / "file.tif"
 
         organizer = ImageOrganizer()
-        organizer.process([(src, dest, [])], copy_mode=True, protect=True)
+        organizer.organize([(src, dest, [])], copy_mode=True, protect=True)
 
         mode = dest.stat().st_mode
         assert not (mode & stat.S_IWUSR), "dest should be read-only"
@@ -81,7 +81,7 @@ class TestImageOrganizer:
         dest = tmp_path / "out" / "file.tif"
 
         organizer = ImageOrganizer()
-        organizer.process([(src, dest, [])], copy_mode=True)
+        organizer.organize([(src, dest, [])], copy_mode=True)
 
         tmp = dest.with_suffix(".tif.tmp")
         assert not tmp.exists()
@@ -99,7 +99,7 @@ class TestImageOrganizer:
             mapping.append((src, dst_dir / f"file{i}.tif", []))
 
         organizer = ImageOrganizer()
-        report = organizer.process(mapping, copy_mode=True)
+        report = organizer.organize(mapping, copy_mode=True)
 
         assert report.succeeded == 3
         assert report.total == 3
@@ -114,7 +114,7 @@ class TestImageOrganizer:
         tags: list[Tag] = [KeyValueTag(TAG_XMP_XMPMM_INSTANCE_ID, new_id)]
 
         organizer = ImageOrganizer()
-        report = organizer.process([(src, dest, tags)], copy_mode=True)
+        report = organizer.organize([(src, dest, tags)], copy_mode=True)
 
         assert report.succeeded == 1
 

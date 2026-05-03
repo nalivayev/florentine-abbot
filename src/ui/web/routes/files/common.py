@@ -1,4 +1,4 @@
-"""Shared helpers for collection-rooted file routes."""
+"""Shared helpers for flat file routes."""
 
 from pathlib import Path
 from typing import Any
@@ -11,12 +11,8 @@ from tile_cutter.constants import TILES_DIR
 from ui.web.store import WebStore
 
 
-def collection_file_detail_or_404(
-    store: WebStore,
-    collection_id: int,
-    file_id: int,
-) -> dict[str, Any]:
-    detail = store.get_file_detail(file_id, collection_id=collection_id)
+def file_or_404(store: WebStore, file_id: int) -> dict[str, Any]:
+    detail = store.get_file_detail(file_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="File not found")
     return detail
@@ -41,7 +37,6 @@ def metadata_payload(row: dict[str, Any]) -> dict[str, Any] | None:
             "lon": float(lon),
             "altitude": None if row.get("gps_altitude") is None else float(row["gps_altitude"]),
         }
-
     return metadata if any(value is not None for value in metadata.values()) else None
 
 
@@ -68,15 +63,16 @@ def tile_base_url(archive_path: Path | None, parts: tuple[str, ...], stem: str, 
 
 
 def decorate_file_row(row: dict[str, Any], archive_path: Path | None) -> dict[str, Any]:
-    rel_path = Path(str(row["path"]))
+    normalized_path = str(row["path"]).replace("\\", "/")
+    rel_path = Path(normalized_path)
     parts = rel_path.parts
     stem = rel_path.stem
     dir_parts = "/".join(parts[:-1])
-
     return {
         "id": int(row["id"]),
-        "collection_id": int(row["collection_id"]),
-        "path": str(row["path"]),
+        "collection_id": int(row["collection_id"]) if row.get("collection_id") is not None else None,
+        "collection_name": str(row["collection_name"]) if row.get("collection_name") is not None else None,
+        "path": normalized_path,
         "status": str(row["status"]),
         "imported_at": str(row["imported_at"]),
         "preview_url": preview_url(archive_path, parts, stem, dir_parts),

@@ -68,7 +68,7 @@ class KeeperStore:
     def _seed_tasks_for_file(self, *, file_id: int, updated_at: str) -> None:
         for provider in list_providers():
             self._c.execute(
-                "INSERT OR IGNORE INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                 (file_id, provider.daemon_name, TASK_STATUS_PENDING, updated_at),
             )
 
@@ -86,7 +86,7 @@ class KeeperStore:
             "UPDATE files SET status = ?, checksum = NULL WHERE id = ?",
             (FILE_STATUS_NEW, file_id),
         )
-        self._c.execute("DELETE FROM tasks WHERE file_id = ?", (file_id,))
+        self._c.execute("DELETE FROM daemon_tasks WHERE file_id = ?", (file_id,))
         self._seed_tasks_for_file(
             file_id=file_id,
             updated_at=datetime.now(timezone.utc).isoformat(),
@@ -124,7 +124,7 @@ class KeeperStore:
             SELECT
                 COUNT(*) AS total,
                 SUM(CASE WHEN status NOT IN (?, ?) THEN 1 ELSE 0 END) AS pending
-            FROM tasks
+            FROM daemon_tasks
             WHERE file_id = ?
             """,
             (TASK_STATUS_DONE, TASK_STATUS_SKIPPED, file_id),

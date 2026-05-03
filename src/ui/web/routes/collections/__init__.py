@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ui.web.deps import get_current_user, get_web_store, require_admin
-from ui.web.routes.collections.files import router as files_router
 from ui.web.store import WebStore
 
 router = APIRouter()
@@ -43,4 +42,3 @@ async def create_collection(
     )
 
 
-router.include_router(files_router)

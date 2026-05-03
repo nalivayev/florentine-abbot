@@ -8,6 +8,33 @@ from common.logger import Logger
 from face_recognizer.processor import RecognizerProcessor
 
 
+def _pixel_bbox_from_region(
+    region: tuple[float, float, float, float],
+    image_size: tuple[int, int],
+) -> tuple[int, int, int, int]:
+    image_width, image_height = image_size
+    center_x, center_y, width, height = region
+    half_width = width / 2.0
+    half_height = height / 2.0
+
+    left = max(0.0, min(1.0, center_x - half_width))
+    top = max(0.0, min(1.0, center_y - half_height))
+    right = max(0.0, min(1.0, center_x + half_width))
+    bottom = max(0.0, min(1.0, center_y + half_height))
+
+    pixel_left = int(round(left * image_width))
+    pixel_top = int(round(top * image_height))
+    pixel_right = int(round(right * image_width))
+    pixel_bottom = int(round(bottom * image_height))
+
+    return (
+        pixel_left,
+        pixel_top,
+        max(0, pixel_right - pixel_left),
+        max(0, pixel_bottom - pixel_top),
+    )
+
+
 class RecognizerPreviewer:
     """Detect faces and draw bounding boxes on a downscaled preview image."""
 
@@ -78,10 +105,7 @@ class RecognizerPreviewer:
         font = self._load_font(size=max(14, int(18 * scale)))
 
         for i, face in enumerate(faces):
-            x = int(face.bbox[0] * scale)
-            y = int(face.bbox[1] * scale)
-            w = int(face.bbox[2] * scale)
-            h = int(face.bbox[3] * scale)
+            x, y, w, h = _pixel_bbox_from_region(face.region, img.size)
 
             pw, ph = img.size
             x1, y1 = max(0, x), max(0, y)

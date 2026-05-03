@@ -18,6 +18,31 @@ SCHEMA_SQL = """
     );
 
     CREATE TABLE IF NOT EXISTS tasks (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain      TEXT    NOT NULL,
+        action      TEXT    NOT NULL,
+        status      TEXT    NOT NULL,
+        payload     TEXT    NOT NULL,
+        steps       INTEGER NOT NULL DEFAULT 0,
+        done        INTEGER NOT NULL DEFAULT 0,
+        failed      INTEGER NOT NULL DEFAULT 0,
+        created_at  TEXT    NOT NULL,
+        started_at  TEXT,
+        finished_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS task_steps (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id     INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+        kind        TEXT    NOT NULL,
+        status      TEXT    NOT NULL DEFAULT 'pending',
+        payload     TEXT    NOT NULL DEFAULT '{}',
+        error       TEXT,
+        started_at  TEXT,
+        finished_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS daemon_tasks (
         id          INTEGER PRIMARY KEY,
         file_id     INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
         daemon      TEXT    NOT NULL,

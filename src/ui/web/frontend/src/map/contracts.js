@@ -1,7 +1,7 @@
 /**
  * @typedef {{ lat: number, lon: number }} MapGeoPoint
  * @typedef {{ center: MapGeoPoint, zoom: number, minZoom?: number, maxZoom?: number }} MapViewport
- * @typedef {{ id: string|number, position: MapGeoPoint, label?: string }} MapMarker
+ * @typedef {{ id: string|number, position: MapGeoPoint, label?: string, title?: string }} MapMarker
  * @typedef {{ id?: string|number, points: MapGeoPoint[], label?: string }} MapPolyline
  * @typedef {{ urlTemplate: string, attribution?: string, minZoom?: number, maxZoom?: number }} MapTileSource
  * @typedef {{

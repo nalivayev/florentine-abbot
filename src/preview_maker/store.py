@@ -60,7 +60,7 @@ class MakerStore:
         rows = self._c.execute(
             """
             SELECT f.id, f.path, f.status
-            FROM tasks t
+            FROM daemon_tasks t
             JOIN files f ON f.id = t.file_id
             WHERE t.daemon = ?
               AND t.status = ?
@@ -80,11 +80,11 @@ class MakerStore:
     def start_task(self, file_id: int, updated_at: str) -> None:
         """Create or reset the preview-maker task to running."""
         self._c.execute(
-            "INSERT OR IGNORE INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
             (file_id, DAEMON_NAME, TASK_STATUS_RUNNING, updated_at),
         )
         self._c.execute(
-            "UPDATE tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
+            "UPDATE daemon_tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
             (TASK_STATUS_RUNNING, updated_at, file_id, DAEMON_NAME),
         )
         self._commit()
@@ -92,7 +92,7 @@ class MakerStore:
     def mark_done(self, file_id: int, updated_at: str) -> None:
         """Mark a preview-maker task as done."""
         self._c.execute(
-            "UPDATE tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
+            "UPDATE daemon_tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
             (TASK_STATUS_DONE, updated_at, file_id, DAEMON_NAME),
         )
         self._commit()
@@ -100,7 +100,7 @@ class MakerStore:
     def mark_skipped(self, file_id: int, updated_at: str) -> None:
         """Mark a preview-maker task as skipped."""
         self._c.execute(
-            "UPDATE tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
+            "UPDATE daemon_tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
             (TASK_STATUS_SKIPPED, updated_at, file_id, DAEMON_NAME),
         )
         self._commit()
@@ -108,7 +108,7 @@ class MakerStore:
     def mark_failed(self, file_id: int, error: str, updated_at: str) -> None:
         """Mark a preview-maker task as failed with an error message."""
         self._c.execute(
-            "UPDATE tasks SET status = ?, error = ?, updated_at = ? WHERE file_id = ? AND daemon = ?",
+            "UPDATE daemon_tasks SET status = ?, error = ?, updated_at = ? WHERE file_id = ? AND daemon = ?",
             (TASK_STATUS_FAILED, error, updated_at, file_id, DAEMON_NAME),
         )
         self._commit()

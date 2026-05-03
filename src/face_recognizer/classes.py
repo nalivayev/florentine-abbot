@@ -17,9 +17,10 @@ _DEFAULT_CLUSTERING_MIN_SAMPLES = 2
 class DetectedFace:
     """A single face detected in an image."""
 
-    bbox: tuple[int, int, int, int]
+    region: tuple[float, float, float, float]
     confidence: float | None
     embedding: numpy.ndarray = field(repr=False)
+    thumb_webp: bytes | None = field(default=None, repr=False)
 
 
 @dataclass(slots=True)

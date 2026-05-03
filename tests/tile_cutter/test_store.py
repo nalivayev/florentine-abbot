@@ -41,7 +41,7 @@ class TestCutterStore:
             ("a.tif",),
         ).fetchone()[0]
         conn.execute(
-            "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+            "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
             (file_id, "tile-cutter", TASK_STATUS_PENDING, self._now()),
         )
         file_id = conn.execute(
@@ -49,7 +49,7 @@ class TestCutterStore:
             ("b.tif",),
         ).fetchone()[0]
         conn.execute(
-            "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+            "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
             (file_id, "tile-cutter", TASK_STATUS_DONE, self._now()),
         )
         conn.commit()
@@ -85,7 +85,7 @@ class TestCutterStore:
         conn = self.database.get_conn()
 
         row = conn.execute(
-            "SELECT status, error FROM tasks WHERE file_id = ? AND daemon = ?",
+            "SELECT status, error FROM daemon_tasks WHERE file_id = ? AND daemon = ?",
             (file_id, "tile-cutter"),
         ).fetchone()
 

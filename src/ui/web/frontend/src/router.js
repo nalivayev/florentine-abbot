@@ -5,13 +5,17 @@ import CollectionsView from './views/CollectionsView.vue'
 import CollectionView from './views/CollectionView.vue'
 import ErrorView from './views/ErrorView.vue'
 import FileView from './views/FileView.vue'
+import MapView from './views/MapView.vue'
 import NotFoundView from './views/NotFoundView.vue'
+import PeopleReviewView from './views/admin/PeopleReviewView.vue'
 import WipView from './views/WipView.vue'
-import ConfigView from './views/ConfigView.vue'
-import ImportView from './views/ImportView.vue'
-import ImportScanView from './views/ImportScanView.vue'
-import ServicesView from './views/ServicesView.vue'
-import UsersView from './views/UsersView.vue'
+import ConfigView from './views/admin/ConfigView.vue'
+import ImportView from './views/admin/ImportView.vue'
+import ImportScanView from './views/admin/ImportScanView.vue'
+import ServicesView from './views/admin/ServicesView.vue'
+import FileManagerView from './views/admin/FileManagerView.vue'
+import TasksView from './views/admin/TasksView.vue'
+import UsersView from './views/admin/UsersView.vue'
 
 const routes = [
   { path: '/login', component: LoginView },
@@ -21,8 +25,8 @@ const routes = [
   { path: '/error', name: 'error', component: ErrorView, meta: { requiresAuth: true } },
   { path: '/not-found', name: 'not-found', component: NotFoundView, meta: { requiresAuth: true } },
   { path: '/photos', component: WipView, meta: { requiresAuth: true } },
-  { path: '/map', component: WipView, meta: { requiresAuth: true } },
-  { path: '/people', component: WipView, meta: { requiresAuth: true } },
+  { path: '/map', component: MapView, meta: { requiresAuth: true, viewer: true } },
+  { path: '/people', component: PeopleReviewView, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/genealogy', component: WipView, meta: { requiresAuth: true } },
   { path: '/timeline', component: WipView, meta: { requiresAuth: true } },
   { path: '/stats', component: WipView, meta: { requiresAuth: true } },
@@ -30,6 +34,8 @@ const routes = [
   { path: '/import', component: ImportView, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/import/scan', component: ImportScanView, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/services', component: ServicesView, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/file-manager', component: FileManagerView, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/tasks', component: TasksView, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/users', component: UsersView, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/:pathMatch(.*)*', component: NotFoundView, meta: { requiresAuth: true } },
 ]

@@ -216,7 +216,7 @@ class TestScansImporter:
             "SELECT path, status FROM files ORDER BY id LIMIT 1"
         ).fetchone()
         task_rows = conn.execute(
-            "SELECT daemon, status FROM tasks ORDER BY daemon"
+            "SELECT daemon, status FROM daemon_tasks ORDER BY daemon"
         ).fetchall()
 
         assert row is not None

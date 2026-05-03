@@ -1,26 +1,26 @@
-"""Collection-rooted file navigation routes."""
+"""File navigation route."""
 
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from common.config_utils import get_archive_path
 from ui.web.deps import get_current_user, get_web_store
-from ui.web.routes.collections.files.common import collection_file_detail_or_404, tile_base_url
+from ui.web.routes.files.common import file_or_404, tile_base_url
 from ui.web.store import WebStore
 
 router = APIRouter()
 
 
-@router.get("/collections/{collection_id}/files/{file_id}/navigation")
+@router.get("/files/{file_id}/navigation")
 async def get_file_navigation(
-    collection_id: int,
     file_id: int,
+    collection_id: int = Query(...),
     _user: dict[str, Any] = Depends(get_current_user),
     store: WebStore = Depends(get_web_store),
 ) -> dict[str, int | None]:
-    collection_file_detail_or_404(store, collection_id, file_id)
+    file_or_404(store, file_id)
 
     rows = store.list_file_paths(collection_id=collection_id)
     archive_path = get_archive_path()

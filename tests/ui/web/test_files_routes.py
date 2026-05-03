@@ -11,10 +11,10 @@ from common.constants import ARCHIVE_SYSTEM_DIR
 from common.database import ArchiveDatabase, FILE_STATUS_ACTIVE, FILE_STATUS_NEW
 from preview_maker.constants import PREVIEWS_DIR
 from tile_cutter.constants import TILES_DIR
-from ui.web.routes.collections.files import get_file, list_files
-from ui.web.routes.collections.files.history import get_file_history
-from ui.web.routes.collections.files.metadata import get_file_metadata
-from ui.web.routes.collections.files.navigation import get_file_navigation
+from ui.web.routes.files import DeleteItemsRequest, delete_items, get_file, list_files
+from ui.web.routes.files.history import get_file_history
+from ui.web.routes.files.metadata import get_file_metadata
+from ui.web.routes.files.navigation import get_file_navigation
 from ui.web.store import WebStore
 
 
@@ -36,8 +36,8 @@ class TestFilesRoutes:
             tile_dir.mkdir(parents=True, exist_ok=True)
             (tile_dir / "meta.json").write_text("{}", encoding="utf-8")
 
-            monkeypatch.setattr("ui.web.routes.collections.files.get_archive_path", lambda: archive_path)
-            monkeypatch.setattr("ui.web.routes.collections.files.navigation.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.navigation.get_archive_path", lambda: archive_path)
 
             conn = database.get_conn()
             try:
@@ -65,7 +65,7 @@ class TestFilesRoutes:
                 with WebStore(archive_path) as store:
                     payload = asyncio.run(
                         list_files(
-                            int(collection_a),
+                            collection_id=int(collection_a),
                             _user={"id": 1, "role": "admin"},
                             store=store,
                         )
@@ -91,8 +91,8 @@ class TestFilesRoutes:
             tile_dir.mkdir(parents=True, exist_ok=True)
             (tile_dir / "meta.json").write_text("{}", encoding="utf-8")
 
-            monkeypatch.setattr("ui.web.routes.collections.files.get_archive_path", lambda: archive_path)
-            monkeypatch.setattr("ui.web.routes.collections.files.navigation.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.navigation.get_archive_path", lambda: archive_path)
 
             conn = database.get_conn()
             try:
@@ -104,7 +104,7 @@ class TestFilesRoutes:
 
                 file_id = conn.execute(
                     "INSERT INTO files (collection_id, path, status, imported_at) VALUES (?, ?, ?, ?)",
-                    (int(collection_id), "2024/scan.tif", FILE_STATUS_ACTIVE, self._now()),
+                    (int(collection_id), "2024\\scan.tif", FILE_STATUS_ACTIVE, self._now()),
                 ).lastrowid
                 assert file_id is not None
 
@@ -125,16 +125,11 @@ class TestFilesRoutes:
                     "INSERT INTO file_creators (file_id, position, name) VALUES (?, ?, ?)",
                     (int(file_id), 1, "Alice Example"),
                 )
-                conn.execute(
-                    "INSERT INTO file_history (file_id, action, recorded_at, software, changed, instance_id) VALUES (?, ?, ?, ?, ?, ?)",
-                    (int(file_id), "managed", self._now(), "content-importer test", "metadata", "iid-1"),
-                )
                 conn.commit()
 
                 with WebStore(archive_path) as store:
                     payload = asyncio.run(
                         get_file(
-                            int(collection_id),
                             int(file_id),
                             _user={"id": 1, "role": "admin"},
                             store=store,
@@ -144,9 +139,32 @@ class TestFilesRoutes:
                 assert payload["path"] == "2024/scan.tif"
                 assert payload["status"] == FILE_STATUS_ACTIVE
                 assert payload["collection_id"] == int(collection_id)
+                assert payload["collection_name"] == "Family album"
                 assert payload["preview_url"] == "/system/previews/2024/scan.PRV.jpg"
                 assert payload["tile_base_url"] == "/system/tiles/2024/scan"
                 assert payload["creators"] == ["Alice Example"]
+            finally:
+                database.close_conn()
+
+    def test_get_file_returns_404_for_missing_file(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        with TemporaryDirectory() as temp_dir:
+            archive_path = Path(temp_dir)
+            database = ArchiveDatabase(archive_path)
+
+            monkeypatch.setattr("ui.web.routes.files.get_archive_path", lambda: archive_path)
+
+            database.get_conn()
+            try:
+                with WebStore(archive_path) as store:
+                    with pytest.raises(Exception) as exc_info:
+                        asyncio.run(
+                            get_file(
+                                999,
+                                _user={"id": 1, "role": "admin"},
+                                store=store,
+                            )
+                        )
+                assert getattr(exc_info.value, "status_code", None) == 404
             finally:
                 database.close_conn()
 
@@ -155,8 +173,8 @@ class TestFilesRoutes:
             archive_path = Path(temp_dir)
             database = ArchiveDatabase(archive_path)
 
-            monkeypatch.setattr("ui.web.routes.collections.files.get_archive_path", lambda: archive_path)
-            monkeypatch.setattr("ui.web.routes.collections.files.navigation.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.navigation.get_archive_path", lambda: archive_path)
 
             conn = database.get_conn()
             try:
@@ -190,7 +208,6 @@ class TestFilesRoutes:
                 with WebStore(archive_path) as store:
                     payload = asyncio.run(
                         get_file_metadata(
-                            int(collection_id),
                             int(file_id),
                             _user={"id": 1, "role": "admin"},
                             store=store,
@@ -204,13 +221,13 @@ class TestFilesRoutes:
             finally:
                 database.close_conn()
 
-    def test_get_file_history_returns_history_for_collection_file(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_file_history_returns_history(self, monkeypatch: pytest.MonkeyPatch) -> None:
         with TemporaryDirectory() as temp_dir:
             archive_path = Path(temp_dir)
             database = ArchiveDatabase(archive_path)
 
-            monkeypatch.setattr("ui.web.routes.collections.files.get_archive_path", lambda: archive_path)
-            monkeypatch.setattr("ui.web.routes.collections.files.navigation.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.navigation.get_archive_path", lambda: archive_path)
 
             conn = database.get_conn()
             try:
@@ -235,7 +252,6 @@ class TestFilesRoutes:
                 with WebStore(archive_path) as store:
                     payload = asyncio.run(
                         get_file_history(
-                            int(collection_id),
                             int(file_id),
                             _user={"id": 1, "role": "admin"},
                             store=store,
@@ -261,8 +277,8 @@ class TestFilesRoutes:
             second_tile_dir.mkdir(parents=True, exist_ok=True)
             (second_tile_dir / "meta.json").write_text("{}", encoding="utf-8")
 
-            monkeypatch.setattr("ui.web.routes.collections.files.get_archive_path", lambda: archive_path)
-            monkeypatch.setattr("ui.web.routes.collections.files.navigation.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.get_archive_path", lambda: archive_path)
+            monkeypatch.setattr("ui.web.routes.files.navigation.get_archive_path", lambda: archive_path)
 
             conn = database.get_conn()
             try:
@@ -292,8 +308,8 @@ class TestFilesRoutes:
                 with WebStore(archive_path) as store:
                     payload = asyncio.run(
                         get_file_navigation(
-                            int(collection_id),
                             int(third_id),
+                            collection_id=int(collection_id),
                             _user={"id": 1, "role": "admin"},
                             store=store,
                         )
@@ -304,45 +320,35 @@ class TestFilesRoutes:
             finally:
                 database.close_conn()
 
-    def test_get_file_rejects_file_from_other_collection(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_delete_items_deletes_untracked_file_by_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
         with TemporaryDirectory() as temp_dir:
             archive_path = Path(temp_dir)
             database = ArchiveDatabase(archive_path)
+            monkeypatch.setattr("ui.web.routes.files.get_archive_path", lambda: archive_path)
 
-            monkeypatch.setattr("ui.web.routes.collections.files.get_archive_path", lambda: archive_path)
-            monkeypatch.setattr("ui.web.routes.collections.files.navigation.get_archive_path", lambda: archive_path)
+            physical_file = archive_path / "1925" / "1925.04.00" / "SOURCES" / "scan.RAW.tif"
+            physical_file.parent.mkdir(parents=True, exist_ok=True)
+            physical_file.write_bytes(b"raw")
 
-            conn = database.get_conn()
+            database.get_conn()
             try:
-                first_collection_id = conn.execute(
-                    "INSERT INTO collections (type, name, created_at) VALUES (?, ?, ?)",
-                    ("scan", "First album", self._now()),
-                ).lastrowid
-                second_collection_id = conn.execute(
-                    "INSERT INTO collections (type, name, created_at) VALUES (?, ?, ?)",
-                    ("scan", "Second album", self._now()),
-                ).lastrowid
-                assert first_collection_id is not None
-                assert second_collection_id is not None
-
-                file_id = conn.execute(
-                    "INSERT INTO files (collection_id, path, status, imported_at) VALUES (?, ?, ?, ?)",
-                    (int(first_collection_id), "2024/scan.tif", FILE_STATUS_ACTIVE, self._now()),
-                ).lastrowid
-                assert file_id is not None
-                conn.commit()
-
                 with WebStore(archive_path) as store:
-                    with pytest.raises(Exception) as exc_info:
-                        asyncio.run(
-                            get_file(
-                                int(second_collection_id),
-                                int(file_id),
-                                _user={"id": 1, "role": "admin"},
-                                store=store,
-                            )
+                    payload = asyncio.run(
+                        delete_items(
+                            DeleteItemsRequest(file_paths=["1925/1925.04.00/SOURCES/scan.RAW.tif"]),
+                            _user={"id": 1, "role": "admin"},
+                            store=store,
                         )
+                    )
 
-                assert getattr(exc_info.value, "status_code", None) == 404
+                assert payload["failed"] == []
+                assert payload["deleted"] == [
+                    {
+                        "kind": "file",
+                        "key": "file-path:1925/1925.04.00/SOURCES/scan.RAW.tif",
+                        "path": "1925/1925.04.00/SOURCES/scan.RAW.tif",
+                    }
+                ]
+                assert physical_file.exists() is False
             finally:
                 database.close_conn()

@@ -20,8 +20,8 @@ from common.tags import HistoryTag, KeyValueTag, Tag
 from common.version import get_version
 from content_importer.classes import Importer, OrganizationReport, ValidationReport, ValidationResult
 from content_importer.image_organizer import ImageOrganizer
+from content_importer.planner import ImportScanPlanner
 from content_importer.scan_validator import ScanResult, ScanValidator
-from content_importer.store import ImporterStore
 
 
 class ScanImporter(Importer):
@@ -147,7 +147,8 @@ class ScanImporter(Importer):
         if not imported_files:
             return
 
-        ImporterStore(archive_path).register_imported_files(
+        ImportScanPlanner().run(
+            archive_path,
             collection_id=collection_id,
             files=imported_files,
         )

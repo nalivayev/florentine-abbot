@@ -46,6 +46,17 @@ class Person:
 
 
 @dataclass(slots=True)
+class FaceClusterSummary:
+    """Cluster-level review state derived from its member faces."""
+
+    cluster_id: int
+    face_count: int
+    assigned_face_count: int
+    distinct_person_count: int
+    created_at: str
+
+
+@dataclass(slots=True)
 class Face:
     """A single face detected in an image file."""
 
@@ -77,7 +88,7 @@ class RecognizerStore:
 
         with RecognizerStore("/archive") as store:
             f = store.get_or_create_file("/archive/photo.tif")
-            store.add_face(file=f, bbox=(x, y, w, h), embedding=vec)
+            store.add_face(file=f, region=(cx, cy, w, h), embedding=vec)
     """
 
     _FACE_SELECT = """
@@ -160,29 +171,17 @@ class RecognizerStore:
         return numpy.load(io.BytesIO(data))
 
     @staticmethod
-    def _normalize_region(
-        bbox: tuple[int, int, int, int],
-        image_size: tuple[int, int],
-    ) -> tuple[float, float, float, float]:
-        image_width, image_height = image_size
-        if image_width <= 0 or image_height <= 0:
-            raise ValueError(f"Invalid image size for face normalization: {image_size}")
-
-        left, top, box_width, box_height = bbox
-        right = left + box_width
-        bottom = top + box_height
-
-        clipped_left = min(max(float(left), 0.0), float(image_width))
-        clipped_top = min(max(float(top), 0.0), float(image_height))
-        clipped_right = min(max(float(right), 0.0), float(image_width))
-        clipped_bottom = min(max(float(bottom), 0.0), float(image_height))
-
-        normalized_width = max(0.0, clipped_right - clipped_left) / float(image_width)
-        normalized_height = max(0.0, clipped_bottom - clipped_top) / float(image_height)
-        center_x = (clipped_left + (clipped_right - clipped_left) / 2.0) / float(image_width)
-        center_y = (clipped_top + (clipped_bottom - clipped_top) / 2.0) / float(image_height)
-
-        return (center_x, center_y, normalized_width, normalized_height)
+    def _validate_region(region: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+        center_x, center_y, width, height = [float(value) for value in region]
+        if not (0.0 <= center_x <= 1.0):
+            raise ValueError(f"Invalid face center_x: {center_x}")
+        if not (0.0 <= center_y <= 1.0):
+            raise ValueError(f"Invalid face center_y: {center_y}")
+        if not (0.0 <= width <= 1.0):
+            raise ValueError(f"Invalid face width: {width}")
+        if not (0.0 <= height <= 1.0):
+            raise ValueError(f"Invalid face height: {height}")
+        return (center_x, center_y, width, height)
 
     def _normalize_file_path(self, file_path: str | Path) -> str:
         path = Path(file_path)
@@ -209,6 +208,16 @@ class RecognizerStore:
             id=int(row["id"]),
             name=row["name"],
             notes=row["notes"],
+            created_at=str(row["created_at"]),
+        )
+
+    @staticmethod
+    def _cluster_summary_from_row(row: sqlite3.Row) -> FaceClusterSummary:
+        return FaceClusterSummary(
+            cluster_id=int(row["cluster_id"]),
+            face_count=int(row["face_count"]),
+            assigned_face_count=int(row["assigned_face_count"]),
+            distinct_person_count=int(row["distinct_person_count"]),
             created_at=str(row["created_at"]),
         )
 
@@ -266,7 +275,7 @@ class RecognizerStore:
         rows = self._c.execute(
             """
             SELECT f.id, f.path, f.status
-            FROM tasks t
+            FROM daemon_tasks t
             JOIN files f ON f.id = t.file_id
             WHERE t.daemon = ?
               AND t.status = ?
@@ -286,11 +295,11 @@ class RecognizerStore:
     def start_task(self, file_id: int, updated_at: str) -> None:
         """Create or reset the face-recognizer task to running."""
         self._c.execute(
-            "INSERT OR IGNORE INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
             (file_id, DAEMON_NAME, TASK_STATUS_RUNNING, updated_at),
         )
         self._c.execute(
-            "UPDATE tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
+            "UPDATE daemon_tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
             (TASK_STATUS_RUNNING, updated_at, file_id, DAEMON_NAME),
         )
         self._commit()
@@ -298,7 +307,7 @@ class RecognizerStore:
     def mark_done(self, file_id: int, updated_at: str) -> None:
         """Mark a face-recognizer task as done."""
         self._c.execute(
-            "UPDATE tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
+            "UPDATE daemon_tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
             (TASK_STATUS_DONE, updated_at, file_id, DAEMON_NAME),
         )
         self._commit()
@@ -306,7 +315,7 @@ class RecognizerStore:
     def mark_skipped(self, file_id: int, updated_at: str) -> None:
         """Mark a face-recognizer task as skipped."""
         self._c.execute(
-            "UPDATE tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
+            "UPDATE daemon_tasks SET status = ?, error = NULL, updated_at = ? WHERE file_id = ? AND daemon = ?",
             (TASK_STATUS_SKIPPED, updated_at, file_id, DAEMON_NAME),
         )
         self._commit()
@@ -314,7 +323,7 @@ class RecognizerStore:
     def mark_failed(self, file_id: int, error: str, updated_at: str) -> None:
         """Mark a face-recognizer task as failed with an error message."""
         self._c.execute(
-            "UPDATE tasks SET status = ?, error = ?, updated_at = ? WHERE file_id = ? AND daemon = ?",
+            "UPDATE daemon_tasks SET status = ?, error = ?, updated_at = ? WHERE file_id = ? AND daemon = ?",
             (TASK_STATUS_FAILED, error, updated_at, file_id, DAEMON_NAME),
         )
         self._commit()
@@ -366,13 +375,12 @@ class RecognizerStore:
         self,
         *,
         file: ImageFile,
-        bbox: tuple[int, int, int, int],
-        image_size: tuple[int, int],
+        region: tuple[float, float, float, float],
         embedding: numpy.ndarray,
         confidence: float | None = None,
     ) -> Face:
         raw_embedding = self._embedding_to_bytes(embedding)
-        center_x, center_y, width, height = self._normalize_region(bbox, image_size)
+        center_x, center_y, width, height = self._validate_region(region)
         created_at = self._now()
         cursor = self._c.execute(
             """
@@ -471,6 +479,35 @@ class RecognizerStore:
         ).fetchall()
         return [self._face_from_row(row) for row in rows]
 
+    def list_unconfirmed_clusters(self) -> list[FaceClusterSummary]:
+        """Return clusters that are not fully resolved to one assigned person."""
+        rows = self._c.execute(
+            """
+            SELECT
+                faces.cluster AS cluster_id,
+                COUNT(*) AS face_count,
+                COUNT(faces.person_id) AS assigned_face_count,
+                COUNT(DISTINCT faces.person_id) AS distinct_person_count,
+                MIN(faces.created_at) AS created_at
+            FROM faces
+            WHERE faces.cluster IS NOT NULL
+            GROUP BY faces.cluster
+            HAVING NOT (
+                COUNT(*) = COUNT(faces.person_id)
+                AND COUNT(DISTINCT faces.person_id) = 1
+            )
+            ORDER BY MIN(faces.created_at), faces.cluster
+            """
+        ).fetchall()
+        return [self._cluster_summary_from_row(row) for row in rows]
+
+    def get_faces_by_cluster(self, cluster: int) -> list[Face]:
+        rows = self._c.execute(
+            self._FACE_SELECT + " WHERE faces.cluster = ? ORDER BY faces.id",
+            (cluster,),
+        ).fetchall()
+        return [self._face_from_row(row) for row in rows]
+
     def set_cluster(self, face_id: int, cluster: int | None) -> None:
         self._c.execute(
             "UPDATE faces SET cluster = ? WHERE id = ?",
@@ -529,9 +566,45 @@ class RecognizerStore:
             return self._person_from_row(row)
         return self.create_person(name=name)
 
+    def assign_cluster_to_person(self, cluster: int, person_id: int | None) -> int:
+        if person_id is not None and self.get_person(person_id) is None:
+            raise ValueError(f"Person does not exist: {person_id}")
+
+        cursor = self._c.execute(
+            "UPDATE faces SET person_id = ? WHERE cluster = ?",
+            (person_id, cluster),
+        )
+        if cursor.rowcount <= 0:
+            raise ValueError(f"Cluster does not exist: {cluster}")
+        self._commit()
+        return int(cursor.rowcount)
+
+    def create_person_from_cluster(
+        self,
+        cluster: int,
+        *,
+        name: str | None = None,
+        notes: str | None = None,
+    ) -> Person:
+        if not self.get_faces_by_cluster(cluster):
+            raise ValueError(f"Cluster does not exist: {cluster}")
+
+        person = self.create_person(name=name, notes=notes)
+        self.assign_cluster_to_person(cluster, person.id)
+        return person
+
     def assign_person(self, face_id: int, person_id: int | None) -> None:
         self._c.execute(
             "UPDATE faces SET person_id = ? WHERE id = ?",
             (person_id, face_id),
         )
+        self._commit()
+
+    def exclude_face_from_cluster(self, face_id: int) -> None:
+        cursor = self._c.execute(
+            "UPDATE faces SET cluster = NULL, person_id = NULL WHERE id = ?",
+            (face_id,),
+        )
+        if cursor.rowcount <= 0:
+            raise ValueError(f"Face does not exist: {face_id}")
         self._commit()

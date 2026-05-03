@@ -59,8 +59,8 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { apiFetch, apiUrl } from '../api.js'
-import { replaceForRouteFailure, ROUTE_LOAD_TIMEOUT_MS } from '../routeErrors.js'
+import { apiFetch, apiUrl } from '../../api.js'
+import { replaceForRouteFailure, ROUTE_LOAD_TIMEOUT_MS } from '../../routeErrors.js'
 
 const { t } = useI18n()
 const route = useRoute()

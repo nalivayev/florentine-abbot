@@ -285,8 +285,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { apiFetch } from '../api.js'
-import FormatEditDialog from '../components/FormatEditDialog.vue'
+import { apiFetch } from '../../api.js'
+import FormatEditDialog from '../../components/admin/import-scan/FormatEditDialog.vue'
 
 const { t } = useI18n()
 const router = useRouter()

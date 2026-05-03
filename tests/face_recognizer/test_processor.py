@@ -21,7 +21,7 @@ class ProcessorTestDetector(FaceDetector):
     def detect(self, image_path: Path) -> list[DetectedFace]:
         return [
             DetectedFace(
-                bbox=(10, 20, 30, 40),
+                region=(0.25, 0.4, 0.3, 0.4),
                 confidence=0.95,
                 embedding=numpy.ones(512, dtype=numpy.float32),
             )
@@ -46,7 +46,7 @@ class TestRecognizerProcessor:
         faces = processor.process(Path("photo.tif"))
 
         assert len(faces) == 1
-        assert faces[0].bbox == (10, 20, 30, 40)
+        assert faces[0].region == (0.25, 0.4, 0.3, 0.4)
         assert faces[0].confidence == 0.95
         assert faces[0].embedding.shape == (512,)
 
@@ -66,7 +66,7 @@ class TestRecognizerProcessor:
                     self.last_size = img.size
                 return [
                     DetectedFace(
-                        bbox=(5, 10, 15, 20),
+                        region=(0.3125, 0.75, 0.375, 0.5),
                         confidence=0.88,
                         embedding=numpy.ones(512, dtype=numpy.float32),
                     )
@@ -85,5 +85,5 @@ class TestRecognizerProcessor:
         assert detector.last_path is not None
         assert detector.last_path != source_path
         assert not detector.last_path.exists()
-        assert faces[0].bbox == (25, 50, 75, 100)
+        assert faces[0].region == (0.3125, 0.75, 0.375, 0.5)
         assert faces[0].confidence == 0.88

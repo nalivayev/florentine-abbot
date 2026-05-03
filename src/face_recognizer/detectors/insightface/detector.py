@@ -68,6 +68,32 @@ class InsightFaceDetector(FaceDetector):
             app.prepare(ctx_id=0, det_size=(det_size, det_size))  # type: ignore[union-attr]
             self._app = app
 
+    @staticmethod
+    def _region_from_bbox(
+        bbox: tuple[int, int, int, int],
+        image_size: tuple[int, int],
+    ) -> tuple[float, float, float, float]:
+        """Convert an InsightFace pixel bbox into a clipped normalized region."""
+        image_width, image_height = image_size
+        if image_width <= 0 or image_height <= 0:
+            raise ValueError(f"Invalid image size for face normalization: {image_size}")
+
+        left, top, box_width, box_height = bbox
+        right = left + box_width
+        bottom = top + box_height
+
+        clipped_left = min(max(float(left), 0.0), float(image_width))
+        clipped_top = min(max(float(top), 0.0), float(image_height))
+        clipped_right = min(max(float(right), 0.0), float(image_width))
+        clipped_bottom = min(max(float(bottom), 0.0), float(image_height))
+
+        normalized_width = max(0.0, clipped_right - clipped_left) / float(image_width)
+        normalized_height = max(0.0, clipped_bottom - clipped_top) / float(image_height)
+        center_x = (clipped_left + (clipped_right - clipped_left) / 2.0) / float(image_width)
+        center_y = (clipped_top + (clipped_bottom - clipped_top) / 2.0) / float(image_height)
+
+        return (center_x, center_y, normalized_width, normalized_height)
+
     def detect(self, image_path: Path) -> list[DetectedFace]:
         """Detect faces and extract embeddings from *image_path*.
 
@@ -122,7 +148,7 @@ class InsightFaceDetector(FaceDetector):
 
             faces.append(
                 DetectedFace(
-                    bbox=bbox,
+                    region=self._region_from_bbox(bbox, (view_w, view_h)),
                     confidence=confidence,
                     embedding=embedding,
                 )

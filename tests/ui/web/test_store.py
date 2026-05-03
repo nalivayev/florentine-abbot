@@ -195,3 +195,52 @@ class TestStore:
         assert history[0]["action"] == "managed"
         assert history[0]["changed"] == "metadata"
 
+    def test_browse_files_uses_filesystem_with_db_overlay_for_tracked_files(self) -> None:
+        sources_dir = self.archive_path / "1925" / "1925.04.00" / "SOURCES"
+        sources_dir.mkdir(parents=True, exist_ok=True)
+        tracked_file = sources_dir / "1925.04.00.00.00.00.C.001.001.0001.A.RAW.tif"
+        tracked_file.write_bytes(b"raw")
+        loose_file = sources_dir / "1925.04.00.00.00.00.C.001.001.0002.A.RAW.tif"
+        loose_file.write_bytes(b"raw2")
+
+        collection = self.store.create_collection(
+            collection_type="scan",
+            name="Family album",
+            created_at=self._now(),
+        )
+        conn = self.database.get_conn()
+        cursor = conn.execute(
+            "INSERT INTO files (collection_id, path, status, imported_at) VALUES (?, ?, ?, ?)",
+            (collection["id"], "1925\\1925.04.00\\SOURCES\\1925.04.00.00.00.00.C.001.001.0001.A.RAW.tif", FILE_STATUS_NEW, self._now()),
+        )
+        assert cursor.lastrowid is not None
+        tracked_id = int(cursor.lastrowid)
+        conn.commit()
+
+        parent_payload = self.store.browse_files(str(self.archive_path), "1925/1925.04.00")
+        child_payload = self.store.browse_files(str(self.archive_path), "1925/1925.04.00/SOURCES")
+        tracked_payload = next(file for file in child_payload["files"] if file["path"].endswith("0001.A.RAW.tif"))
+        loose_payload = next(file for file in child_payload["files"] if file["path"].endswith("0002.A.RAW.tif"))
+
+        assert len(parent_payload["folders"]) == 1
+        assert parent_payload["folders"][0]["name"] == "SOURCES"
+        assert parent_payload["folders"][0]["path"] == "1925/1925.04.00/SOURCES"
+        assert parent_payload["folders"][0]["empty"] is False
+        assert parent_payload["folders"][0]["modified_at"] is not None
+        assert child_payload["folders"] == []
+        assert len(child_payload["files"]) == 2
+        assert tracked_payload["path"] == "1925/1925.04.00/SOURCES/1925.04.00.00.00.00.C.001.001.0001.A.RAW.tif"
+        assert tracked_payload["size_bytes"] == 3
+        assert tracked_payload["modified_at"] is not None
+        assert tracked_payload["id"] == tracked_id
+        assert tracked_payload["collection_id"] == collection["id"]
+        assert tracked_payload["collection_name"] == "Family album"
+        assert tracked_payload["status"] == FILE_STATUS_NEW
+        assert tracked_payload["imported_at"] is not None
+        assert loose_payload["path"] == "1925/1925.04.00/SOURCES/1925.04.00.00.00.00.C.001.001.0002.A.RAW.tif"
+        assert loose_payload["size_bytes"] == 4
+        assert loose_payload["modified_at"] is not None
+        assert "id" not in loose_payload
+        assert "status" not in loose_payload
+        assert "collection_id" not in loose_payload
+

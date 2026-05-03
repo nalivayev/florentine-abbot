@@ -1,10 +1,11 @@
 """Database boundary for ui.web authentication and user management."""
 
+from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
 from typing import Any
 
-from common.database import ArchiveDatabase
+from common.database import ArchiveDatabase, FILE_STATUS_DELETED
 
 
 class WebStore:
@@ -211,6 +212,7 @@ class WebStore:
             SELECT
                 f.id,
                 f.collection_id,
+                c.name AS collection_name,
                 f.path,
                 f.status,
                 f.checksum,
@@ -227,6 +229,7 @@ class WebStore:
                 fg.lon AS gps_lon,
                 fg.altitude AS gps_altitude
             FROM files f
+            LEFT JOIN collections c ON c.id = f.collection_id
             LEFT JOIN file_metadata fm ON fm.file_id = f.id
             LEFT JOIN file_meta_gps fg ON fg.file_id = f.id
             WHERE f.id = ?
@@ -259,6 +262,172 @@ class WebStore:
             (file_id,),
         ).fetchall()
         return [dict(row) for row in rows]
+
+    def list_geotagged_files(self) -> list[dict[str, Any]]:
+        """Return files that have GPS coordinates along with map-facing metadata."""
+        rows = self._c.execute(
+            """
+            SELECT
+                f.id,
+                f.collection_id,
+                f.path,
+                c.name AS collection_name,
+                fg.lat AS gps_lat,
+                fg.lon AS gps_lon,
+                fg.altitude AS gps_altitude
+            FROM files f
+            JOIN file_meta_gps fg ON fg.file_id = f.id
+            LEFT JOIN collections c ON c.id = f.collection_id
+            ORDER BY f.path
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def file_tree(self, archive_path: str) -> list[dict[str, Any]]:
+        """Build folder tree by scanning the physical filesystem."""
+        base = Path(archive_path)
+
+        def scan(directory: Path, rel: str) -> list[dict[str, Any]]:
+            result: list[dict[str, Any]] = []
+            try:
+                entries = sorted(directory.iterdir(), key=lambda e: e.name.lower())
+            except PermissionError:
+                return result
+            for entry in entries:
+                if entry.name.startswith(".") or not entry.is_dir():
+                    continue
+                child_rel = f"{rel}/{entry.name}" if rel else entry.name
+                result.append({"name": entry.name, "path": child_rel, "children": scan(entry, child_rel)})
+            return result
+
+        return scan(base, "")
+
+    @staticmethod
+    def _has_visible_entries(directory: Path) -> bool:
+        """Return True when a directory has at least one non-hidden child entry."""
+        try:
+            for entry in directory.iterdir():
+                if entry.name.startswith("."):
+                    continue
+                return True
+        except (FileNotFoundError, NotADirectoryError, PermissionError):
+            return False
+        return False
+
+    @staticmethod
+    def _entry_modified_at(entry: Path) -> str | None:
+        """Return an entry mtime as an ISO timestamp in UTC, if available."""
+        try:
+            return datetime.fromtimestamp(entry.stat().st_mtime, timezone.utc).isoformat()
+        except OSError:
+            return None
+
+    @staticmethod
+    def _entry_size_bytes(entry: Path) -> int | None:
+        """Return file size in bytes, or None when stat is unavailable."""
+        try:
+            return int(entry.stat().st_size)
+        except OSError:
+            return None
+
+    def _file_manager_overlay_by_path(self, paths: list[str]) -> dict[str, dict[str, Any]]:
+        """Return optional DB metadata for physical files visible in the browser."""
+        normalized_paths = [path.replace("\\", "/").strip("/") for path in paths if path]
+        if not normalized_paths:
+            return {}
+
+        placeholders = ", ".join("?" for _ in normalized_paths)
+        rows = self._c.execute(
+            f"""
+            SELECT
+                f.id,
+                f.collection_id,
+                c.name AS collection_name,
+                REPLACE(f.path, '\\', '/') AS normalized_path,
+                f.status,
+                f.imported_at
+            FROM files f
+            LEFT JOIN collections c ON c.id = f.collection_id
+            WHERE REPLACE(f.path, '\\', '/') IN ({placeholders})
+            """,
+            tuple(normalized_paths),
+        ).fetchall()
+
+        return {
+            str(row["normalized_path"]): {
+                "id": int(row["id"]),
+                "collection_id": int(row["collection_id"]) if row["collection_id"] is not None else None,
+                "collection_name": str(row["collection_name"]) if row["collection_name"] is not None else None,
+                "status": str(row["status"]),
+                "imported_at": str(row["imported_at"]) if row["imported_at"] is not None else None,
+            }
+            for row in rows
+        }
+
+    def browse_files(self, archive_path: str, path: str) -> dict[str, Any]:
+        """Scan the physical filesystem directory for file-manager browsing.
+
+        Folders come from the real filesystem (including empty ones).
+        Files are direct children of the requested directory and come from the
+        filesystem first, with optional DB metadata overlaid for tracked files.
+        Each folder carries an ``empty`` flag for the UI delete logic.
+        """
+        base = Path(archive_path)
+        full = base / path if path else base
+
+        if not full.is_dir():
+            return {"path": path, "folders": [], "files": []}
+
+        folders: list[dict[str, Any]] = []
+        files: list[dict[str, Any]] = []
+        file_paths: list[str] = []
+
+        for entry in sorted(full.iterdir(), key=lambda e: e.name.lower()):
+            if entry.name.startswith('.'):
+                continue
+            rel_path = str(entry.relative_to(base)).replace("\\", "/")
+            if entry.is_dir():
+                is_empty = not self._has_visible_entries(entry)
+                folders.append({
+                    "name": entry.name,
+                    "path": rel_path,
+                    "empty": is_empty,
+                    "modified_at": self._entry_modified_at(entry),
+                })
+            elif entry.is_file():
+                file_paths.append(rel_path)
+                files.append({
+                    "path": rel_path,
+                    "size_bytes": self._entry_size_bytes(entry),
+                    "modified_at": self._entry_modified_at(entry),
+                })
+
+        overlay_by_path = self._file_manager_overlay_by_path(file_paths)
+        for file_row in files:
+            overlay = overlay_by_path.get(str(file_row["path"]))
+            if overlay:
+                file_row.update(overlay)
+
+        return {"path": path, "folders": folders, "files": files}
+
+    def folder_is_empty(self, archive_path: str, path: str) -> bool:
+        """Return True if the physical directory exists and has no entries."""
+        physical = Path(archive_path) / path
+        if not physical.is_dir():
+            return True
+        try:
+            next(physical.iterdir())
+            return False
+        except StopIteration:
+            return True
+
+    def mark_file_deleted(self, file_id: int) -> None:
+        """Update one file row status to deleted."""
+        self._c.execute(
+            "UPDATE files SET status = ? WHERE id = ?",
+            (FILE_STATUS_DELETED, file_id),
+        )
+        self._commit()
 
     def create_collection(self, collection_type: str, name: str, created_at: str) -> dict[str, Any]:
         """Insert one collection row and return it."""

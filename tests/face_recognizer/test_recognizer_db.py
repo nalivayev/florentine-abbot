@@ -59,7 +59,7 @@ class TestRecognizerDb:
                     ("1950/scan.tif",),
                 ).fetchone()[0]
                 conn.execute(
-                    "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                     (file_id, "face-recognizer", TASK_STATUS_PENDING, self._now()),
                 )
                 conn.commit()
@@ -78,7 +78,7 @@ class TestRecognizerDb:
 
                 conn = database.get_conn()
                 row = conn.execute(
-                    "SELECT status FROM tasks WHERE file_id = ? AND daemon = ?",
+                    "SELECT status FROM daemon_tasks WHERE file_id = ? AND daemon = ?",
                     (file_id, "face-recognizer"),
                 ).fetchone()
 

@@ -56,7 +56,7 @@ onMounted(async () => {
   try {
     const [cRes, fRes] = await Promise.all([
       apiFetch('/collections', { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
-      apiFetch(`/collections/${id}/files`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
+      apiFetch(`/files?collection_id=${id}`, { timeoutMs: ROUTE_LOAD_TIMEOUT_MS }),
     ])
 
     if (!cRes.ok) {

@@ -77,7 +77,7 @@ class TestRecognizerClusterer:
                     img_file = store.get_or_create_file(f"/img{i}.jpg")
                     store.add_face(
                         file=img_file,
-                        bbox=(0, 0, 50, 50), image_size=(100, 100), embedding=vec,
+                        region=(0.25, 0.25, 0.5, 0.5), embedding=vec,
                     )
 
                 clusterer = RecognizerClusterer(self.logger, eps=0.3, min_samples=2)
@@ -109,8 +109,7 @@ class TestRecognizerClusterer:
                     img_file = store.get_or_create_file(f"/first{i}.jpg")
                     face = store.add_face(
                         file=img_file,
-                        bbox=(0, 0, 50, 50),
-                        image_size=(100, 100),
+                        region=(0.25, 0.25, 0.5, 0.5),
                         embedding=vec,
                     )
                     first_ids.append(face.id)
@@ -130,8 +129,7 @@ class TestRecognizerClusterer:
                     img_file = store.get_or_create_file(f"/second{i}.jpg")
                     face = store.add_face(
                         file=img_file,
-                        bbox=(0, 0, 50, 50),
-                        image_size=(100, 100),
+                        region=(0.25, 0.25, 0.5, 0.5),
                         embedding=vec,
                     )
                     second_ids.append(face.id)
@@ -157,8 +155,7 @@ class TestRecognizerClusterer:
                     img_file = store.get_or_create_file(f"/first{i}.jpg")
                     face = store.add_face(
                         file=img_file,
-                        bbox=(0, 0, 50, 50),
-                        image_size=(100, 100),
+                        region=(0.25, 0.25, 0.5, 0.5),
                         embedding=vec,
                     )
                     first_ids.append(face.id)
@@ -180,8 +177,7 @@ class TestRecognizerClusterer:
                     img_file = store.get_or_create_file(f"/second{i}.jpg")
                     face = store.add_face(
                         file=img_file,
-                        bbox=(0, 0, 50, 50),
-                        image_size=(100, 100),
+                        region=(0.25, 0.25, 0.5, 0.5),
                         embedding=vec,
                     )
                     second_ids.append(face.id)

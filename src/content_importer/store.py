@@ -47,7 +47,7 @@ class ImporterStore:
     def _seed_tasks_for_file(self, *, file_id: int, updated_at: str) -> None:
         for provider in list_providers():
             self._c.execute(
-                "INSERT OR IGNORE INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                 (file_id, provider.daemon_name, TASK_STATUS_PENDING, updated_at),
             )
 
@@ -127,7 +127,6 @@ class ImporterStore:
         """Register imported files when the archive DB already exists."""
         if not self._open():
             return
-
         try:
             for file_data in files:
                 file_id = self._register_imported_file(

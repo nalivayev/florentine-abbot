@@ -46,7 +46,7 @@ class TestMakerDb:
                     ("scan.tif",),
                 ).fetchone()[0]
                 conn.execute(
-                    "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                     (file_id, "preview-maker", TASK_STATUS_PENDING, self._now()),
                 )
                 conn.commit()
@@ -64,7 +64,7 @@ class TestMakerDb:
 
                 conn = database.get_conn()
                 row = conn.execute(
-                    "SELECT status FROM tasks WHERE file_id = ? AND daemon = ?",
+                    "SELECT status FROM daemon_tasks WHERE file_id = ? AND daemon = ?",
                     (file_id, "preview-maker"),
                 ).fetchone()
 
@@ -104,7 +104,7 @@ class TestMakerDb:
                 for provider in list_providers():
                     status = TASK_STATUS_DONE if provider.daemon_name == "tile-cutter" else TASK_STATUS_PENDING
                     conn.execute(
-                        "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                        "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                         (file_id, provider.daemon_name, status, self._now()),
                     )
                 conn.commit()
@@ -129,7 +129,7 @@ class TestMakerDb:
                     (file_id,),
                 ).fetchone()
                 task_row = conn.execute(
-                    "SELECT status FROM tasks WHERE file_id = ? AND daemon = ?",
+                    "SELECT status FROM daemon_tasks WHERE file_id = ? AND daemon = ?",
                     (file_id, "preview-maker"),
                 ).fetchone()
 

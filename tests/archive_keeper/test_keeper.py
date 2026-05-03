@@ -54,7 +54,7 @@ class TestKeeper:
     def _insert_terminal_tasks(self, conn, file_id: int) -> None:
         for provider in list_providers():
             conn.execute(
-                "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                 (file_id, provider.daemon_name, TASK_STATUS_DONE, self._now()),
             )
 
@@ -241,7 +241,7 @@ class TestKeeper:
                     ("scan.tif",),
                 ).fetchone()[0]
                 conn.execute(
-                    "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                     (file_id, "preview-maker", TASK_STATUS_DONE, self._now()),
                 )
                 conn.commit()
@@ -258,7 +258,7 @@ class TestKeeper:
                     (file_id,),
                 ).fetchone()
                 task_rows = conn.execute(
-                    "SELECT daemon, status FROM tasks WHERE file_id = ? ORDER BY daemon",
+                    "SELECT daemon, status FROM daemon_tasks WHERE file_id = ? ORDER BY daemon",
                     (file_id,),
                 ).fetchall()
 
@@ -295,15 +295,15 @@ class TestKeeper:
                     ("scan.tif",),
                 ).fetchone()[0]
                 conn.execute(
-                    "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                     (file_id, "preview-maker", TASK_STATUS_DONE, self._now()),
                 )
                 conn.execute(
-                    "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                     (file_id, "tile-cutter", TASK_STATUS_DONE, self._now()),
                 )
                 conn.execute(
-                    "INSERT INTO tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO daemon_tasks (file_id, daemon, status, updated_at) VALUES (?, ?, ?, ?)",
                     (file_id, "face-recognizer", TASK_STATUS_PENDING, self._now()),
                 )
                 conn.commit()

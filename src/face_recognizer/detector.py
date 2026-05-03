@@ -34,7 +34,7 @@ class FaceDetector(ABC):
 
     @abstractmethod
     def detect(self, image_path: Path) -> list[DetectedFace]:
-        """Detect faces in *image_path* and return their embeddings."""
+        """Detect faces in *image_path* and return normalized regions plus embeddings."""
 
 
 def detector(name: str) -> Callable[[type[FaceDetector]], type[FaceDetector]]:
