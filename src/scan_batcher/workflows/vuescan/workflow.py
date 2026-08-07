@@ -250,8 +250,7 @@ class VuescanWorkflow(MetadataWorkflow):
             for key in self._EXIF_TEMPLATE_NAMES:
                 self._templates[key] = getattr(moment, key.replace("digitization_", ""), "")
 
-    @staticmethod
-    def _parse_exif_datetime(value: str) -> datetime.datetime:
+    def _parse_exif_datetime(self, value: str) -> datetime.datetime:
         """Parse EXIF datetime string to datetime object.
         
         Supports both standard EXIF format (YYYY:MM:DD HH:MM:SS)

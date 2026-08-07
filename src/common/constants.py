@@ -7,6 +7,7 @@ so that tools stay in sync.
 
 from typing import Any
 
+
 # Common set of supported image file extensions (lowercase).
 # Used to detect real image files
 # and skip sidecar/auxiliary artifacts such as .log, .icc, etc.

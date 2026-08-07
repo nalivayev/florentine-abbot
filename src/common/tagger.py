@@ -214,8 +214,7 @@ class Tagger:
             timeout=self._timeout,
         )
 
-    @staticmethod
-    def _collect_write_args(tags: list[Tag]) -> dict[str, Any]:
+    def _collect_write_args(self, tags: list[Tag]) -> dict[str, Any]:
         """
         Merge ``write_args()`` from all tags into a single dict.
 
