@@ -4,7 +4,7 @@
 
 # Scan Batcher
 
-Scan Batcher — это проект, посвященный сканированию и цифровой организации домашних фотоархивов.
+Scan Batcher — это проект, посвященный сканированию домашних фотоархивов.
 
 ## Архитектура и стандарты
 
@@ -160,7 +160,7 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 - `common/logger.py` — единая подсистема логирования.
 - `common/tagger.py` — абстракция пакетного XMP/EXIF чтения/записи поверх exiftool.
 - `common/exifer.py` — извлечение и обработка EXIF-метаданных.
-- `common/constants.py` — имена тегов, константы действий и конфигурация по умолчанию.
+- `common/constants.py` — имена тегов, MIME-типы и константы действий XMP History.
 
 ### Установка
 
