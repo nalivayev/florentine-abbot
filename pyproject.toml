@@ -5,7 +5,7 @@ description = "A utility to automate and optimize scanning workflows using VueSc
 authors = [
     { name="Andrey Nalivayev", email="nalivayev@gmail.com" }
 ]
-keywords = ["vuescan", "scanning", "automation", "archiving", "exif", "metadata"]
+keywords = ["vuescan", "scanning", "automation", "exif", "metadata"]
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -27,13 +27,13 @@ package-dir = {"" = "src"}
 packages = [
     "scan_batcher",
     "scan_batcher.workflows",
+    "scan_batcher.workflows.patch",
     "scan_batcher.workflows.vuescan",
     "common",
 ]
 
 [tool.setuptools.package-data]
 "scan_batcher.workflows.vuescan" = ["*.ini"]
-"common" = ["*.json"]
 
 [build-system]
 requires = ["setuptools>=61.0", "setuptools_scm>=8.0"]
