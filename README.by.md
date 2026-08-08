@@ -6,23 +6,6 @@
 
 Scan Batcher — гэта праект, прысвечаны сканаванню хатніх фотаархіваў.
 
-## Архітэктура і стандарты
-
-Праект у некаторай ступені рэалізуе падыходы эталоннай мадэлі **OAIS (Open Archival Information System)**, распрацаванай **[Consultative Committee for Space Data Systems (CCSDS)](https://public.ccsds.org/)** — стандарту для доўгатэрміновага захоўвання даных, які выкарыстоўваецца архівамі і бібліятэкамі.
-
-OAIS апублікаваны як:
-- **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — актуальная версія, свабодна даступная
-- **[ISO 14721:2025](https://www.iso.org/standard/87471.html)** — фармальны міжнародны стандарт (ідэнтычны CCSDS 650.0-M-3 па змеце)
-
-Праект рэалізуе функцыянальны блок OAIS **Ingest (Прыём даных)**: аўтаматызацыю сканавання, разбор структураваных імёнаў файлаў і запіс метаданых (XMP/EXIF).
-
-Для аблічбоўкі выяў праект таксама абапіраецца на рэкамендацыі **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
-- **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (май 2023)
-
-Для кадавання і захавання метаданых выкарыстоўваецца **[XMP (Extensible Metadata Platform)](https://www.adobe.com/devnet/xmp.html)**:
-- **[ISO 16684-1:2019](https://www.iso.org/standard/75163.html)** — Extensible metadata platform (XMP) — Частка 1: Мадэль даных, серыялізацыя і асноўныя ўласцівасці
-- **[XMP Specification Part 2: Additional Properties](https://github.com/adobe/xmp-docs/tree/master/XMPSpecifications)** (Adobe) — пашыраныя прасторы імёнаў, уключаючы XMP Media Management (xmpMM) для адсочвання гісторыі файлаў
-
 ## Сканаванне
 
 Утыліта для аўтаматызацыі працэсу сканавання з дапамогай знешняга ПЗ для сканавання (напрыклад, [VueScan](https://www.hamrick.com) ад Ed Hamrick).
@@ -242,6 +225,22 @@ scan-batcher --workflow examples\workflow.ini
 - Аўтаматычная ратацыя (10 МБ на файл, 5 рэзервовых копій)
 - Вывад у кансоль + запіс у файл
 - Імя модуля і ўзровень лагіравання ў кожным запісе
+
+## Архітэктура і стандарты
+
+Праект у некаторай ступені рэалізуе падыходы эталоннай мадэлі **OAIS (Open Archival Information System)**, распрацаванай **[Consultative Committee for Space Data Systems (CCSDS)](https://public.ccsds.org/)** — стандарту для доўгатэрміновага захоўвання даных, які выкарыстоўваецца архівамі і бібліятэкамі.
+
+OAIS апублікаваны як:
+- **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — актуальная версія, свабодна даступная
+- **[ISO 14721:2025](https://www.iso.org/standard/87471.html)** — фармальны міжнародны стандарт (ідэнтычны CCSDS 650.0-M-3 па змеце)
+
+
+Для аблічбоўкі выяў праект таксама абапіраецца на рэкамендацыі **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
+- **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (май 2023)
+
+Для кадавання і захавання метаданых выкарыстоўваецца **[XMP (Extensible Metadata Platform)](https://www.adobe.com/devnet/xmp.html)**:
+- **[ISO 16684-1:2019](https://www.iso.org/standard/75163.html)** — Extensible metadata platform (XMP) — Частка 1: Мадэль даных, серыялізацыя і асноўныя ўласцівасці
+- **[XMP Specification Part 2: Additional Properties](https://github.com/adobe/xmp-docs/tree/master/XMPSpecifications)** (Adobe) — пашыраныя прасторы імёнаў, уключаючы XMP Media Management (xmpMM) для адсочвання гісторыі файлаў
 
 ## Дакументацыя
 
