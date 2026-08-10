@@ -1,14 +1,9 @@
 """
 Project-wide shared constants.
 
-Defines canonical directory names, tag names, and cross-package conventions
-so that tools stay in sync.
+Defines canonical tag names and cross-package conventions for consistent
+metadata handling in Scan Batcher.
 """
-
-# Common set of supported image file extensions (lowercase).
-# Used to detect real image files
-# and skip sidecar/auxiliary artifacts such as .log, .icc, etc.
-SUPPORTED_IMAGE_EXTENSIONS = {".tif", ".tiff", ".jpg", ".jpeg", ".png"}
 
 # MIME type mapping for image file extensions.
 # Used when writing dc:Format tag to ensure correct MIME types.
@@ -27,10 +22,9 @@ EXIFTOOL_LARGE_FILE_TIMEOUT = 600  # 10 minutes
 
 # EXIF/XMP tag names (used across all components for consistent metadata handling)
 # Organized by namespace: EXIF, ExifIFD, IFD0, XMP-xmp, XMP-dc, XMP-exif,
-# XMP-photoshop, XMP-xmpRights, XMP-tiff, XMP-xmpMM
+# XMP-tiff, XMP-xmpMM
 
 # EXIF tags
-TAG_EXIF_DATETIME_ORIGINAL = "Exif:DateTimeOriginal"
 TAG_EXIF_OFFSET_TIME_DIGITIZED = "Exif:OffsetTimeDigitized"
 
 # ExifIFD tags
@@ -44,29 +38,13 @@ TAG_IFD0_MAKE = "IFD0:Make"
 TAG_IFD0_MODEL = "IFD0:Model"
 
 # XMP-xmp tags
-TAG_XMP_XMP_IDENTIFIER = "XMP-xmp:Identifier"
 TAG_XMP_XMP_CREATOR_TOOL = "XMP-xmp:CreatorTool"
 
 # XMP-dc (Dublin Core) tags
-TAG_XMP_DC_IDENTIFIER = "XMP-dc:Identifier"
-TAG_XMP_DC_DESCRIPTION = "XMP-dc:Description"
-TAG_XMP_DC_TITLE = "XMP-dc:Title"
-TAG_XMP_DC_CREATOR = "XMP-dc:Creator"
-TAG_XMP_DC_RIGHTS = "XMP-dc:Rights"
-TAG_XMP_DC_SOURCE = "XMP-dc:Source"
-TAG_XMP_DC_RELATION = "XMP-dc:Relation"
 TAG_XMP_DC_FORMAT = "XMP-dc:Format"
 
 # XMP-exif tags
 TAG_XMP_EXIF_DATETIME_DIGITIZED = "XMP-exif:DateTimeDigitized"
-
-# XMP-photoshop tags
-TAG_XMP_PHOTOSHOP_DATE_CREATED = "XMP-photoshop:DateCreated"
-TAG_XMP_PHOTOSHOP_CREDIT = "XMP-photoshop:Credit"
-
-# XMP-xmpRights tags
-TAG_XMP_XMPRIGHTS_USAGE_TERMS = "XMP-xmpRights:UsageTerms"
-TAG_XMP_XMPRIGHTS_MARKED = "XMP-xmpRights:Marked"
 
 # XMP-tiff tags
 TAG_XMP_TIFF_MAKE = "XMP-tiff:Make"
@@ -77,8 +55,6 @@ TAG_XMP_TIFF_SOFTWARE = "XMP-tiff:Software"
 TAG_XMP_XMPMM_HISTORY = "XMP-xmpMM:History"
 TAG_XMP_XMPMM_INSTANCE_ID = "XMP-xmpMM:InstanceID"
 TAG_XMP_XMPMM_DOCUMENT_ID = "XMP-xmpMM:DocumentID"
-TAG_XMP_XMPMM_DERIVED_FROM_DOCUMENT_ID = "XMP-xmpMM:DerivedFromDocumentID"
-TAG_XMP_XMPMM_DERIVED_FROM_INSTANCE_ID = "XMP-xmpMM:DerivedFromInstanceID"
 
 # XMP-xmpMM History flattened tags (exiftool expands structures)
 TAG_XMP_XMPMM_HISTORY_ACTION = "XMP-xmpMM:HistoryAction"
@@ -100,17 +76,5 @@ XMP_FIELD_INSTANCE_ID = "instanceID"
 # Standard XMP History action types per XMP Specification Part 2 (xmpMM namespace)
 # Table 8 — ResourceEvent fields: stEvt:action Open Choice of Text
 # https://www.adobe.com/devnet/xmp/library/XMPSpecificationPart2.pdf
-XMP_ACTION_CONVERTED = "converted"          # Format conversion
-XMP_ACTION_COPIED = "copied"                # File copied
 XMP_ACTION_CREATED = "created"              # File created from scratch
-XMP_ACTION_CROPPED = "cropped"              # Image cropped
 XMP_ACTION_EDITED = "edited"                # Content modification
-XMP_ACTION_FILTERED = "filtered"            # Filter applied
-XMP_ACTION_FORMATTED = "formatted"          # Format/layout changed
-XMP_ACTION_VERSION_UPDATED = "version_updated"  # Version updated
-XMP_ACTION_PRINTED = "printed"              # File printed
-XMP_ACTION_PUBLISHED = "published"          # File published
-XMP_ACTION_MANAGED = "managed"              # Metadata management without content change
-XMP_ACTION_PRODUCED = "produced"            # File produced/rendered
-XMP_ACTION_RESIZED = "resized"              # Image resized
-XMP_ACTION_SAVED = "saved"                  # File saved
