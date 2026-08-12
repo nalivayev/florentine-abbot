@@ -12,7 +12,7 @@ where test doubles inherit real classes and only override what is needed.
 import datetime
 from pathlib import Path
 
-from common.logger import Logger
+from scan_batcher.logger import Logger
 from scan_batcher.workflow import MetadataWorkflow
 
 

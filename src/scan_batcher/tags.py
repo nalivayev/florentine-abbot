@@ -1,5 +1,5 @@
 """
-Tag descriptors for :class:`~common.tagger.Tagger`.
+Tag descriptors for :class:`~scan_batcher.tagger.Tagger`.
 
 Each ``Tag`` knows how to serialise itself for exiftool writes and how to
 request / parse data for exiftool reads.  ``Tagger`` works exclusively
@@ -120,7 +120,7 @@ class HistoryTag(Tag):
             instance_id="abc123…",
         )
 
-    Parameters match ``XMP_FIELD_*`` constants from :mod:`common.constants`.
+    Parameters match ``XMP_FIELD_*`` constants from :mod:`scan_batcher.constants`.
     """
 
     _FLATTENED_TAGS = [

@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from common.exifer import Exifer
-from common.tagger import Tagger
-from common.tags import KeyValueTag, HistoryTag
-from common.constants import TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED
-from tests.common.test_utils import create_test_image
+from scan_batcher.exifer import Exifer
+from scan_batcher.tagger import Tagger
+from scan_batcher.tags import KeyValueTag, HistoryTag
+from scan_batcher.constants import TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED
+from tests.scan_batcher.test_utils import create_test_image
 
 
 @pytest.mark.usefixtures("require_exiftool")

@@ -4,7 +4,7 @@ Patch workflow for adding XMP metadata to existing files.
 
 from pathlib import Path
 
-from common.logger import Logger
+from scan_batcher.logger import Logger
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import MetadataWorkflow
 

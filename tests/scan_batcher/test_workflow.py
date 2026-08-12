@@ -8,9 +8,9 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from common.logger import Logger
+from scan_batcher.logger import Logger
 from tests.scan_batcher.fake_metadata_workflow import FakeMetadataWorkflow
-from tests.common.test_utils import create_test_image, exiftool_available
+from tests.scan_batcher.test_utils import create_test_image, exiftool_available
 
 import pytest
 

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Sequence
 
-from common.logger import Logger
+from scan_batcher.logger import Logger
 from scan_batcher.calculator import Calculator
 from scan_batcher.constants import RoundingStrategy, CM_TO_INCH
 

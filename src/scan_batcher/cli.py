@@ -2,7 +2,7 @@ import logging
 from sys import exit
 from typing import Sequence
 
-from common.logger import Logger
+from scan_batcher.logger import Logger
 from scan_batcher.batch import Batch, Scan
 from scan_batcher.parser import Parser
 from scan_batcher.utils import log_banner, get_version

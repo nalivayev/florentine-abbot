@@ -6,7 +6,7 @@ batch mode (``begin`` / ``end``) so that multiple writes are flushed
 to disk in a single exiftool invocation.
 
 ``Tagger`` is **generic** — it has no knowledge of specific tag formats.
-All serialisation / parsing logic lives in :class:`~common.tags.Tag`
+All serialisation / parsing logic lives in :class:`~scan_batcher.tags.Tag`
 subclasses (``KeyValueTag``, ``HistoryTag``, …).
 
 Usage — immediate mode::

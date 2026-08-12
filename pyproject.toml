@@ -29,7 +29,6 @@ packages = [
     "scan_batcher.workflows",
     "scan_batcher.workflows.patch",
     "scan_batcher.workflows.vuescan",
-    "common",
 ]
 
 [tool.setuptools.package-data]
@@ -49,6 +48,5 @@ markers = [
 ]
 addopts = "-m 'not manual'"
 testpaths = [
-    "tests/common",
     "tests/scan_batcher",
 ]

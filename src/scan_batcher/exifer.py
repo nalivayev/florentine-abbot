@@ -6,7 +6,7 @@ import threading
 from pathlib import Path
 from typing import Any, Sequence
 
-from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
+from scan_batcher.constants import EXIFTOOL_LARGE_FILE_TIMEOUT
 
 
 class Exifer:

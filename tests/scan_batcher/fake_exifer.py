@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from common.exifer import Exifer
+from scan_batcher.exifer import Exifer
 
 
 class FakeExifer(Exifer):

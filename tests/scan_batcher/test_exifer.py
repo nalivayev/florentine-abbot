@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch
 from pathlib import Path
-from common.exifer import Exifer
+from scan_batcher.exifer import Exifer
 
 class TestExifer:
 

@@ -7,9 +7,9 @@ from pathlib import Path
 
 from PIL import Image
 
-from common.constants import TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_IFD0_SOFTWARE, TAG_EXIFIFD_CREATE_DATE
-from common.logger import Logger
-from tests.common.fake_exifer import FakeExifer
+from scan_batcher.constants import TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_IFD0_SOFTWARE, TAG_EXIFIFD_CREATE_DATE
+from scan_batcher.logger import Logger
+from tests.scan_batcher.fake_exifer import FakeExifer
 from tests.scan_batcher.fake_metadata_workflow import FakeMetadataWorkflow
 
 

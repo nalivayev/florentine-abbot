@@ -8,7 +8,7 @@ from re import finditer
 from os import makedirs
 import datetime
 
-from common.logger import Logger
+from scan_batcher.logger import Logger
 from scan_batcher.workflows import register_workflow
 from scan_batcher.workflow import MetadataWorkflow
 from scan_batcher.constants import EXIF_DATETIME_FORMAT, EXIF_DATETIME_FORMAT_MS

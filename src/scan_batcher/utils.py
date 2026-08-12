@@ -4,7 +4,7 @@ Scan Batcher utilities.
 
 import importlib.metadata
 
-from common.logger import Logger
+from scan_batcher.logger import Logger
 
 
 def get_version() -> str:
