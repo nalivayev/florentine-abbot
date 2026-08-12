@@ -7,9 +7,9 @@ from common.exifer import Exifer
 from common.tagger import Tagger
 from common.tags import KeyValueTag, HistoryTag
 from common.logger import Logger
-from common.version import get_version
 from common.constants import EXIFTOOL_LARGE_FILE_TIMEOUT, MIME_TYPE_MAP, TAG_XMP_XMPMM_DOCUMENT_ID, TAG_XMP_XMPMM_INSTANCE_ID, XMP_ACTION_CREATED, XMP_ACTION_EDITED, TAG_XMP_DC_FORMAT, TAG_XMP_EXIF_DATETIME_DIGITIZED, TAG_EXIFIFD_DATETIME_DIGITIZED, TAG_EXIFIFD_CREATE_DATE, TAG_EXIF_OFFSET_TIME_DIGITIZED, TAG_IFD0_DATETIME, TAG_IFD0_MAKE, TAG_IFD0_MODEL, TAG_IFD0_SOFTWARE, TAG_XMP_TIFF_MAKE, TAG_XMP_TIFF_MODEL, TAG_XMP_TIFF_SOFTWARE, TAG_XMP_XMP_CREATOR_TOOL
 from scan_batcher.constants import EXIF_DATETIME_FORMAT, EXIF_DATETIME_FORMAT_MS
+from scan_batcher.utils import get_version
 
 
 class Workflow(ABC):

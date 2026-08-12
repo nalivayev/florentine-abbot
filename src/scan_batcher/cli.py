@@ -3,10 +3,9 @@ from sys import exit
 from typing import Sequence
 
 from common.logger import Logger
-from common.utils import log_banner
 from scan_batcher.batch import Batch, Scan
 from scan_batcher.parser import Parser
-from common.version import get_version
+from scan_batcher.utils import log_banner, get_version
 from scan_batcher.workflows import get_workflow
 from scan_batcher.workflow import Workflow
 from scan_batcher.constants import DEFAULT_ENGINE, RoundingStrategy

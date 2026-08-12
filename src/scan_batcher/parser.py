@@ -1,8 +1,8 @@
 from argparse import ArgumentParser, Action
 from typing import Any, Sequence
 
-from common.version import get_version
 from scan_batcher.constants import RoundingStrategy, DEFAULT_ENGINE
+from scan_batcher.utils import get_version
 
 
 class _KeyValueAction(Action):
