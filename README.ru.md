@@ -234,6 +234,7 @@ OAIS опубликован как:
 - **[CCSDS 650.0-M-3](https://public.ccsds.org/Pubs/650x0m3.pdf)** (Pink Book, 2019) — актуальная версия, свободно доступна
 - **[ISO 14721:2025](https://www.iso.org/standard/87471.html)** — формальный международный стандарт (идентичен CCSDS 650.0-M-3 по содержанию)
 
+Проект реализует функциональный блок OAIS **Ingest (Приём данных)**: автоматизацию сканирования, разбор структурированных имён файлов и запись метаданных (XMP/EXIF).
 
 Для оцифровки изображений проект также опирается на рекомендации **[Federal Agencies Digital Guidelines Initiative (FADGI)](https://www.digitizationguidelines.gov/)**:
 - **[Technical Guidelines for Digitizing Cultural Heritage Materials, 3rd Edition](https://www.digitizationguidelines.gov/guidelines/FADGITechnicalGuidelinesforDigitizingCulturalHeritageMaterials_ThirdEdition_05092023.pdf)** (май 2023)
