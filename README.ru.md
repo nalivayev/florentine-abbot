@@ -129,21 +129,15 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 - `scan_batcher/batch.py` — логика пакетных и интерактивных расчётов DPI.
 - `scan_batcher/calculator.py` — алгоритмы расчёта DPI.
 - `scan_batcher/parser.py` — парсинг и валидация аргументов командной строки.
-- `scan_batcher/constants.py` — централизованные константы и перечисления (напр., `RoundingStrategy`).
+- `scan_batcher/constants.py` — централизованные константы и перечисления (напр., `RoundingStrategy`), имена тегов, MIME-типы и константы действий XMP History.
 - `scan_batcher/workflow.py` — базовый класс для всех workflow-плагинов.
 - `scan_batcher/workflows/__init__.py` — регистрация и обнаружение плагинов.
 - `scan_batcher/workflows/vuescan/workflow.py` — автоматизация рабочего процесса VueScan.
+- `scan_batcher/logger.py` — единая подсистема логирования.
+- `scan_batcher/tagger.py` — абстракция пакетного XMP/EXIF чтения/записи поверх exiftool.
+- `scan_batcher/exifer.py` — извлечение и обработка EXIF-метаданных.
 
 ## Технические детали
-
-### Общие модули
-
-Используются по всему проекту:
-
-- `common/logger.py` — единая подсистема логирования.
-- `common/tagger.py` — абстракция пакетного XMP/EXIF чтения/записи поверх exiftool.
-- `common/exifer.py` — извлечение и обработка EXIF-метаданных.
-- `common/constants.py` — имена тегов, MIME-типы и константы действий XMP History.
 
 ### Установка
 
