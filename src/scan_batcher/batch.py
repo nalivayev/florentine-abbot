@@ -1,3 +1,4 @@
+import fnmatch
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Sequence
@@ -278,6 +279,8 @@ class Process(Batch):
         self._file_filter = file_filter
         self._validate_path()
         self._files = self._get_matching_files()
+        if not self._files:
+            self._logger.warning(f"No files in {self._path} match the filter '{self._file_filter}'")
         self._index = 0  # Current index for iteration
 
     def _validate_path(self) -> None:
@@ -306,19 +309,21 @@ class Process(Batch):
         """
         Check if a filename matches the file filter.
 
+        A filter containing any of the glob characters "*", "?" or "[" is a
+        glob pattern ("*.RAW.tif"). Any other filter is an ending of the name
+        (".tif", "RAW.tif"). Case follows the platform: ignored on Windows,
+        significant elsewhere, as fnmatch applies os.path.normcase.
+
         Args:
             filename (str): The filename to check.
 
         Returns:
             bool: True if the file matches the filter, False otherwise.
         """
-        if self._file_filter == "*.*":
-            return True
-        ext = Path(filename).suffix.lower()
-        filter_ext = self._file_filter.lower()
-        if filter_ext.startswith("*"):
-            return ext == filter_ext[1:] or ext == filter_ext[2:]
-        return ext == filter_ext if filter_ext.startswith(".") else filename.lower().endswith(filter_ext.lower())
+        pattern = self._file_filter
+        if not any(c in pattern for c in "*?["):
+            pattern = "*" + pattern
+        return fnmatch.fnmatch(filename, pattern)
 
     def __iter__(self) -> "Process":
         """

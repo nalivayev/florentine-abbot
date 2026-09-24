@@ -88,6 +88,8 @@ scan-batcher --workflow examples/workflow.ini --batch process /path/to/scanned/f
 ```
 *Process existing files without interactive input.*
 
+*An optional second value after the folder filters the files: an extension (`.tif`), an ending of the name (`RAW.tif`) or a glob (`"*.RAW.tif"`). In bash, quote a glob, or the shell will expand it first.*
+
 ### Template System
 
 Templates are used in settings and file names to inject dynamic values.
