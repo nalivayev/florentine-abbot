@@ -44,7 +44,7 @@ class Calculate(Batch):
         min_dpi: int | None = None,
         max_dpi: int | None = None,
         dpis: Sequence[int] | None = None,
-        rounding: RoundingStrategy | str = RoundingStrategy.NEAREST
+        rounding: RoundingStrategy | str = RoundingStrategy.MAXIMUM
     ) -> None:
         """
         Initialize the Calculate batch.
@@ -54,7 +54,7 @@ class Calculate(Batch):
             min_dpi (int | None, optional): Minimum allowed DPI.
             max_dpi (int | None, optional): Maximum allowed DPI.
             dpis (Sequence[int] | None, optional): List of available DPI values.
-            rounding (RoundingStrategy | str, optional): Rounding strategy (default: NEAREST).
+            rounding (RoundingStrategy | str, optional): Rounding strategy (default: MAXIMUM).
         """
         self._logger = logger
         self._calculator = Calculator()

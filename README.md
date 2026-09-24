@@ -66,7 +66,7 @@ scan-batcher --help
 - `-mnd, --min-dpi` - Minimum allowed DPI value for scanning (optional)
 - `-mxd, --max-dpi` - Maximum allowed DPI value for scanning (optional)
 - `-d, --dpis` - List of supported DPI resolutions by the scanner, separated by space, e.g., `100 300 1200`
-- `-r, --rounding` - Rounding strategy: `mx` (maximum), `mn` (minimum), `nr` (nearest). Default: nr. Internally uses `RoundingStrategy` enum
+- `-r, --rounding` - Rounding strategy: `mx` (maximum), `mn` (minimum), `nr` (nearest). Default: mx. Internally uses `RoundingStrategy` enum
 
 #### Examples
 

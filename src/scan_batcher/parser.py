@@ -128,13 +128,13 @@ class Parser(ArgumentParser):
             "-r",
             "--rounding",
             choices=[e.value for e in RoundingStrategy],
-            default=RoundingStrategy.NEAREST.value,
+            default=RoundingStrategy.MAXIMUM.value,
             help=(
                 "Rounding strategy for calculated DPI: "
                 f"{RoundingStrategy.MAXIMUM.value} (maximum), "
                 f"{RoundingStrategy.MINIMUM.value} (minimum), "
                 f"{RoundingStrategy.NEAREST.value} (nearest). "
-                f"Default: {RoundingStrategy.NEAREST.value}"
+                f"Default: {RoundingStrategy.MAXIMUM.value}"
             ),
         )
         self.add_argument(
